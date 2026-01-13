@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-from csv import reader
-import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
+import RPi.GPIO as GPIO
 GPIO.setwarnings(False)
 
-reade = SimpleMFRC522()
-print("🔖 RFID TEST")
+reader = SimpleMFRC522()  # ← SimpleMFRC522 OBJECT
 
 try:
-    id, text = reader.read()
-    print(f"✅ Card detected! ID: {id}, Text: '{text.strip()}'")
-except Exception as e:
-    print(f"❌ Error reading RFID: {e}")
+    print("🧪 Tap card NOW!")
+    id, text = reader.read()  # ← CALL .read() on SimpleMFRC522
+    print(f"✅ CARD OK! ID: {id}")
+except KeyboardInterrupt:
+    pass
 finally:
     GPIO.cleanup()
+    print("\n👋 Goodbye!")

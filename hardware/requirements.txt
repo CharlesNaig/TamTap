@@ -10,6 +10,3 @@ mfrc522>=0.0.7
 
 # I2C Communication (LCD Display)
 smbus>=1.1.post2
-
-# Registration GUI
-pygame>=2.5.0

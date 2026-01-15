@@ -398,7 +398,7 @@ def card_detected_state():
 
 def no_face_state():
     """NO_FACE/FAIL state: Display error, red LED on, 5 beeps"""
-    lcd.show("NO FACE DETECT", "TRY AGAIN TMRW")
+    lcd.show("NO FACE DETECT", "TRY AGAIN!")
     led_on(GPIO_RED_LED)
     beep(count=5, duration=0.1, pause=0.1)
     time.sleep(1.0)

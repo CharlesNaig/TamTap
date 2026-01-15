@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-🚀 TAMTAP v6.2 - LCD Messages PERFECT SYNC
+TAMTAP v6.2 - LCD Messages PERFECT SYNC
 NFC-Based Attendance System | FEU Roosevelt Marikina
 State Machine: IDLE → CARD_DETECTED → CAMERA_ACTIVE → SUCCESS|FAIL → IDLE
 """
@@ -18,9 +18,10 @@ from enum import Enum
 import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
 import smbus
+import cv2
 
 # ========================================
-# 📋 LOGGING CONFIGURATION
+# LOGGING CONFIGURATION
 # ========================================
 logging.basicConfig(
     level=logging.INFO,
@@ -30,7 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger('TAMTAP')
 
 # ========================================
-# 🔧 HARDWARE CONSTANTS
+# HARDWARE CONSTANTS
 # ========================================
 # GPIO Pins
 GPIO_GREEN_LED = 17
@@ -48,13 +49,19 @@ LCD_BACKLIGHT = 0x08
 ENABLE = 0b00000100
 
 # Timing Constants (in seconds)
-CAMERA_TIMEOUT = 1.5
+CAMERA_CAPTURE_TIME = 2000  # 2 seconds for camera capture (ms)
+CAMERA_TIMEOUT = 3.0        # subprocess timeout
 NFC_POLL_INTERVAL = 0.1
-DETECTION_THRESHOLD = 1.3  # 30% larger = person present
+FACE_DETECTION_TIMEOUT = 1.2  # Haar cascade timeout
+
+# Face Detection Constants
+HAAR_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+MIN_FACE_SIZE = (80, 80)  # Minimum face size to detect
 
 # File Paths
 DB_FILE = "tamtap_users.json"
 PHOTO_DIR = "attendance_photos"
+TEMP_DETECTION_IMG = "/tmp/tamtap_detect.jpg"
 
 # ========================================
 # 🔁 STATE MACHINE
@@ -282,17 +289,30 @@ def save_attendance_record(nfc_id, name, role, photo_path):
     return True
 
 # ========================================
-# 📸 CAMERA FUNCTIONS (rpicam-still)
+# CAMERA & FACE DETECTION (OpenCV + Haar Cascade)
 # ========================================
-def capture_photo(filename, width=320, height=240, timeout_ms=500):
-    """Capture photo using rpicam-still with timeout"""
+
+# Initialize Haar Cascade for face detection
+try:
+    face_cascade = cv2.CascadeClassifier(HAAR_CASCADE_PATH)
+    if face_cascade.empty():
+        logger.error("Failed to load Haar cascade classifier")
+        face_cascade = None
+    else:
+        logger.info("Haar cascade loaded successfully")
+except Exception as e:
+    logger.error("Haar cascade init error: %s", e)
+    face_cascade = None
+
+def capture_photo_for_detection(filename, timeout_ms=1500):
+    """Capture photo for face detection - longer exposure for better quality"""
     try:
         result = subprocess.run(
             [
                 'rpicam-still',
                 '-t', str(timeout_ms),
-                '--width', str(width),
-                '--height', str(height),
+                '--width', '640',
+                '--height', '480',
                 '-o', filename
             ],
             capture_output=True,
@@ -308,51 +328,83 @@ def capture_photo(filename, width=320, height=240, timeout_ms=500):
     
     return False
 
-def detect_person():
+def detect_face_in_image(image_path):
     """
-    Motion detection algorithm:
-    1. Capture empty frame
-    2. Wait 0.5 seconds
-    3. Capture person frame
-    4. Compare file sizes
-    5. If person_size > empty_size * 1.3 → Person detected
+    Detect face in image using OpenCV Haar Cascade
+    Returns: (bool, num_faces) - whether face detected and count
     """
-    empty_path = "/tmp/tamtap_empty.jpg"
-    person_path = "/tmp/tamtap_person.jpg"
+    if face_cascade is None:
+        logger.error("Face cascade not initialized")
+        return False, 0
     
     try:
-        # Capture frame 1 (baseline)
-        if not capture_photo(empty_path):
-            logger.warning("Failed to capture baseline frame")
+        # Read image
+        img = cv2.imread(image_path)
+        if img is None:
+            logger.warning("Could not read image: %s", image_path)
+            return False, 0
+        
+        # Convert to grayscale for Haar detection
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Detect faces with Haar cascade
+        # Parameters tuned for speed (<1.2s) on Raspberry Pi
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=4,
+            minSize=MIN_FACE_SIZE,
+            flags=cv2.CASCADE_SCALE_IMAGE
+        )
+        
+        num_faces = len(faces)
+        logger.info("Face detection: found %d face(s)", num_faces)
+        
+        return num_faces > 0, num_faces
+        
+    except Exception as e:
+        logger.error("Face detection error: %s", e)
+        return False, 0
+
+def detect_person():
+    """
+    Face detection using OpenCV Haar Cascade:
+    1. Capture photo with camera preview (2 seconds)
+    2. Run Haar cascade face detection
+    3. Return True if at least one face detected
+    
+    Total time budget: ≤3.5 seconds
+    """
+    try:
+        # Capture photo for face detection (shows preview on screen)
+        logger.info("Capturing image for face detection...")
+        
+        if not capture_photo_for_detection(TEMP_DETECTION_IMG, timeout_ms=2000):
+            logger.warning("Failed to capture detection image")
             return False
         
-        time.sleep(0.5)
+        # Run face detection with Haar cascade
+        logger.info("Running Haar cascade face detection...")
+        face_found, num_faces = detect_face_in_image(TEMP_DETECTION_IMG)
         
-        # Capture frame 2 (with potential person)
-        if not capture_photo(person_path):
-            logger.warning("Failed to capture detection frame")
-            return False
-        
-        # Compare file sizes
-        empty_size = os.path.getsize(empty_path) if os.path.exists(empty_path) else 0
-        person_size = os.path.getsize(person_path) if os.path.exists(person_path) else 0
-        
-        if empty_size > 0 and person_size > empty_size * DETECTION_THRESHOLD:
-            logger.info("Person detected (size ratio: %.2f)", person_size / empty_size)
+        if face_found:
+            logger.info("Person verified: %d face(s) detected", num_faces)
             return True
+        else:
+            logger.info("No face detected in image")
+            return False
         
-        logger.info("No person detected (size ratio: %.2f)", 
-                   person_size / empty_size if empty_size > 0 else 0)
+    except Exception as e:
+        logger.error("Person detection error: %s", e)
         return False
         
     finally:
-        # Cleanup temp files
-        for path in [empty_path, person_path]:
-            try:
-                if os.path.exists(path):
-                    os.remove(path)
-            except Exception:
-                pass
+        # Cleanup temp file
+        try:
+            if os.path.exists(TEMP_DETECTION_IMG):
+                os.remove(TEMP_DETECTION_IMG)
+        except Exception:
+            pass
 
 def take_attendance_photo(nfc_id):
     """Take attendance photo and save to photo directory"""
@@ -362,16 +414,17 @@ def take_attendance_photo(nfc_id):
     # Try up to 2 times to capture photo
     for attempt in range(2):
         try:
+            # Capture high quality photo with 2 second preview
             result = subprocess.run(
                 [
                     'rpicam-still',
-                    '-t', '1500',
+                    '-t', str(CAMERA_CAPTURE_TIME),
                     '--width', '1024',
                     '--height', '768',
                     '-o', filename
                 ],
                 capture_output=True,
-                timeout=3.0
+                timeout=CAMERA_TIMEOUT
             )
             
             if os.path.exists(filename) and os.path.getsize(filename) > 5000:

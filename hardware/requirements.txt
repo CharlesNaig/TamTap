@@ -10,3 +10,9 @@ mfrc522>=0.0.7
 
 # I2C Communication (LCD Display)
 smbus>=1.1.post2
+
+# Face Detection (OpenCV with Haar Cascade)
+# For Raspberry Pi, use opencv-python-headless (no GUI dependencies)
+opencv-python-headless>=4.8.0
+
+# Alternative for Pi with desktop: opencv-python>=4.8.0

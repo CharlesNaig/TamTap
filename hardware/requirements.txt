@@ -1,4 +1,4 @@
-# TAMTAP v6.2 - Hardware Dependencies
+# TAMTAP v6.3 - Hardware Dependencies
 # Install: pip install -r requirements.txt
 # Note: Run inside virtual environment (.venv)
 
@@ -15,4 +15,5 @@ smbus>=1.1.post2
 # For Raspberry Pi, use opencv-python-headless (no GUI dependencies)
 opencv-python-headless>=4.8.0
 
-# Alternative for Pi with desktop: opencv-python>=4.8.0
+# MongoDB Driver (with JSON fallback if unavailable)
+pymongo>=4.6.0

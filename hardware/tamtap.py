@@ -261,18 +261,24 @@ def save_attendance_record(nfc_id, name, role, photo_path):
     db = load_db()
     now = datetime.now()
     
+    # Get photo filename for database storage
+    photo_filename = os.path.basename(photo_path) if photo_path else None
+    
     record = {
         "uid": nfc_id,
         "name": name,
         "role": role,
         "date": now.strftime("%Y-%m-%d %H:%M:%S"),
-        "photo": os.path.basename(photo_path) if photo_path else None,
-        "session": "AM" if now.hour < 12 else "PM"
+        "time": now.strftime("%H:%M:%S"),
+        "photo": photo_filename,
+        "photo_path": photo_path,
+        "session": "AM" if now.hour < 12 else "PM",
+        "status": "present"
     }
     
     db["attendance"].append(record)
     save_db(db)
-    logger.info("Attendance saved: %s (%s)", name, role)
+    logger.info("Attendance saved: %s (%s) - Photo: %s", name, role, photo_filename)
     return True
 
 # ========================================
@@ -352,30 +358,40 @@ def detect_person():
 def take_attendance_photo(nfc_id):
     """Take attendance photo and save to photo directory"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{PHOTO_DIR}/att_{nfc_id}_{timestamp}.jpg"
+    filename = f"{PHOTO_DIR}/{timestamp}_{nfc_id}.jpg"
     
-    try:
-        result = subprocess.run(
-            [
-                'rpicam-still',
-                '-t', '1000',
-                '--width', '1024',
-                '--height', '768',
-                '-o', filename,
-                '--nopreview'
-            ],
-            capture_output=True,
-            timeout=CAMERA_TIMEOUT
-        )
+    # Try up to 2 times to capture photo
+    for attempt in range(2):
+        try:
+            result = subprocess.run(
+                [
+                    'rpicam-still',
+                    '-t', '1000',
+                    '--width', '1024',
+                    '--height', '768',
+                    '-o', filename,
+                    '--nopreview'
+                ],
+                capture_output=True,
+                timeout=CAMERA_TIMEOUT
+            )
+            
+            if os.path.exists(filename) and os.path.getsize(filename) > 5000:
+                logger.info("Attendance photo saved: %s", filename)
+                return filename
+            else:
+                logger.warning("Photo file invalid, attempt %d", attempt + 1)
+                
+        except subprocess.TimeoutExpired:
+            logger.warning("Attendance photo timeout, attempt %d", attempt + 1)
+        except Exception as e:
+            logger.error("Attendance photo error: %s", e)
         
-        if os.path.exists(filename) and os.path.getsize(filename) > 5000:
-            logger.info("Attendance photo saved: %s", filename)
-            return filename
-    except subprocess.TimeoutExpired:
-        logger.warning("Attendance photo timeout")
-    except Exception as e:
-        logger.error("Attendance photo error: %s", e)
+        # Brief delay before retry
+        if attempt < 1:
+            time.sleep(0.3)
     
+    logger.error("Failed to capture attendance photo after retries")
     return None
 
 # ========================================
@@ -469,10 +485,21 @@ def process_card(nfc_id):
         current_state = State.IDLE
         return True
     
-    # Take attendance photo
+    # Take attendance photo (required for dashboard)
+    lcd.show("TAKING PHOTO", "SMILE!")
     photo_path = take_attendance_photo(nfc_id)
     
-    # Save attendance record
+    if not photo_path:
+        logger.warning("Photo capture failed for %s", name)
+        lcd.show("PHOTO FAILED", "TRY AGAIN")
+        led_on(GPIO_RED_LED)
+        beep(count=3, duration=0.15, pause=0.1)
+        time.sleep(1.5)
+        led_off(GPIO_RED_LED)
+        current_state = State.IDLE
+        return False
+    
+    # Save attendance record with photo
     if save_attendance_record(nfc_id, name, role, photo_path):
         # === STATE: SUCCESS ===
         current_state = State.SUCCESS
@@ -562,7 +589,14 @@ def main():
                     process_card(nfc_id)
                     # Return to IDLE after processing
                     idle_state()
-                    # Debounce delay
+                    
+                    # Reset RFID reader state to allow next card read
+                    try:
+                        reader.READER.MFRC522_StopCrypto1()
+                    except Exception:
+                        pass
+                    
+                    # Debounce delay - wait for card to be removed
                     time.sleep(2.0)
                 
                 time.sleep(NFC_POLL_INTERVAL)
@@ -570,6 +604,11 @@ def main():
             except Exception as e:
                 if not shutdown_in_progress:
                     logger.error("RFID read error: %s", e)
+                    # Reset reader on error
+                    try:
+                        reader.READER.MFRC522_StopCrypto1()
+                    except Exception:
+                        pass
                     time.sleep(0.5)
                 
     except (KeyboardInterrupt, SystemExit):

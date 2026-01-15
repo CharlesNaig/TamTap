@@ -484,16 +484,32 @@ def process_card(nfc_id):
     return True
 
 # ========================================
-# 🛑 SIGNAL HANDLERS
+# SIGNAL HANDLERS
 # ========================================
+shutdown_in_progress = False
+
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully"""
-    global current_state
+    global current_state, shutdown_in_progress
+    
+    if shutdown_in_progress:
+        return
+    
+    shutdown_in_progress = True
     logger.info("Shutdown signal received")
     current_state = State.SHUTDOWN
-    shutdown_state()
-    time.sleep(1)
-    GPIO.cleanup()
+    
+    try:
+        shutdown_state()
+        time.sleep(1)
+    except Exception:
+        pass
+    finally:
+        try:
+            GPIO.cleanup()
+        except Exception:
+            pass
+    
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -552,15 +568,24 @@ def main():
                 time.sleep(NFC_POLL_INTERVAL)
                 
             except Exception as e:
-                logger.error("RFID read error: %s", e)
-                time.sleep(0.5)
+                if not shutdown_in_progress:
+                    logger.error("RFID read error: %s", e)
+                    time.sleep(0.5)
                 
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         pass
     finally:
-        shutdown_state()
-        time.sleep(0.5)
-        GPIO.cleanup()
+        if not shutdown_in_progress:
+            try:
+                shutdown_state()
+                time.sleep(0.5)
+            except Exception:
+                pass
+            finally:
+                try:
+                    GPIO.cleanup()
+                except Exception:
+                    pass
         logger.info("TAMTAP shutdown complete")
 
 if __name__ == "__main__":

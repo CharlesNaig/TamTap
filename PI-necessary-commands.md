@@ -109,6 +109,120 @@ pip install -r requirements.txt
 
 ---
 
+## 🔄 4. GitHub Update & Sync Cheat Sheet (Raspberry Pi)
+
+### 🎯 Purpose
+
+Update the TAMTAP code on the Raspberry Pi when changes were pushed from another device (e.g., laptop or lab PC).
+
+This avoids re-cloning and keeps deployments clean.
+
+---
+
+### 🔍 Check Current Repository Status
+
+```bash
+git status
+```
+
+* Shows modified files
+* Confirms current branch
+
+---
+
+### 🌐 Fetch Latest Changes from GitHub (Safe)
+
+```bash
+git fetch origin
+```
+
+* Downloads updates
+* Does NOT modify local files yet
+
+---
+
+### 📋 View Incoming Changes
+
+```bash
+git log HEAD..origin/main --oneline
+```
+
+> Replace `main` if your branch name is different.
+
+---
+
+### ⬇️ Pull Latest Updates (Most Common)
+
+```bash
+git pull origin main
+```
+
+* Fetches + merges latest changes
+* Use when Raspberry Pi has **no local edits**
+
+---
+
+### ⚠️ If Local Changes Exist (Safe Update)
+
+```bash
+git stash
+git pull origin main
+git stash pop
+```
+
+* Temporarily saves local edits
+* Applies updates
+* Restores local changes
+
+---
+
+### 🔁 Hard Reset to GitHub Version (Last Resort)
+
+⚠️ **This will discard local changes**
+
+```bash
+git fetch origin
+git reset --hard origin/main
+```
+
+Use only if:
+
+* Code is broken
+* Pi must match GitHub exactly
+
+---
+
+### 🧠 Recommended Update Flow for TAMTAP
+
+```bash
+cd ~/tamtap
+git status
+git pull origin main
+sudo systemctl restart tamtap
+```
+
+---
+
+### 🧪 Verify After Update
+
+```bash
+sudo systemctl status tamtap
+```
+
+* Confirm service is running
+* Check logs if needed
+
+---
+
+## ✅ Git Update Summary
+
+* `git fetch` → check for updates
+* `git pull` → apply updates
+* `git stash` → protect local changes
+* `git reset --hard` → force sync
+
+---
+
 ## ⚙️ Auto-Start TAMTAP on Boot (One Plug, Ready to Tap)
 
 ### 🎯 Goal

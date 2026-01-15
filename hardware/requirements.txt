@@ -1,0 +1,15 @@
+# TAMTAP v6.2 - Hardware Dependencies
+# Install: pip install -r requirements.txt
+# Note: Run inside virtual environment (.venv)
+
+# GPIO Control for Raspberry Pi
+RPi.GPIO>=0.7.1
+
+# RFID/NFC Reader (MFRC522 via SPI)
+mfrc522>=0.0.7
+
+# I2C Communication (LCD Display)
+smbus>=1.1.post2
+
+# Registration GUI
+pygame>=2.5.0

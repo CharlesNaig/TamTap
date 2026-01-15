@@ -1,0 +1,184 @@
+# 🧰 TAMTAP – Raspberry Pi Necessary Commands Cheat Sheet
+
+**FEU Roosevelt Marikina | Grade 12 ICT Capstone**  
+**Purpose:** WiFi management, IP discovery, Python environment setup, and auto-start configuration for TAMTAP.
+
+## 📶 WiFi Management (nmcli)
+
+### 🔍 List Saved WiFi Connections
+
+```bash
+nmcli connection show
+```
+
+---
+
+### 🔌 Manually Connect to an Existing Profile
+
+```bash
+sudo nmcli connection up "Your_Profile_Name"
+```
+
+---
+
+### ⭐ Set WiFi Priority (Auto-Connect Order)
+
+Set **primary network** (higher priority):
+
+```bash
+sudo nmcli connection modify "Primary_SSID" connection.autoconnect-priority 100
+```
+
+Set **secondary / backup network**:
+
+```bash
+sudo nmcli connection modify "tamtap" connection.autoconnect-priority 50
+```
+
+> Higher number = higher priority
+> Raspberry Pi will always prefer the highest available network.
+
+---
+
+### 🔄 Rescan Available WiFi Networks
+
+```bash
+sudo nmcli device wifi rescan
+```
+
+---
+
+### ➕ Connect to a New WiFi Network
+
+```bash
+sudo nmcli dev wifi connect "Your_Backup_SSID" password "Your_Backup_Password"
+```
+
+---
+
+## 🌐 Finding TAMTAP IP Address (LAN)
+
+### 📡 Check Local IP Addresses
+
+```bash
+ip addr
+```
+
+Look for `wlan0` and note the IP (e.g., `192.168.254.x`).
+
+---
+
+### 🔎 Scan Network for Unknown TAMTAP IP (nmap)
+
+If TAMTAP switched WiFi and IP is unknown:
+
+```bash
+sudo nmap -sn 192.168.254.1/24
+```
+
+- Scan the subnet of the current router
+- Identify the Raspberry Pi hostname or MAC
+- Copy the discovered TAMTAP IP address
+
+---
+
+## 🐍 Python Virtual Environment (Recommended)
+
+### 📦 Create Virtual Environment
+
+```bash
+python3 -m venv .venv
+```
+
+---
+
+### ▶️ Activate Virtual Environment
+
+```bash
+source .venv/bin/activate
+```
+
+Once activated, install packages safely:
+
+```bash
+pip install -r requirements.txt
+```
+
+> ✅ Keeps system Python clean
+> ✅ Prevents package conflicts on Bookworm OS
+
+---
+
+## ⚙️ Auto-Start TAMTAP on Boot (One Plug, Ready to Tap)
+
+### 🎯 Goal
+
+Automatically start:
+
+- Python hardware controller
+- Node.js backend
+- Dashboard services
+
+---
+
+### 🧾 Create systemd Service
+
+```bash
+sudo nano /etc/systemd/system/tamtap.service
+```
+
+---
+
+### 🧠 Example systemd Service File
+
+```ini
+[Unit]
+Description=TAMTAP NFC Attendance System
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/tamtap
+ExecStart=/home/pi/tamtap/.venv/bin/python main.py
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+---
+
+### 🔄 Reload & Enable Service
+
+```bash
+sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
+sudo systemctl enable tamtap
+sudo systemctl start tamtap
+```
+
+---
+
+### 🔍 Check Service Status
+
+```bash
+sudo systemctl status tamtap
+```
+
+---
+
+## 🛑 Stop / Restart TAMTAP (Maintenance)
+
+```bash
+sudo systemctl stop tamtap
+sudo systemctl restart tamtap
+```
+
+---
+
+## ✅ Summary
+
+- 📶 WiFi managed via `nmcli`
+- 🌐 IP discovery via `ip addr` + `nmap`
+- 🐍 Python isolation using `.venv`
+- ⚙️ systemd ensures **plug-and-play readiness**

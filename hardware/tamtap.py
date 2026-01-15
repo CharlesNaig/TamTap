@@ -293,8 +293,7 @@ def capture_photo(filename, width=320, height=240, timeout_ms=500):
                 '-t', str(timeout_ms),
                 '--width', str(width),
                 '--height', str(height),
-                '-o', filename,
-                '--nopreview'
+                '-o', filename
             ],
             capture_output=True,
             timeout=CAMERA_TIMEOUT
@@ -366,14 +365,13 @@ def take_attendance_photo(nfc_id):
             result = subprocess.run(
                 [
                     'rpicam-still',
-                    '-t', '1000',
+                    '-t', '1500',
                     '--width', '1024',
                     '--height', '768',
-                    '-o', filename,
-                    '--nopreview'
+                    '-o', filename
                 ],
                 capture_output=True,
-                timeout=CAMERA_TIMEOUT
+                timeout=3.0
             )
             
             if os.path.exists(filename) and os.path.getsize(filename) > 5000:
@@ -564,7 +562,7 @@ def main():
     logger.info("Testing camera...")
     try:
         subprocess.run(
-            ['rpicam-hello', '-t', '500', '--nopreview'],
+            ['rpicam-hello', '-t', '500'],
             capture_output=True,
             timeout=2
         )

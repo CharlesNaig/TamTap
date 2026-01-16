@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-"""
-TAMTAP v6.3 REGISTRATION CLI
-Student/Teacher Registration + NFC Integration
-MongoDB with JSON fallback for offline mode
-CLI version for headless Raspberry Pi
-"""
-
 import json
 import os
 import sys

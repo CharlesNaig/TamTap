@@ -38,7 +38,7 @@ logger = logging.getLogger('TAMTAP_REG')
 # CONSTANTS
 # ========================================
 DB_FILE = "tamtap_users.json"
-MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
+MONGODB_URI = "mongodb://naig:password@162.243.218.87:27017/"
 MONGODB_NAME = "tamtap"
 MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
 

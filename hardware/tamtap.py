@@ -13,6 +13,7 @@ import signal
 import sys
 import subprocess
 import logging
+import shutil
 from datetime import datetime
 from enum import Enum
 
@@ -69,7 +70,8 @@ MIN_FACE_SIZE = (80, 80)  # Minimum face size to detect
 
 # File Paths
 DB_FILE = "tamtap_users.json"
-PHOTO_DIR = "attendance_photos"
+# Photo directory: ../assets/attendance_photos/{date}/
+PHOTO_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "attendance_photos")
 TEMP_DETECTION_IMG = "/tmp/tamtap_detect.jpg"
 
 # MongoDB Configuration
@@ -105,8 +107,67 @@ GPIO.output(GPIO_BUZZER, GPIO.LOW)
 # Initialize RFID reader
 reader = SimpleMFRC522()
 
-# Create photo directory
-os.makedirs(PHOTO_DIR, exist_ok=True)
+# Create base photo directory
+os.makedirs(PHOTO_BASE_DIR, exist_ok=True)
+
+# ========================================
+# 📸 PHOTO HELPER FUNCTIONS
+# ========================================
+def sanitize_filename(text):
+    """Sanitize text for use in filenames - remove special chars, replace spaces"""
+    if not text:
+        return "Unknown"
+    # Replace spaces with underscores, keep only alphanumeric and underscore
+    sanitized = "".join(c if c.isalnum() or c == '_' else '_' for c in text.replace(' ', '_'))
+    # Remove consecutive underscores and strip
+    while '__' in sanitized:
+        sanitized = sanitized.replace('__', '_')
+    return sanitized.strip('_')[:30]  # Max 30 chars
+
+def get_photo_dir_for_date(date_str=None):
+    """
+    Get photo directory for a specific date.
+    Creates the directory if it doesn't exist.
+    Returns: /path/to/assets/attendance_photos/2026-01-17/
+    """
+    if date_str is None:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    date_dir = os.path.join(PHOTO_BASE_DIR, date_str)
+    os.makedirs(date_dir, exist_ok=True)
+    return date_dir
+
+def generate_photo_filename(user_data, suffix=""):
+    """
+    Generate descriptive filename for attendance photo.
+    Format: {tamtap_id}_{first_name}_{last_name}_{time}_{session}{suffix}.jpg
+    Example: 001_Charles_Marcelo_081523_AM.jpg
+             001_Charles_Marcelo_081523_AM_detected.jpg
+    """
+    now = datetime.now()
+    
+    # Extract user info
+    tamtap_id = user_data.get("tamtap_id", "000") if user_data else "000"
+    first_name = sanitize_filename(user_data.get("first_name", "")) if user_data else ""
+    last_name = sanitize_filename(user_data.get("last_name", "")) if user_data else ""
+    
+    # Fallback to full name if first/last not available
+    if not first_name and not last_name:
+        full_name = user_data.get("name", "Unknown") if user_data else "Unknown"
+        name_parts = full_name.split()
+        first_name = sanitize_filename(name_parts[0]) if name_parts else "Unknown"
+        last_name = sanitize_filename(name_parts[-1]) if len(name_parts) > 1 else ""
+    
+    # Time and session
+    time_str = now.strftime("%H%M%S")
+    session = "AM" if now.hour < 12 else "PM"
+    
+    # Build filename
+    name_part = f"{first_name}_{last_name}" if last_name else first_name
+    suffix_part = f"_{suffix}" if suffix else ""
+    
+    filename = f"{tamtap_id}_{name_part}_{time_str}_{session}{suffix_part}.jpg"
+    return filename
 
 # ========================================
 # 📱 I2C LCD DRIVER (SMBus)
@@ -579,22 +640,25 @@ def detect_face_in_image(image_path):
         logger.error("Face detection error: %s", e)
         return False, 0
 
-def detect_person():
+def detect_person(user_data=None, save_detection=True):
     """
     Face detection using OpenCV Haar Cascade:
     1. Capture photo with camera preview (2 seconds)
     2. Run Haar cascade face detection
-    3. Return True if at least one face detected
+    3. Optionally save detection photo with user info
+    4. Return (success, saved_path)
     
     Total time budget: ≤3.5 seconds
     """
+    saved_path = None
+    
     try:
         # Capture photo for face detection (shows preview on screen)
         logger.info("Capturing image for face detection...")
         
         if not capture_photo_for_detection(TEMP_DETECTION_IMG, timeout_ms=2000):
             logger.warning("Failed to capture detection image")
-            return False
+            return False, None
         
         # Run face detection with Haar cascade
         logger.info("Running Haar cascade face detection...")
@@ -602,14 +666,28 @@ def detect_person():
         
         if face_found:
             logger.info("Person verified: %d face(s) detected", num_faces)
-            return True
+            
+            # Save detection photo if requested
+            if save_detection and user_data:
+                try:
+                    date_dir = get_photo_dir_for_date()
+                    filename = generate_photo_filename(user_data, suffix="detected")
+                    saved_path = os.path.join(date_dir, filename)
+                    
+                    # Copy temp file to permanent location
+                    shutil.copy2(TEMP_DETECTION_IMG, saved_path)
+                    logger.info("Detection photo saved: %s", saved_path)
+                except Exception as e:
+                    logger.warning("Failed to save detection photo: %s", e)
+            
+            return True, saved_path
         else:
             logger.info("No face detected in image")
-            return False
+            return False, None
         
     except Exception as e:
         logger.error("Person detection error: %s", e)
-        return False
+        return False, None
         
     finally:
         # Cleanup temp file
@@ -619,10 +697,19 @@ def detect_person():
         except Exception:
             pass
 
-def take_attendance_photo(nfc_id):
-    """Take attendance photo and save to photo directory"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"{PHOTO_DIR}/{timestamp}_{nfc_id}.jpg"
+def take_attendance_photo(user_data):
+    """
+    Take attendance photo and save to date-organized directory.
+    
+    Saves to: assets/attendance_photos/{YYYY-MM-DD}/{tamtap_id}_{name}_{time}_{session}.jpg
+    Example:  assets/attendance_photos/2026-01-17/001_Charles_Marcelo_081523_AM.jpg
+    """
+    # Get date-based directory
+    date_dir = get_photo_dir_for_date()
+    
+    # Generate descriptive filename
+    filename = generate_photo_filename(user_data)
+    filepath = os.path.join(date_dir, filename)
     
     # Try up to 2 times to capture photo
     for attempt in range(2):
@@ -634,15 +721,15 @@ def take_attendance_photo(nfc_id):
                     '-t', str(CAMERA_CAPTURE_TIME),
                     '--width', '1024',
                     '--height', '768',
-                    '-o', filename
+                    '-o', filepath
                 ],
                 capture_output=True,
                 timeout=CAMERA_TIMEOUT
             )
             
-            if os.path.exists(filename) and os.path.getsize(filename) > 5000:
-                logger.info("Attendance photo saved: %s", filename)
-                return filename
+            if os.path.exists(filepath) and os.path.getsize(filepath) > 5000:
+                logger.info("Attendance photo saved: %s", filepath)
+                return filepath
             else:
                 logger.warning("Photo file invalid, attempt %d", attempt + 1)
                 
@@ -756,17 +843,18 @@ def process_card(nfc_id):
     current_state = State.CAMERA_ACTIVE
     card_detected_state()
     
-    # Person detection (face verification)
-    if not detect_person():
+    # Person detection (face verification) - pass user_data for photo naming
+    face_detected, detection_photo = detect_person(user_data=user_data, save_detection=True)
+    if not face_detected:
         # === STATE: FAIL ===
         current_state = State.FAIL
         no_face_state()
         current_state = State.IDLE
         return False
     
-    # Take attendance photo (required for dashboard)
+    # Take attendance photo (required for dashboard) - pass user_data for naming
     lcd.show("TAKING PHOTO", "SMILE!")
-    photo_path = take_attendance_photo(nfc_id)
+    photo_path = take_attendance_photo(user_data)
     
     if not photo_path:
         logger.warning("Photo capture failed for %s", name)

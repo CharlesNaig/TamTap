@@ -1,0 +1,2 @@
+# This file ensures the attendance_photos directory is tracked by git
+# Actual photos are ignored via .gitignore

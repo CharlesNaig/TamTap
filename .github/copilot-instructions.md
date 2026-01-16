@@ -11,7 +11,9 @@
 TAMTAP is a **locally hosted, NFC-based attendance system** using Raspberry Pi hardware with camera verification and a real-time LAN dashboard.
 All generated code **must align with research requirements**, hardware limits, and school deployment constraints.
 
-Copilot must behave as a **junior engineer following strict specs**, not as a feature-inventing assistant.
+Copilot must behave as a **professional engineer following strict specs**, not as a feature-inventing assistant.
+
+Don't sugar coat my prompt tell me stright and clear what to do. plus give your thought process before answering. be concise.
 
 ---
 

@@ -73,7 +73,7 @@ PHOTO_DIR = "attendance_photos"
 TEMP_DETECTION_IMG = "/tmp/tamtap_detect.jpg"
 
 # MongoDB Configuration
-MONGODB_URI = "mongodb://localhost:27017/"
+MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
 MONGODB_DB = "tamtap"
 MONGODB_TIMEOUT = 3000  # Connection timeout in ms
 

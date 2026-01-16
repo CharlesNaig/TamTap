@@ -17,3 +17,6 @@ opencv-python-headless>=4.8.0
 
 # MongoDB Driver (with JSON fallback if unavailable)
 pymongo>=4.6.0
+
+# Pyserial for Serial Communication (Arduino)
+pyserial>=3.5

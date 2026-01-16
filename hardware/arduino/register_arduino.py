@@ -446,16 +446,25 @@ class ArduinoNFCReader:
             )
             
             # Wait for Arduino reset (Arduino resets on serial connect)
-            time.sleep(2)
+            # Raspberry Pi may need longer wait time
+            logger.info("Waiting for Arduino to reset...")
+            time.sleep(3)
             
             # Clear buffer
             self.serial.reset_input_buffer()
             
+            # Send a newline to clear any partial commands
+            self.serial.write(b"\n")
+            time.sleep(0.2)
+            self.serial.reset_input_buffer()
+            
             # Wait for READY message
+            logger.info("Waiting for READY signal...")
             start_time = time.time()
             while time.time() - start_time < 5:
                 if self.serial.in_waiting:
                     response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                    logger.info("Arduino says: %s", response)
                     if response == "READY":
                         self.connected = True
                         logger.info("Arduino connected on %s", port)
@@ -466,7 +475,18 @@ class ArduinoNFCReader:
                         logger.error("Arduino: %s", response)
                 time.sleep(0.1)
             
-            logger.warning("Arduino connected but no READY received")
+            # Try sending PING to verify connection
+            logger.info("No READY received, trying PING...")
+            self.serial.write(b"PING\n")
+            time.sleep(0.3)
+            if self.serial.in_waiting:
+                response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                if response == "PONG":
+                    logger.info("Arduino responded to PING - connected!")
+                    self.connected = True
+                    return
+            
+            logger.warning("Arduino connected but no READY/PONG received")
             self.connected = True  # Proceed anyway
             
         except serial.SerialException as e:
@@ -503,22 +523,34 @@ class ArduinoNFCReader:
             # Clear buffer
             self.serial.reset_input_buffer()
             
-            # Send scan command
-            self.serial.write(b"SCAN\n")
-            
-            # Wait for ACK
-            ack_received = False
-            start_time = time.time()
-            while time.time() - start_time < 2:
-                if self.serial.in_waiting:
-                    response = self.serial.readline().decode('utf-8', errors='ignore').strip()
-                    if response == "ACK:SCANNING":
-                        ack_received = True
-                        break
-                time.sleep(0.05)
-            
-            if not ack_received:
-                logger.warning("No ACK from Arduino, proceeding anyway")
+            # Send scan command with retry
+            for attempt in range(3):
+                self.serial.write(b"SCAN\n")
+                
+                # Wait for ACK
+                ack_start = time.time()
+                while time.time() - ack_start < 1:
+                    if self.serial.in_waiting:
+                        response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                        logger.info("Arduino response: %s", response)
+                        if response == "ACK:SCANNING":
+                            logger.info("ACK received, scanning...")
+                            break
+                        elif response.startswith("CARD:"):
+                            # Card already detected!
+                            nfc_id = response.split(":", 1)[1]
+                            logger.info("NFC scanned: %s", nfc_id)
+                            return nfc_id
+                    time.sleep(0.05)
+                else:
+                    # No ACK received, retry
+                    if attempt < 2:
+                        logger.warning("No ACK (attempt %d), retrying...", attempt + 1)
+                        time.sleep(0.3)
+                        continue
+                    else:
+                        logger.warning("No ACK after 3 attempts, proceeding anyway")
+                break
             
             # Wait for card
             start_time = time.time()

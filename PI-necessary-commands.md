@@ -101,6 +101,13 @@ python3 -m venv .venv
 ```bash
 source .venv/bin/activate
 ```
+windows 11/10
+```
+.\venv\Scripts\activate.bat
+or
+.\venv\Scripts\Activate.ps1
+
+```
 
 Once activated, install packages safely:
 

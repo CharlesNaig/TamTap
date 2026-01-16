@@ -706,6 +706,8 @@ def process_card(nfc_id):
     """
     Process card tap through state machine:
     CARD_DETECTED → CAMERA_ACTIVE → SUCCESS|FAIL → IDLE
+    
+    Flow: Check user first → Face detection → Photo → Save
     """
     global current_state
     
@@ -713,25 +715,19 @@ def process_card(nfc_id):
     
     # === STATE: CARD_DETECTED ===
     current_state = State.CARD_DETECTED
-    card_detected_state()
     
-    # === STATE: CAMERA_ACTIVE ===
-    current_state = State.CAMERA_ACTIVE
-    
-    # Person detection
-    if not detect_person():
-        # === STATE: FAIL ===
-        current_state = State.FAIL
-        no_face_state()
-        current_state = State.IDLE
-        return False
+    # *** CHECK USER FIRST before any camera operations ***
+    lcd.show("CHECKING CARD", "PLEASE WAIT...")
+    led_on(GPIO_GREEN_LED)
     
     # Look up user in database
     name, role, user_data = db.lookup_user(nfc_id)
     
     if name is None:
+        # User not registered - reject immediately
         logger.warning("Unknown NFC ID: %s", nfc_id)
-        lcd.show("UNKNOWN CARD", "REGISTER FIRST")
+        led_off(GPIO_GREEN_LED)
+        lcd.show("USER NOT FOUND", "REGISTER FIRST")
         led_on(GPIO_RED_LED)
         beep(count=2, duration=0.2, pause=0.1)
         time.sleep(1.5)
@@ -741,6 +737,7 @@ def process_card(nfc_id):
     
     # Check if already logged today
     if db.is_already_logged_today(nfc_id):
+        led_off(GPIO_GREEN_LED)
         lcd.show("ALREADY LOGGED", name[:LCD_WIDTH])
         led_on(GPIO_GREEN_LED)
         beep(count=1, duration=0.3)
@@ -748,6 +745,24 @@ def process_card(nfc_id):
         led_off(GPIO_GREEN_LED)
         current_state = State.IDLE
         return True
+    
+    # User found - show welcome and proceed to camera
+    logger.info("User found: %s (%s)", name, role)
+    lcd.show("HELLO " + name[:10], "FACE CAMERA")
+    led_off(GPIO_GREEN_LED)
+    time.sleep(0.5)
+    
+    # === STATE: CAMERA_ACTIVE ===
+    current_state = State.CAMERA_ACTIVE
+    card_detected_state()
+    
+    # Person detection (face verification)
+    if not detect_person():
+        # === STATE: FAIL ===
+        current_state = State.FAIL
+        no_face_state()
+        current_state = State.IDLE
+        return False
     
     # Take attendance photo (required for dashboard)
     lcd.show("TAKING PHOTO", "SMILE!")

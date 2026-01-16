@@ -4,8 +4,10 @@
 **Purpose:** WiFi management, IP discovery, Python environment setup, and auto-start configuration for TAMTAP.
 
 ## naig ip on tamtap
+
 `ssh 10.43.13.49`
 
+---
 
 ## 📶 WiFi Management (nmcli)
 
@@ -86,6 +88,36 @@ sudo nmap -sn 192.168.254.1/24
 
 ---
 
+## 📤 File Transfer with SCP
+
+### 📁 Copy Files FROM Raspberry Pi to Local Machine
+
+```bash
+scp pi@10.43.13.49:/path/to/file /local/destination/
+```
+
+### 📂 Copy Entire Directory FROM Raspberry Pi
+
+```bash
+scp -r pi@10.43.13.49:/path/to/directory /local/destination/
+```
+
+### 📥 Copy Files TO Raspberry Pi from Local Machine
+
+```bash
+scp /local/file pi@10.43.13.49:/home/pi/tamtap/
+```
+
+### 📦 Copy Entire Directory TO Raspberry Pi
+
+```bash
+scp -r /local/directory pi@10.43.13.49:/home/pi/tamtap/
+```
+
+> Replace `10.43.13.49` with current TAMTAP IP address
+
+---
+
 ## 🐍 Python Virtual Environment (Recommended)
 
 ### 📦 Create Virtual Environment
@@ -101,12 +133,17 @@ python3 -m venv .venv
 ```bash
 source .venv/bin/activate
 ```
-windows 11/10
-```
-.\venv\Scripts\activate.bat
-or
-.\venv\Scripts\Activate.ps1
 
+windows 11/10
+
+```bash
+.\venv\Scripts\activate.bat
+```
+
+or
+
+```bash
+.\venv\Scripts\Activate.ps1
 ```
 
 Once activated, install packages safely:
@@ -136,8 +173,8 @@ This avoids re-cloning and keeps deployments clean.
 git status
 ```
 
-* Shows modified files
-* Confirms current branch
+- Shows modified files
+- Confirms current branch
 
 ---
 
@@ -147,8 +184,8 @@ git status
 git fetch origin
 ```
 
-* Downloads updates
-* Does NOT modify local files yet
+- Downloads updates
+- Does NOT modify local files yet
 
 ---
 
@@ -168,8 +205,8 @@ git log HEAD..origin/main --oneline
 git pull origin main
 ```
 
-* Fetches + merges latest changes
-* Use when Raspberry Pi has **no local edits**
+- Fetches + merges latest changes
+- Use when Raspberry Pi has **no local edits**
 
 ---
 
@@ -181,9 +218,9 @@ git pull origin main
 git stash pop
 ```
 
-* Temporarily saves local edits
-* Applies updates
-* Restores local changes
+- Temporarily saves local edits
+- Applies updates
+- Restores local changes
 
 ---
 
@@ -198,8 +235,8 @@ git reset --hard origin/main
 
 Use only if:
 
-* Code is broken
-* Pi must match GitHub exactly
+- Code is broken
+- Pi must match GitHub exactly
 
 ---
 
@@ -220,17 +257,17 @@ sudo systemctl restart tamtap
 sudo systemctl status tamtap
 ```
 
-* Confirm service is running
-* Check logs if needed
+- Confirm service is running
+- Check logs if needed
 
 ---
 
 ## ✅ Git Update Summary
 
-* `git fetch` → check for updates
-* `git pull` → apply updates
-* `git stash` → protect local changes
-* `git reset --hard` → force sync
+- `git fetch` → check for updates
+- `git pull` → apply updates
+- `git stash` → protect local changes
+- `git reset --hard` → force sync
 
 ---
 
@@ -305,5 +342,7 @@ sudo systemctl restart tamtap
 
 - 📶 WiFi managed via `nmcli`
 - 🌐 IP discovery via `ip addr` + `nmap`
+- 📤 File transfer via `scp` (secure copy)
 - 🐍 Python isolation using `.venv`
 - ⚙️ systemd ensures **plug-and-play readiness**
+

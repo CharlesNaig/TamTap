@@ -1,0 +1,16 @@
+{
+  "students": {
+    "2710951593": {
+      "email": "r2026001@feuroosevelt.edu.ph",
+      "first_name": "Charles",
+      "last_name": "Marcelo",
+      "name": "Charles Marcelo",
+      "grade": "12",
+      "section": "ICT B",
+      "registered": "2026-01-16 21:30:11"
+    }
+  },
+  "teachers": {},
+  "attendance": [],
+  "pending_attendance": []
+}

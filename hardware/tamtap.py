@@ -460,6 +460,7 @@ class Database:
         
         # Add user details if available
         if user_data:
+            record["tamtap_id"] = user_data.get("tamtap_id", "")
             record["email"] = user_data.get("email", "")
             record["first_name"] = user_data.get("first_name", "")
             record["last_name"] = user_data.get("last_name", "")

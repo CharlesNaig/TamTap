@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-TAMTAP v6.3 REGISTRATION CLI
-Student/Teacher Registration + NFC Integration
+TAMTAP v6.3 REGISTRATION CLI - ARDUINO VERSION
+Student/Teacher Registration + NFC Integration via Arduino Uno
 MongoDB with JSON fallback for offline mode
-CLI version for headless Raspberry Pi
+CLI version for Windows/Linux/Mac with Arduino RFID reader
+
+Hardware: Arduino Uno + RC522 RFID Module
+Communication: Serial (USB)
 """
 
 import json
@@ -11,10 +14,17 @@ import os
 import sys
 import signal
 import logging
+import time
 from datetime import datetime
 
-import RPi.GPIO as GPIO
-from mfrc522 import SimpleMFRC522
+# Serial communication for Arduino
+try:
+    import serial
+    import serial.tools.list_ports
+    SERIAL_AVAILABLE = True
+except ImportError:
+    SERIAL_AVAILABLE = False
+    print("[!] pyserial not installed. Run: pip install pyserial")
 
 # MongoDB support (optional - fallback to JSON if unavailable)
 try:
@@ -42,9 +52,9 @@ MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
 MONGODB_NAME = "tamtap"
 MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
 
-# GPIO setup for RFID
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
+# Arduino Serial settings
+ARDUINO_BAUD_RATE = 9600
+ARDUINO_TIMEOUT = 2  # seconds for serial read timeout
 
 # ========================================
 # DATABASE CLASS (MongoDB + JSON Fallback)
@@ -249,6 +259,7 @@ class Database:
         # Get from MongoDB
         if self.is_connected():
             try:
+                # Find highest tamtap_id
                 for collection in ['students', 'teachers']:
                     cursor = self.mongo_db[collection].find({}, {"tamtap_id": 1}).sort("tamtap_id", -1).limit(1)
                     for doc in cursor:
@@ -265,6 +276,7 @@ class Database:
         json_next = data.get("next_tamtap_id", 1)
         next_id = max(next_id, json_next)
         
+        # Check all existing IDs to be safe
         for user in data.get("students", {}).values():
             try:
                 user_id = int(user.get("tamtap_id", "0"))
@@ -370,55 +382,198 @@ class Database:
             self.mongo_client.close()
             logger.info("MongoDB connection closed")
 
+
 # ========================================
-# NFC READER
+# ARDUINO NFC READER (Serial Communication)
 # ========================================
-class NFCReader:
-    """NFC Reader wrapper with error handling"""
+class ArduinoNFCReader:
+    """Arduino-based NFC Reader via Serial communication"""
     
-    def __init__(self):
-        self.reader = None
+    def __init__(self, port=None):
+        self.serial = None
+        self.port = port
+        self.connected = False
+        
+        if not SERIAL_AVAILABLE:
+            logger.error("pyserial not available - install with: pip install pyserial")
+            return
+        
+        self._connect(port)
+    
+    def _find_arduino_port(self):
+        """Auto-detect Arduino port"""
+        ports = serial.tools.list_ports.comports()
+        
+        # Common Arduino identifiers
+        arduino_keywords = ['arduino', 'ch340', 'ch341', 'usb serial', 'usb-serial', 'ftdi']
+        
+        for port in ports:
+            port_desc = f"{port.description} {port.manufacturer or ''}".lower()
+            for keyword in arduino_keywords:
+                if keyword in port_desc:
+                    logger.info("Found Arduino on: %s (%s)", port.device, port.description)
+                    return port.device
+        
+        # If no Arduino found, list all ports
+        if ports:
+            logger.warning("Arduino not auto-detected. Available ports:")
+            for port in ports:
+                logger.info("  - %s: %s", port.device, port.description)
+            # Return first available port as fallback
+            return ports[0].device
+        
+        return None
+    
+    def _connect(self, port=None):
+        """Connect to Arduino"""
+        if not SERIAL_AVAILABLE:
+            return
+        
         try:
-            self.reader = SimpleMFRC522()
-            logger.info("NFC reader initialized")
+            # Find port if not specified
+            if port is None:
+                port = self._find_arduino_port()
+            
+            if port is None:
+                logger.error("No serial ports found!")
+                return
+            
+            self.port = port
+            self.serial = serial.Serial(
+                port=port,
+                baudrate=ARDUINO_BAUD_RATE,
+                timeout=ARDUINO_TIMEOUT
+            )
+            
+            # Wait for Arduino reset (Arduino resets on serial connect)
+            time.sleep(2)
+            
+            # Clear buffer
+            self.serial.reset_input_buffer()
+            
+            # Wait for READY message
+            start_time = time.time()
+            while time.time() - start_time < 5:
+                if self.serial.in_waiting:
+                    response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                    if response == "READY":
+                        self.connected = True
+                        logger.info("Arduino connected on %s", port)
+                        return
+                    elif response.startswith("INFO:"):
+                        logger.info("Arduino: %s", response)
+                    elif response.startswith("ERROR:"):
+                        logger.error("Arduino: %s", response)
+                time.sleep(0.1)
+            
+            logger.warning("Arduino connected but no READY received")
+            self.connected = True  # Proceed anyway
+            
+        except serial.SerialException as e:
+            logger.error("Serial connection failed: %s", e)
+            self.serial = None
         except Exception as e:
-            logger.error("NFC reader init failed: %s", e)
+            logger.error("Arduino connection error: %s", e)
+            self.serial = None
+    
+    def is_connected(self):
+        """Check if Arduino is connected"""
+        if not self.serial or not self.connected:
+            return False
+        try:
+            self.serial.write(b"PING\n")
+            time.sleep(0.1)
+            if self.serial.in_waiting:
+                response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                return response == "PONG"
+        except Exception:
+            self.connected = False
+        return False
     
     def scan_blocking(self, timeout=30):
-        """Blocking NFC scan with timeout message"""
-        if not self.reader:
+        """Blocking NFC scan with timeout"""
+        if not self.serial or not self.connected:
+            logger.error("Arduino not connected")
             return None
         
         print(f"\n[*] Tap NFC card now... (waiting {timeout}s)")
         print("[*] Press Ctrl+C to cancel\n")
         
         try:
-            nfc_id, text = self.reader.read()
-            if nfc_id:
-                logger.info("NFC scanned: %s", nfc_id)
-                return str(nfc_id)
+            # Clear buffer
+            self.serial.reset_input_buffer()
+            
+            # Send scan command
+            self.serial.write(b"SCAN\n")
+            
+            # Wait for ACK
+            ack_received = False
+            start_time = time.time()
+            while time.time() - start_time < 2:
+                if self.serial.in_waiting:
+                    response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                    if response == "ACK:SCANNING":
+                        ack_received = True
+                        break
+                time.sleep(0.05)
+            
+            if not ack_received:
+                logger.warning("No ACK from Arduino, proceeding anyway")
+            
+            # Wait for card
+            start_time = time.time()
+            while time.time() - start_time < timeout:
+                if self.serial.in_waiting:
+                    response = self.serial.readline().decode('utf-8', errors='ignore').strip()
+                    
+                    if response.startswith("CARD:"):
+                        nfc_id = response.split(":", 1)[1]
+                        logger.info("NFC scanned: %s", nfc_id)
+                        return nfc_id
+                
+                time.sleep(0.05)
+            
+            # Timeout - stop scanning
+            self.serial.write(b"STOP\n")
+            print("[!] Timeout - no card detected")
+            return None
+            
         except KeyboardInterrupt:
             print("\n[!] Scan cancelled")
+            if self.serial:
+                self.serial.write(b"STOP\n")
             return None
         except Exception as e:
             logger.error("NFC scan error: %s", e)
-        
-        return None
+            return None
+    
+    def close(self):
+        """Close serial connection"""
+        if self.serial:
+            try:
+                self.serial.write(b"STOP\n")
+                self.serial.close()
+            except Exception:
+                pass
+            logger.info("Arduino connection closed")
+
 
 # ========================================
 # CLI INTERFACE
 # ========================================
 def clear_screen():
     """Clear terminal screen"""
-    os.system('clear' if os.name != 'nt' else 'cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
-def print_header(db):
-    """Print application header with DB status"""
+def print_header(db, nfc_reader):
+    """Print application header with DB and Arduino status"""
     print("=" * 50)
     print("   TAMTAP v6.3 - REGISTRATION SYSTEM")
-    print("   NFC-Based Attendance | CLI Version")
+    print("   NFC-Based Attendance | Arduino CLI Version")
     db_status = "[MongoDB]" if db.is_connected() else "[JSON Fallback]"
+    arduino_status = f"[Arduino: {nfc_reader.port}]" if nfc_reader.connected else "[Arduino: NOT CONNECTED]"
     print(f"   Database: {db_status}")
+    print(f"   Reader:   {arduino_status}")
     print("=" * 50)
 
 def print_menu():
@@ -429,7 +584,8 @@ def print_menu():
     print("  2. Register Teacher")
     print("  3. List All Users")
     print("  4. Delete User")
-    print("  5. Exit")
+    print("  5. Reconnect Arduino")
+    print("  6. Exit")
     print("-" * 30)
 
 def get_input(prompt, required=True, max_length=50):
@@ -459,7 +615,7 @@ def validate_email(email):
 def register_user(role, db, nfc_reader):
     """Register a new student or teacher"""
     clear_screen()
-    print_header(db)
+    print_header(db, nfc_reader)
     
     role_upper = role.upper()
     print(f"\n[REGISTER {role_upper}]")
@@ -479,6 +635,11 @@ def register_user(role, db, nfc_reader):
         if nfc_id is None:
             return False
     else:
+        if not nfc_reader.connected:
+            print("[!] Arduino not connected. Use 'manual' mode or reconnect.")
+            input("\nPress Enter to continue...")
+            return False
+        
         nfc_id = nfc_reader.scan_blocking()
         if nfc_id is None:
             print("[!] No card detected")
@@ -508,9 +669,11 @@ def register_user(role, db, nfc_reader):
             return False
         
         if not tamtap_input:
+            # Use auto-generated ID
             tamtap_id = next_id_str
             break
         else:
+            # Validate manual input (must be numeric)
             try:
                 tamtap_num = int(tamtap_input)
                 if tamtap_num < 1:
@@ -518,6 +681,7 @@ def register_user(role, db, nfc_reader):
                     continue
                 tamtap_id = str(tamtap_num).zfill(3)
                 
+                # Check if already exists
                 if db.tamtap_id_exists(tamtap_id):
                     print(f"[!] TAMTAP ID {tamtap_id} already exists!")
                     continue
@@ -599,10 +763,10 @@ def register_user(role, db, nfc_reader):
     input("\nPress Enter to continue...")
     return True
 
-def list_users(db):
+def list_users(db, nfc_reader):
     """List all registered users"""
     clear_screen()
-    print_header(db)
+    print_header(db, nfc_reader)
     print("\n[REGISTERED USERS]")
     print("-" * 60)
     
@@ -656,7 +820,7 @@ def list_users(db):
 def delete_user(db, nfc_reader):
     """Delete a registered user"""
     clear_screen()
-    print_header(db)
+    print_header(db, nfc_reader)
     print("\n[DELETE USER]")
     print("-" * 30)
     
@@ -671,6 +835,11 @@ def delete_user(db, nfc_reader):
         if nfc_id is None:
             return False
     else:
+        if not nfc_reader.connected:
+            print("[!] Arduino not connected. Use 'manual' mode or reconnect.")
+            input("\nPress Enter to continue...")
+            return False
+        
         nfc_id = nfc_reader.scan_blocking()
         if nfc_id is None:
             print("[!] No card detected")
@@ -713,23 +882,74 @@ def delete_user(db, nfc_reader):
     input("\nPress Enter to continue...")
     return True
 
+def reconnect_arduino(nfc_reader):
+    """Reconnect to Arduino"""
+    clear_screen()
+    print("\n[RECONNECT ARDUINO]")
+    print("-" * 30)
+    
+    # List available ports
+    if SERIAL_AVAILABLE:
+        ports = serial.tools.list_ports.comports()
+        if ports:
+            print("\nAvailable ports:")
+            for i, port in enumerate(ports, 1):
+                print(f"  {i}. {port.device} - {port.description}")
+            print()
+            
+            choice = get_input("> Enter port number (or press Enter for auto): ", required=False)
+            
+            if choice is None:
+                return nfc_reader
+            
+            selected_port = None
+            if choice:
+                try:
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(ports):
+                        selected_port = ports[idx].device
+                except ValueError:
+                    # Treat as port name
+                    selected_port = choice
+            
+            # Close existing connection
+            nfc_reader.close()
+            
+            # Create new connection
+            new_reader = ArduinoNFCReader(port=selected_port)
+            
+            if new_reader.connected:
+                print(f"\n[SUCCESS] Connected to {new_reader.port}")
+            else:
+                print("\n[ERROR] Failed to connect")
+            
+            input("\nPress Enter to continue...")
+            return new_reader
+        else:
+            print("\n[ERROR] No serial ports found")
+    else:
+        print("\n[ERROR] pyserial not installed")
+    
+    input("\nPress Enter to continue...")
+    return nfc_reader
+
 def main():
     """Main entry point"""
-    logger.info("Starting TAMTAP v6.3 Registration CLI...")
+    logger.info("Starting TAMTAP v6.3 Registration CLI (Arduino Version)...")
     
     # Initialize database (MongoDB with JSON fallback)
     db = Database()
     
-    # Initialize NFC reader
-    nfc_reader = NFCReader()
+    # Initialize Arduino NFC reader
+    nfc_reader = ArduinoNFCReader()
     
     try:
         while True:
             clear_screen()
-            print_header(db)
+            print_header(db, nfc_reader)
             print_menu()
             
-            choice = get_input("\n> Select option (1-5): ", required=False)
+            choice = get_input("\n> Select option (1-6): ", required=False)
             
             if choice is None:
                 continue
@@ -739,10 +959,12 @@ def main():
             elif choice == '2':
                 register_user("teacher", db, nfc_reader)
             elif choice == '3':
-                list_users(db)
+                list_users(db, nfc_reader)
             elif choice == '4':
                 delete_user(db, nfc_reader)
             elif choice == '5':
+                nfc_reader = reconnect_arduino(nfc_reader)
+            elif choice == '6':
                 print("\n[*] Goodbye!")
                 break
             else:
@@ -753,8 +975,9 @@ def main():
         print("\n\n[*] Interrupted - Exiting...")
     finally:
         db.close()
-        GPIO.cleanup()
+        nfc_reader.close()
         logger.info("Registration CLI closed")
+
 
 # ========================================
 # SIGNAL HANDLER
@@ -762,11 +985,11 @@ def main():
 def signal_handler(sig, frame):
     """Handle shutdown signals"""
     print("\n\n[*] Shutdown signal received")
-    GPIO.cleanup()
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
 
 # ========================================
 # RUN

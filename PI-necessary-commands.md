@@ -3,6 +3,10 @@
 **FEU Roosevelt Marikina | Grade 12 ICT Capstone**  
 **Purpose:** WiFi management, IP discovery, Python environment setup, and auto-start configuration for TAMTAP.
 
+## naig ip on tamtap
+`ssh 10.43.13.49`
+
+
 ## 📶 WiFi Management (nmcli)
 
 ### 🔍 List Saved WiFi Connections

@@ -21,6 +21,11 @@ import logging
 import threading
 import time
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load .env from project root
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
 # MongoDB support (optional - fallback to JSON if unavailable)
 try:
@@ -39,11 +44,11 @@ logger = logging.getLogger('TAMTAP_DB')
 # CONSTANTS
 # ========================================
 # JSON file path - in database/ folder relative to project root
-_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_DB_FILE = os.path.join(_PROJECT_ROOT, "database", "tamtap_users.json")
 
-MONGODB_URI = os.getenv("TAMTAP_MONGODB_URI", "mongodb://naig:naig1229@162.243.218.87:27017/")
-MONGODB_NAME = os.getenv("TAMTAP_MONGODB_NAME", "tamtap")
+# MongoDB from .env
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
+MONGODB_NAME = os.getenv("MONGODB_NAME", "tamtap")
 MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
 
 

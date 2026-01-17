@@ -18,6 +18,11 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 from enum import Enum
+from dotenv import load_dotenv
+
+# Load .env from project root
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
 import RPi.GPIO as GPIO
 from mfrc522 import SimpleMFRC522
@@ -76,15 +81,10 @@ MIN_FACE_SIZE = (80, 80)  # Minimum face size to detect
 # File Paths
 DB_FILE = "tamtap_users.json"
 # Photo directory: ../assets/attendance_photos/{date}/
-PHOTO_BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "attendance_photos")
+PHOTO_BASE_DIR = os.path.join(_PROJECT_ROOT, "assets", "attendance_photos")
 TEMP_DETECTION_IMG = "/tmp/tamtap_detect.jpg"
 
-# MongoDB Configuration
-MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
-MONGODB_DB = "tamtap"
-MONGODB_TIMEOUT = 3000  # Connection timeout in ms
-
-# API Server Configuration (for Socket.IO bridge)
+# API Server Configuration (from .env)
 API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
 API_TIMEOUT = 2  # seconds
 

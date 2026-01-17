@@ -3,17 +3,19 @@
  * Environment-based configuration for server and database
  */
 
+require('dotenv').config({ path: '../.env' });
+
 const config = {
     // Server Configuration
     server: {
-        port: process.env.PORT || 3000,
-        host: process.env.HOST || '0.0.0.0'  // Listen on all interfaces for LAN access
+        port: parseInt(process.env.API_SERVER_PORT) || 3000,
+        host: process.env.API_SERVER_HOST || '0.0.0.0'
     },
 
     // MongoDB Configuration
     mongodb: {
-        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017',
-        database: process.env.MONGODB_DB || 'tamtap',
+        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/',
+        database: process.env.MONGODB_NAME || 'tamtap',
         options: {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000,
@@ -23,7 +25,7 @@ const config = {
 
     // Photo Configuration
     photos: {
-        baseDir: process.env.PHOTO_DIR || '../assets/attendance_photos',
+        baseDir: '../assets/attendance_photos',
         maxAge: 86400000  // 1 day cache
     },
 

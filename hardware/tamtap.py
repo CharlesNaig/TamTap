@@ -767,7 +767,7 @@ def main():
     logger.info("=" * 50)
     
     # Database status
-    if db.mongo_available:
+    if db.use_mongodb:
         logger.info("Database: MongoDB connected")
     else:
         logger.info("Database: JSON fallback mode")

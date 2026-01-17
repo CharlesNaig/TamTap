@@ -7,64 +7,73 @@
 #  - Ensure correct working directory
 #  - Start the main TAMTAP application
 #
-# This script is designed for:
-#  - Manual execution
-#  - systemd auto-start usage
+# Usage:
+#  - Manual: ./startup.sh
+#  - Systemd: ExecStart=/home/charles/TamTap/startup.sh
 #
 # Author: Charles Giann Marcelo et al.
 # ============================================================
 
-# Exit immediately if a command fails
+# Exit immediately on error
 set -e
 
-# Define project directory
+# ============================================================
+# ABSOLUTE PATHS ONLY (systemd-safe, no ~ or relative paths)
+# ============================================================
 PROJECT_DIR="/home/charles/TamTap"
-
-# Define virtual environment path
 VENV_PATH="$PROJECT_DIR/.venv"
+VENV_PYTHON="$VENV_PATH/bin/python"
+MAIN_FILE="$PROJECT_DIR/hardware/tamtap.py"
 
-# Define main Python entry file
-MAIN_FILE="$PROJECT_DIR/main.py"
-
-# ------------------------------------------------------------
+# ============================================================
 # Step 1: Change to project directory
-# ------------------------------------------------------------
-cd "$PROJECT_DIR" || {
+# ============================================================
+if [ ! -d "$PROJECT_DIR" ]; then
   echo "[ERROR] Project directory not found: $PROJECT_DIR"
   exit 1
-}
+fi
+cd "$PROJECT_DIR"
+echo "[INFO] Working directory: $PROJECT_DIR"
 
-# ------------------------------------------------------------
+# ============================================================
 # Step 2: Verify virtual environment exists
-# ------------------------------------------------------------
+# ============================================================
 if [ ! -d "$VENV_PATH" ]; then
-  echo "[ERROR] Virtual environment not found."
-  echo "Run: python3 -m venv .venv && pip install -r requirements.txt"
+  echo "[ERROR] Virtual environment not found at: $VENV_PATH"
+  echo "[ERROR] Run: python3 -m venv .venv && source .venv/bin/activate && pip install -r hardware/requirements.txt"
   exit 1
 fi
 
-# ------------------------------------------------------------
-# Step 3: Activate virtual environment
-# ------------------------------------------------------------
+# ============================================================
+# Step 3: Verify venv Python executable exists
+# ============================================================
+if [ ! -f "$VENV_PYTHON" ]; then
+  echo "[ERROR] Python executable not found in venv: $VENV_PYTHON"
+  exit 1
+fi
+echo "[INFO] Using Python: $VENV_PYTHON"
+
+# ============================================================
+# Step 4: Activate virtual environment
+# ============================================================
 # shellcheck disable=SC1091
 source "$VENV_PATH/bin/activate"
+echo "[INFO] Virtual environment activated"
 
-# ------------------------------------------------------------
-# Step 4: Verify main application file exists
-# ------------------------------------------------------------
+# ============================================================
+# Step 5: Verify main application file exists
+# ============================================================
 if [ ! -f "$MAIN_FILE" ]; then
-  echo "[ERROR] main.py not found in project directory."
-  deactivate
+  echo "[ERROR] Main file not found: $MAIN_FILE"
   exit 1
 fi
+echo "[INFO] Main file verified: $MAIN_FILE"
 
-# ------------------------------------------------------------
-# Step 5: Start TAMTAP
-# ------------------------------------------------------------
+# ============================================================
+# Step 6: Start TAMTAP application
+# ============================================================
 echo "[INFO] Starting TAMTAP application..."
-python "$MAIN_FILE"
+"$VENV_PYTHON" "$MAIN_FILE"
 
-# ------------------------------------------------------------
-# Step 6: Deactivate virtual environment on exit
-# ------------------------------------------------------------
-deactivate
+# Note: Script will remain running while tamtap.py runs
+# systemd handles restart on exit

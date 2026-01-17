@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-TAMTAP v6.3 ADMIN CLI
+TAMTAP v7.1 ADMIN CLI
 Administrative Tools for TAMTAP Attendance System
+Uses shared Database module with MongoDB + JSON sync
 - Archive attendance records
 - Manage users (students/teachers)
 - View/export data
@@ -16,13 +17,8 @@ import logging
 import shutil
 from datetime import datetime, timedelta
 
-# MongoDB support (optional - fallback to JSON if unavailable)
-try:
-    from pymongo import MongoClient
-    from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-    MONGODB_AVAILABLE = True
-except ImportError:
-    MONGODB_AVAILABLE = False
+# Shared Database module
+from database import Database as SharedDatabase
 
 # ========================================
 # LOGGING CONFIGURATION
@@ -37,175 +33,20 @@ logger = logging.getLogger('TAMTAP_ADMIN')
 # ========================================
 # CONSTANTS
 # ========================================
-DB_FILE = "tamtap_users.json"
-ARCHIVE_DIR = "archives"
-PHOTO_DIR = "attendance_photos"
-MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
-MONGODB_NAME = "tamtap"
-MONGODB_TIMEOUT = 3000
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ARCHIVE_DIR = os.path.join(_PROJECT_ROOT, "database", "archives")
+PHOTO_DIR = os.path.join(_PROJECT_ROOT, "assets", "attendance_photos")
 
 # Create directories
 os.makedirs(ARCHIVE_DIR, exist_ok=True)
 os.makedirs(PHOTO_DIR, exist_ok=True)
 
+
 # ========================================
-# DATABASE CLASS
+# DATABASE CLASS (Extended)
 # ========================================
-class Database:
-    """Database handler with MongoDB primary and JSON fallback"""
-    
-    def __init__(self):
-        self.mongo_client = None
-        self.mongo_db = None
-        self.use_mongodb = False
-        self._init_mongodb()
-    
-    def _init_mongodb(self):
-        """Initialize MongoDB connection"""
-        if not MONGODB_AVAILABLE:
-            logger.warning("PyMongo not installed - using JSON fallback")
-            return
-        
-        try:
-            self.mongo_client = MongoClient(
-                MONGODB_URI,
-                serverSelectionTimeoutMS=MONGODB_TIMEOUT
-            )
-            self.mongo_client.admin.command('ping')
-            self.mongo_db = self.mongo_client[MONGODB_NAME]
-            self.use_mongodb = True
-            logger.info("MongoDB connected successfully")
-        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.warning("MongoDB connection failed: %s - using JSON fallback", e)
-            self.use_mongodb = False
-        except Exception as e:
-            logger.error("MongoDB init error: %s - using JSON fallback", e)
-            self.use_mongodb = False
-    
-    def _load_json(self):
-        """Load JSON database"""
-        try:
-            if os.path.exists(DB_FILE):
-                with open(DB_FILE, 'r') as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.error("JSON load error: %s", e)
-        return {
-            "students": {},
-            "teachers": {},
-            "attendance": [],
-            "pending_attendance": [],
-            "next_tamtap_id": 1
-        }
-    
-    def _save_json(self, data):
-        """Save JSON database"""
-        try:
-            with open(DB_FILE, 'w') as f:
-                json.dump(data, f, indent=2)
-            return True
-        except Exception as e:
-            logger.error("JSON save error: %s", e)
-            return False
-    
-    def is_connected(self):
-        """Check if MongoDB is connected"""
-        if not self.use_mongodb:
-            return False
-        try:
-            self.mongo_client.admin.command('ping')
-            return True
-        except Exception:
-            self.use_mongodb = False
-            return False
-    
-    def get_all_users(self):
-        """Get all users"""
-        if self.is_connected():
-            try:
-                students = list(self.mongo_db.students.find({}, {"_id": 0}))
-                teachers = list(self.mongo_db.teachers.find({}, {"_id": 0}))
-                return students, teachers
-            except Exception as e:
-                logger.error("MongoDB get_all_users error: %s", e)
-        
-        json_data = self._load_json()
-        students = [{"nfc_id": k, **v} for k, v in json_data.get("students", {}).items()]
-        teachers = [{"nfc_id": k, **v} for k, v in json_data.get("teachers", {}).items()]
-        return students, teachers
-    
-    def get_user(self, nfc_id):
-        """Get user by NFC ID"""
-        nfc_str = str(nfc_id)
-        
-        if self.is_connected():
-            try:
-                student = self.mongo_db.students.find_one({"nfc_id": nfc_str})
-                if student:
-                    return student, "student"
-                teacher = self.mongo_db.teachers.find_one({"nfc_id": nfc_str})
-                if teacher:
-                    return teacher, "teacher"
-                return None, None
-            except Exception as e:
-                logger.error("MongoDB get_user error: %s", e)
-        
-        data = self._load_json()
-        if nfc_str in data.get("students", {}):
-            return data["students"][nfc_str], "student"
-        if nfc_str in data.get("teachers", {}):
-            return data["teachers"][nfc_str], "teacher"
-        return None, None
-    
-    def delete_user(self, nfc_id):
-        """Delete user by NFC ID"""
-        nfc_str = str(nfc_id)
-        deleted = False
-        
-        json_data = self._load_json()
-        if nfc_str in json_data.get("students", {}):
-            del json_data["students"][nfc_str]
-            deleted = True
-        elif nfc_str in json_data.get("teachers", {}):
-            del json_data["teachers"][nfc_str]
-            deleted = True
-        
-        if deleted:
-            self._save_json(json_data)
-        
-        if self.is_connected():
-            try:
-                result = self.mongo_db.students.delete_one({"nfc_id": nfc_str})
-                if result.deleted_count == 0:
-                    self.mongo_db.teachers.delete_one({"nfc_id": nfc_str})
-            except Exception as e:
-                logger.warning("MongoDB delete error: %s", e)
-        
-        return deleted
-    
-    def get_attendance(self, date_filter=None):
-        """Get attendance records, optionally filtered by date"""
-        records = []
-        
-        if self.is_connected():
-            try:
-                query = {}
-                if date_filter:
-                    query["date"] = {"$regex": f"^{date_filter}"}
-                records = list(self.mongo_db.attendance.find(query, {"_id": 0}).sort("date", -1))
-            except Exception as e:
-                logger.error("MongoDB get_attendance error: %s", e)
-        
-        if not records:
-            json_data = self._load_json()
-            all_records = json_data.get("attendance", []) + json_data.get("pending_attendance", [])
-            if date_filter:
-                records = [r for r in all_records if r.get("date", "").startswith(date_filter)]
-            else:
-                records = all_records
-            records.sort(key=lambda x: x.get("date", ""), reverse=True)
-        
-        return records
+class Database(SharedDatabase):
+    """Extended Database with admin-specific methods"""
     
     def archive_attendance(self, date_str):
         """Archive attendance records for a specific date"""
@@ -215,7 +56,7 @@ class Database:
             return 0, None
         
         # Create archive file
-        archive_filename = f"{ARCHIVE_DIR}/attendance_{date_str.replace('-', '')}.json"
+        archive_filename = os.path.join(ARCHIVE_DIR, f"attendance_{date_str.replace('-', '')}.json")
         
         # Load existing archive if exists
         existing = []
@@ -240,11 +81,11 @@ class Database:
         return len(records), archive_filename
     
     def clear_attendance(self, date_str=None, clear_all=False):
-        """Clear attendance records"""
+        """Clear attendance records from both MongoDB and JSON"""
         deleted_count = 0
         
         # Clear from MongoDB
-        if self.is_connected():
+        if self._check_mongodb():
             try:
                 if clear_all:
                     result = self.mongo_db.attendance.delete_many({})
@@ -259,22 +100,22 @@ class Database:
                 logger.error("MongoDB clear error: %s", e)
         
         # Clear from JSON
-        json_data = self._load_json()
-        original_count = len(json_data.get("attendance", [])) + len(json_data.get("pending_attendance", []))
+        data = self._load_json()
+        original_count = len(data.get("attendance", [])) + len(data.get("pending_attendance", []))
         
         if clear_all:
-            json_data["attendance"] = []
-            json_data["pending_attendance"] = []
+            data["attendance"] = []
+            data["pending_attendance"] = []
         elif date_str:
-            json_data["attendance"] = [r for r in json_data.get("attendance", []) 
-                                       if not r.get("date", "").startswith(date_str)]
-            json_data["pending_attendance"] = [r for r in json_data.get("pending_attendance", []) 
-                                               if not r.get("date", "").startswith(date_str)]
+            data["attendance"] = [r for r in data.get("attendance", []) 
+                                  if not r.get("date", "").startswith(date_str)]
+            data["pending_attendance"] = [r for r in data.get("pending_attendance", []) 
+                                          if not r.get("date", "").startswith(date_str)]
         
-        new_count = len(json_data.get("attendance", [])) + len(json_data.get("pending_attendance", []))
+        new_count = len(data.get("attendance", [])) + len(data.get("pending_attendance", []))
         deleted_count = max(deleted_count, original_count - new_count)
         
-        self._save_json(json_data)
+        self._save_json(data)
         
         return deleted_count
     
@@ -284,26 +125,49 @@ class Database:
         
         today = datetime.now().strftime("%Y-%m-%d")
         today_attendance = self.get_attendance(today)
-        
         total_attendance = len(self.get_attendance())
         
-        # Count pending sync
-        json_data = self._load_json()
-        pending = len(json_data.get("pending_attendance", []))
+        # Get status from parent
+        status = self.get_status()
         
         return {
             "students": len(students),
             "teachers": len(teachers),
             "today_attendance": len(today_attendance),
             "total_attendance": total_attendance,
-            "pending_sync": pending,
-            "mongodb_connected": self.is_connected()
+            "pending_sync": status.get("pending_count", 0),
+            "mongodb_connected": status.get("mongodb_connected", False),
+            "last_sync": status.get("last_sync")
         }
     
-    def close(self):
-        """Close database connection"""
-        if self.mongo_client:
-            self.mongo_client.close()
+    def delete_all_users(self, role=None):
+        """Delete all users (or by role)"""
+        deleted = 0
+        
+        # Delete from MongoDB
+        if self._check_mongodb():
+            try:
+                if role == "student" or role is None:
+                    result = self.mongo_db.students.delete_many({})
+                    deleted += result.deleted_count
+                if role == "teacher" or role is None:
+                    result = self.mongo_db.teachers.delete_many({})
+                    deleted += result.deleted_count
+            except Exception as e:
+                logger.error("MongoDB delete all error: %s", e)
+        
+        # Delete from JSON
+        data = self._load_json()
+        if role == "student" or role is None:
+            deleted = max(deleted, len(data.get("students", {})))
+            data["students"] = {}
+        if role == "teacher" or role is None:
+            deleted = max(deleted, len(data.get("teachers", {})))
+            data["teachers"] = {}
+        
+        self._save_json(data)
+        
+        return deleted
 
 
 # ========================================
@@ -333,7 +197,7 @@ def print_header(db):
     """Print application header"""
     stats = db.get_stats()
     print("=" * 60)
-    print("   TAMTAP v6.3 - ADMIN CLI")
+    print("   TAMTAP v7.0 - ADMIN CLI")
     print("   System Administration & Maintenance Tools")
     db_status = "[MongoDB]" if stats["mongodb_connected"] else "[JSON Fallback]"
     print(f"   Database: {db_status}")

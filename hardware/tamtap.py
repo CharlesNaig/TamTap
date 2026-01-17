@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TAMTAP v6.3 - LCD Messages PERFECT SYNC
+TAMTAP v7.0 - LCD Messages PERFECT SYNC
 NFC-Based Attendance System | FEU Roosevelt Marikina
 State Machine: IDLE → CARD_DETECTED → CAMERA_ACTIVE → SUCCESS|FAIL → IDLE
 MongoDB with JSON fallback for offline mode
@@ -14,6 +14,8 @@ import sys
 import subprocess
 import logging
 import shutil
+import urllib.request
+import urllib.error
 from datetime import datetime
 from enum import Enum
 
@@ -29,6 +31,9 @@ try:
     MONGODB_AVAILABLE = True
 except ImportError:
     MONGODB_AVAILABLE = False
+
+# Database module (shared sync logic)
+from database import Database as SharedDatabase
     
 # ========================================
 # LOGGING CONFIGURATION
@@ -78,6 +83,10 @@ TEMP_DETECTION_IMG = "/tmp/tamtap_detect.jpg"
 MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
 MONGODB_DB = "tamtap"
 MONGODB_TIMEOUT = 3000  # Connection timeout in ms
+
+# API Server Configuration (for Socket.IO bridge)
+API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
+API_TIMEOUT = 2  # seconds
 
 # ========================================
 # 🔁 STATE MACHINE
@@ -284,283 +293,94 @@ def all_leds_off():
     GPIO.output(GPIO_RED_LED, GPIO.LOW)
 
 # ========================================
-# 💾 DATABASE CLASS (MongoDB + JSON Fallback)
+# 💾 DATABASE (Using Shared Module)
 # ========================================
-class Database:
+class Database(SharedDatabase):
     """
-    Database handler with MongoDB primary and JSON fallback.
-    Automatically syncs pending attendance when MongoDB becomes available.
+    Database wrapper for tamtap.py.
+    Extends SharedDatabase with tamtap-specific methods.
+    
+    Features:
+    - MongoDB primary, JSON cache/fallback
+    - Auto-sync: Pull from MongoDB on connect, push pending on reconnect
+    - Bidirectional sync keeps JSON always up-to-date
     """
-    
-    def __init__(self):
-        self.mongo_client = None
-        self.mongo_db = None
-        self.mongo_available = False
-        self.json_file = DB_FILE
-        self._init_json()
-        self._connect_mongodb()
-    
-    def _init_json(self):
-        """Initialize JSON file if it doesn't exist"""
-        if not os.path.exists(self.json_file):
-            self._save_json({
-                "students": {},
-                "teachers": {},
-                "attendance": [],
-                "pending_attendance": []
-            })
-            logger.info("Created new JSON database file")
-    
-    def _load_json(self):
-        """Load JSON database"""
-        try:
-            with open(self.json_file, 'r') as f:
-                data = json.load(f)
-                # Ensure all required keys exist
-                data.setdefault("students", {})
-                data.setdefault("teachers", {})
-                data.setdefault("attendance", [])
-                data.setdefault("pending_attendance", [])
-                return data
-        except Exception as e:
-            logger.error("JSON load error: %s", e)
-            return {"students": {}, "teachers": {}, "attendance": [], "pending_attendance": []}
-    
-    def _save_json(self, data):
-        """Save JSON database"""
-        try:
-            with open(self.json_file, 'w') as f:
-                json.dump(data, f, indent=2)
-        except Exception as e:
-            logger.error("JSON save error: %s", e)
-    
-    def _connect_mongodb(self):
-        """Attempt to connect to MongoDB"""
-        if not MONGODB_AVAILABLE:
-            logger.warning("pymongo not installed, using JSON fallback only")
-            return False
-        
-        try:
-            self.mongo_client = MongoClient(
-                MONGODB_URI,
-                serverSelectionTimeoutMS=MONGODB_TIMEOUT
-            )
-            # Test connection
-            self.mongo_client.admin.command('ping')
-            self.mongo_db = self.mongo_client[MONGODB_DB]
-            self.mongo_available = True
-            logger.info("MongoDB connected successfully")
-            
-            # Sync pending attendance if any
-            self._sync_pending_attendance()
-            
-            return True
-        except Exception as e:
-            logger.warning("MongoDB connection failed: %s (using JSON fallback)", e)
-            self.mongo_available = False
-            return False
-    
-    def _check_mongodb(self):
-        """Check if MongoDB is available, reconnect if needed"""
-        if not MONGODB_AVAILABLE:
-            return False
-        
-        if self.mongo_available:
-            try:
-                self.mongo_client.admin.command('ping')
-                return True
-            except Exception:
-                logger.warning("MongoDB connection lost, switching to JSON fallback")
-                self.mongo_available = False
-        else:
-            # Try to reconnect
-            if self._connect_mongodb():
-                logger.info("MongoDB reconnected")
-                return True
-        
-        return False
-    
-    def _sync_pending_attendance(self):
-        """Sync pending attendance records from JSON to MongoDB"""
-        if not self.mongo_available:
-            return
-        
-        data = self._load_json()
-        pending = data.get("pending_attendance", [])
-        
-        if not pending:
-            return
-        
-        synced_count = 0
-        failed = []
-        
-        for record in pending:
-            try:
-                # Check if record already exists in MongoDB
-                existing = self.mongo_db.attendance.find_one({
-                    "nfc_id": str(record.get("nfc_id", record.get("uid"))),
-                    "date": record.get("date", "")[:10]
-                })
-                
-                if not existing:
-                    # Insert to MongoDB
-                    self.mongo_db.attendance.insert_one(record)
-                synced_count += 1
-            except Exception as e:
-                logger.error("Failed to sync attendance record: %s", e)
-                failed.append(record)
-        
-        # Update JSON - keep only failed records in pending
-        data["pending_attendance"] = failed
-        self._save_json(data)
-        
-        if synced_count > 0:
-            logger.info("Synced %d pending attendance records to MongoDB", synced_count)
     
     def lookup_user(self, nfc_id):
         """
         Look up user by NFC ID.
         Returns: (name, role, user_data) or (None, None, None)
         """
-        nfc_str = str(nfc_id)
+        user_data, role = self.get_user(nfc_id)
         
-        # Try MongoDB first
-        if self._check_mongodb():
-            try:
-                # Check students collection
-                student = self.mongo_db.students.find_one({"nfc_id": nfc_str})
-                if student:
-                    name = f"{student.get('first_name', '')} {student.get('last_name', '')}".strip()
-                    if not name:
-                        name = student.get("name", "Unknown")
-                    return name, "student", student
-                
-                # Check teachers collection
-                teacher = self.mongo_db.teachers.find_one({"nfc_id": nfc_str})
-                if teacher:
-                    name = f"{teacher.get('first_name', '')} {teacher.get('last_name', '')}".strip()
-                    if not name:
-                        name = teacher.get("name", "Unknown")
-                    return name, "teacher", teacher
-                
-                return None, None, None
-            except Exception as e:
-                logger.error("MongoDB lookup error: %s", e)
-        
-        # Fallback to JSON
-        data = self._load_json()
-        
-        if nfc_str in data.get("students", {}):
-            user = data["students"][nfc_str]
-            name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
+        if user_data:
+            name = f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip()
             if not name:
-                name = user.get("name", "Unknown")
-            return name, "student", user
-        
-        if nfc_str in data.get("teachers", {}):
-            user = data["teachers"][nfc_str]
-            name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
-            if not name:
-                name = user.get("name", "Unknown")
-            return name, "teacher", user
+                name = user_data.get("name", "Unknown")
+            return name, role, user_data
         
         return None, None, None
     
-    def is_already_logged_today(self, nfc_id):
-        """Check if user already logged attendance today"""
-        nfc_str = str(nfc_id)
-        today = datetime.now().strftime("%Y-%m-%d")
-        
-        # Try MongoDB first
-        if self._check_mongodb():
-            try:
-                existing = self.mongo_db.attendance.find_one({
-                    "nfc_id": nfc_str,
-                    "date": {"$regex": f"^{today}"}
-                })
-                if existing:
-                    return True
-            except Exception as e:
-                logger.error("MongoDB attendance check error: %s", e)
-        
-        # Also check JSON (for pending records)
-        data = self._load_json()
-        
-        for record in data.get("attendance", []) + data.get("pending_attendance", []):
-            record_nfc = str(record.get("nfc_id", record.get("uid", "")))
-            record_date = record.get("date", "")[:10]
-            if record_nfc == nfc_str and record_date == today:
-                return True
-        
-        return False
-    
     def save_attendance_record(self, nfc_id, name, role, photo_path, user_data=None):
-        """
-        Save attendance record to MongoDB with JSON fallback.
-        Returns True if saved successfully.
-        """
-        if self.is_already_logged_today(nfc_id):
-            logger.info("User %s already logged today", name)
-            return False
-        
-        now = datetime.now()
-        photo_filename = os.path.basename(photo_path) if photo_path else None
-        
-        # Build record with new schema
-        record = {
-            "nfc_id": str(nfc_id),
-            "name": name,
-            "role": role,
-            "date": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "time": now.strftime("%H:%M:%S"),
-            "photo": photo_filename,
-            "photo_path": photo_path,
-            "session": "AM" if now.hour < 12 else "PM",
-            "status": "present"
-        }
-        
-        # Add user details if available
-        if user_data:
-            record["tamtap_id"] = user_data.get("tamtap_id", "")
-            record["email"] = user_data.get("email", "")
-            record["first_name"] = user_data.get("first_name", "")
-            record["last_name"] = user_data.get("last_name", "")
-            record["grade"] = user_data.get("grade", "")
-            record["section"] = user_data.get("section", "")
-        
-        # Try MongoDB first
-        if self._check_mongodb():
-            try:
-                self.mongo_db.attendance.insert_one(record)
-                logger.info("Attendance saved to MongoDB: %s (%s)", name, role)
-                
-                # Also save to JSON as backup
-                data = self._load_json()
-                data["attendance"].append(record)
-                self._save_json(data)
-                
-                return True
-            except Exception as e:
-                logger.error("MongoDB save error: %s", e)
-        
-        # Fallback: Save to JSON pending queue
-        data = self._load_json()
-        data["pending_attendance"].append(record)
-        self._save_json(data)
-        logger.info("Attendance saved to JSON (pending sync): %s (%s)", name, role)
-        
-        return True
-    
-    def close(self):
-        """Close database connections"""
-        if self.mongo_client:
-            try:
-                self.mongo_client.close()
-            except Exception:
-                pass
+        """Save attendance record - wrapper for save_attendance"""
+        return self.save_attendance(nfc_id, name, role, photo_path, user_data)
 
 # Initialize database
 db = Database()
+
+# ========================================
+# API SERVER NOTIFICATION (Socket.IO Bridge)
+# ========================================
+def notify_api_server(endpoint, data):
+    """
+    Send HTTP POST to Express API server for Socket.IO broadcast.
+    Non-blocking with short timeout - failure doesn't affect core operation.
+    
+    Args:
+        endpoint: API path (e.g., '/api/hardware/attendance')
+        data: Dictionary to send as JSON
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        url = f"{API_SERVER_URL}{endpoint}"
+        json_data = json.dumps(data).encode('utf-8')
+        
+        req = urllib.request.Request(
+            url,
+            data=json_data,
+            headers={'Content-Type': 'application/json'},
+            method='POST'
+        )
+        
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
+            if response.status == 200:
+                logger.info("API notified: %s", endpoint)
+                return True
+            else:
+                logger.warning("API response: %s", response.status)
+                return False
+                
+    except urllib.error.URLError as e:
+        # Server not running or network issue - not critical
+        logger.debug("API server unreachable: %s", e.reason)
+        return False
+    except Exception as e:
+        logger.debug("API notification failed: %s", e)
+        return False
+
+def notify_attendance_success(record):
+    """Notify API server of successful attendance"""
+    notify_api_server('/api/hardware/attendance', record)
+
+def notify_attendance_fail(nfc_id, name, reason):
+    """Notify API server of failed attendance"""
+    notify_api_server('/api/hardware/fail', {
+        'nfc_id': str(nfc_id),
+        'name': name,
+        'reason': reason
+    })
 
 # ========================================
 # CAMERA & FACE DETECTION (OpenCV + Haar Cascade)
@@ -849,6 +669,10 @@ def process_card(nfc_id):
         # === STATE: FAIL ===
         current_state = State.FAIL
         no_face_state()
+        
+        # Notify API server of failure
+        notify_attendance_fail(nfc_id, name, "No face detected")
+        
         current_state = State.IDLE
         return False
     
@@ -864,6 +688,10 @@ def process_card(nfc_id):
         time.sleep(1.5)
         led_off(GPIO_RED_LED)
         current_state = State.IDLE
+        
+        # Notify API server of failure
+        notify_attendance_fail(nfc_id, name, "Photo capture failed")
+        
         return False
     
     # Save attendance record with photo
@@ -871,6 +699,20 @@ def process_card(nfc_id):
         # === STATE: SUCCESS ===
         current_state = State.SUCCESS
         success_state(name)
+        
+        # Notify API server for Socket.IO broadcast
+        notify_attendance_success({
+            "nfc_id": str(nfc_id),
+            "tamtap_id": user_data.get("tamtap_id", "") if user_data else "",
+            "name": name,
+            "role": role,
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time": datetime.now().strftime("%H:%M:%S"),
+            "session": "AM" if datetime.now().hour < 12 else "PM",
+            "photo": os.path.basename(photo_path) if photo_path else None,
+            "grade": user_data.get("grade", "") if user_data else "",
+            "section": user_data.get("section", "") if user_data else ""
+        })
     else:
         logger.warning("Failed to save attendance for %s", name)
     
@@ -917,11 +759,11 @@ signal.signal(signal.SIGTERM, signal_handler)
 # 🚀 MAIN ENTRY POINT
 # ========================================
 def main():
-    """Main entry point for TAMTAP v6.3"""
+    """Main entry point for TAMTAP v7.0"""
     global current_state
     
     logger.info("=" * 50)
-    logger.info("🚀 TAMTAP v6.3 - MongoDB + LCD SYNC STARTING")
+    logger.info("🚀 TAMTAP v7.0 - MongoDB + LCD SYNC STARTING")
     logger.info("=" * 50)
     
     # Database status
@@ -931,7 +773,7 @@ def main():
         logger.info("Database: JSON fallback mode")
     
     # Startup feedback
-    lcd.show("TAMTAP v6.3", "STARTING...")
+    lcd.show("TAMTAP v7.0", "STARTING...")
     led_on(GPIO_GREEN_LED)
     beep(count=2, duration=0.1, pause=0.1)
     time.sleep(0.5)

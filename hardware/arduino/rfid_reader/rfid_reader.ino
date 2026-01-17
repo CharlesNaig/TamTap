@@ -1,5 +1,5 @@
 /**
- * TAMTAP v6.3 - Arduino RFID Reader
+ * TAMTAP v7.0 - Arduino RFID Reader
  * RC522 RFID Module for Registration System
  * 
  * Wiring for Arduino Uno + RC522:

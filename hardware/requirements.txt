@@ -1,4 +1,4 @@
-# TAMTAP v6.3 - Hardware Dependencies
+# TAMTAP v7.0 - Hardware Dependencies
 # Install: pip install -r requirements.txt
 # Note: Run inside virtual environment (.venv)
 

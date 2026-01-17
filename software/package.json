@@ -1,0 +1,21 @@
+{
+  "name": "tamtap-server",
+  "version": "1.0.0",
+  "description": "TAMTAP Attendance System - Express.js API Server",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongodb": "^6.3.0",
+    "socket.io": "^4.7.4",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "author": "Charles Giann Marcelo",
+  "license": "MIT"
+}

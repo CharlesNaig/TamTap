@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
 """
-TAMTAP v6.3 REGISTRATION CLI - ARDUINO VERSION
+TAMTAP v7.1 REGISTRATION CLI - ARDUINO VERSION
 Student/Teacher Registration + NFC Integration via Arduino Uno
-MongoDB with JSON fallback for offline mode
-CLI version for Windows/Linux/Mac with Arduino RFID reader
+Uses shared Database module with MongoDB + JSON sync
 
 Hardware: Arduino Uno + RC522 RFID Module
 Communication: Serial (USB)
 """
 
-import json
 import os
 import sys
 import signal
 import logging
 import time
 from datetime import datetime
+
+# Add parent directory to path for database import
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Serial communication for Arduino
 try:
@@ -26,13 +27,8 @@ except ImportError:
     SERIAL_AVAILABLE = False
     print("[!] pyserial not installed. Run: pip install pyserial")
 
-# MongoDB support (optional - fallback to JSON if unavailable)
-try:
-    from pymongo import MongoClient
-    from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
-    MONGODB_AVAILABLE = True
-except ImportError:
-    MONGODB_AVAILABLE = False
+# Shared Database module
+from database import Database
 
 # ========================================
 # LOGGING CONFIGURATION
@@ -44,343 +40,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger('TAMTAP_REG')
 
-# ========================================
-# CONSTANTS
-# ========================================
-DB_FILE = "tamtap_users.json"
-MONGODB_URI = "mongodb://naig:naig1229@162.243.218.87:27017/"
-MONGODB_NAME = "tamtap"
-MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
-
 # Arduino Serial settings
 ARDUINO_BAUD_RATE = 9600
 ARDUINO_TIMEOUT = 2  # seconds for serial read timeout
-
-# ========================================
-# DATABASE CLASS (MongoDB + JSON Fallback)
-# ========================================
-class Database:
-    """Database handler with MongoDB primary and JSON fallback"""
-    
-    def __init__(self):
-        self.mongo_client = None
-        self.mongo_db = None
-        self.use_mongodb = False
-        self._init_mongodb()
-    
-    def _init_mongodb(self):
-        """Initialize MongoDB connection"""
-        if not MONGODB_AVAILABLE:
-            logger.warning("PyMongo not installed - using JSON fallback")
-            return
-        
-        try:
-            self.mongo_client = MongoClient(
-                MONGODB_URI,
-                serverSelectionTimeoutMS=MONGODB_TIMEOUT
-            )
-            # Test connection
-            self.mongo_client.admin.command('ping')
-            self.mongo_db = self.mongo_client[MONGODB_NAME]
-            self.use_mongodb = True
-            logger.info("MongoDB connected successfully")
-            
-            # Create indexes
-            self._create_indexes()
-            
-            # Sync pending JSON data to MongoDB
-            self._sync_json_to_mongodb()
-            
-        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.warning("MongoDB connection failed: %s - using JSON fallback", e)
-            self.use_mongodb = False
-        except Exception as e:
-            logger.error("MongoDB init error: %s - using JSON fallback", e)
-            self.use_mongodb = False
-    
-    def _create_indexes(self):
-        """Create required indexes in MongoDB"""
-        if not self.use_mongodb:
-            return
-        try:
-            self.mongo_db.students.create_index("nfc_id", unique=True)
-            self.mongo_db.teachers.create_index("nfc_id", unique=True)
-            self.mongo_db.attendance.create_index([("uid", 1), ("date", 1)])
-            logger.info("MongoDB indexes created")
-        except Exception as e:
-            logger.warning("Index creation warning: %s", e)
-    
-    def _sync_json_to_mongodb(self):
-        """Sync pending JSON data to MongoDB when connection restored"""
-        if not self.use_mongodb or not os.path.exists(DB_FILE):
-            return
-        
-        try:
-            with open(DB_FILE, 'r') as f:
-                json_data = json.load(f)
-            
-            synced_count = 0
-            
-            # Sync students
-            for nfc_id, data in json_data.get("students", {}).items():
-                if not self.mongo_db.students.find_one({"nfc_id": nfc_id}):
-                    doc = {"nfc_id": nfc_id, **data}
-                    self.mongo_db.students.insert_one(doc)
-                    synced_count += 1
-            
-            # Sync teachers
-            for nfc_id, data in json_data.get("teachers", {}).items():
-                if not self.mongo_db.teachers.find_one({"nfc_id": nfc_id}):
-                    doc = {"nfc_id": nfc_id, **data}
-                    self.mongo_db.teachers.insert_one(doc)
-                    synced_count += 1
-            
-            # Sync pending attendance (offline records)
-            pending = json_data.get("pending_attendance", [])
-            for record in pending:
-                # Check if already exists
-                exists = self.mongo_db.attendance.find_one({
-                    "uid": record.get("uid"),
-                    "date": {"$regex": f"^{record.get('date', '')[:10]}"}
-                })
-                if not exists:
-                    self.mongo_db.attendance.insert_one(record)
-                    synced_count += 1
-            
-            if synced_count > 0:
-                logger.info("Synced %d records from JSON to MongoDB", synced_count)
-                # Clear pending attendance after sync
-                json_data["pending_attendance"] = []
-                with open(DB_FILE, 'w') as f:
-                    json.dump(json_data, f, indent=2)
-                    
-        except Exception as e:
-            logger.error("JSON to MongoDB sync error: %s", e)
-    
-    def _load_json(self):
-        """Load data from JSON file"""
-        try:
-            if os.path.exists(DB_FILE):
-                with open(DB_FILE, 'r') as f:
-                    return json.load(f)
-        except Exception as e:
-            logger.error("JSON load error: %s", e)
-        return {
-            "students": {},
-            "teachers": {},
-            "attendance": [],
-            "pending_attendance": [],
-            "next_tamtap_id": 1
-        }
-    
-    def _save_json(self, data):
-        """Save data to JSON file"""
-        try:
-            with open(DB_FILE, 'w') as f:
-                json.dump(data, f, indent=2)
-            return True
-        except Exception as e:
-            logger.error("JSON save error: %s", e)
-            return False
-    
-    def is_connected(self):
-        """Check if MongoDB is connected"""
-        if not self.use_mongodb:
-            return False
-        try:
-            self.mongo_client.admin.command('ping')
-            return True
-        except Exception:
-            self.use_mongodb = False
-            return False
-    
-    def get_user(self, nfc_id):
-        """Get user by NFC ID"""
-        nfc_str = str(nfc_id)
-        
-        if self.is_connected():
-            try:
-                # Check students
-                student = self.mongo_db.students.find_one({"nfc_id": nfc_str})
-                if student:
-                    return student, "student"
-                
-                # Check teachers
-                teacher = self.mongo_db.teachers.find_one({"nfc_id": nfc_str})
-                if teacher:
-                    return teacher, "teacher"
-                
-                return None, None
-            except Exception as e:
-                logger.error("MongoDB get_user error: %s", e)
-        
-        # Fallback to JSON
-        data = self._load_json()
-        if nfc_str in data.get("students", {}):
-            return data["students"][nfc_str], "student"
-        if nfc_str in data.get("teachers", {}):
-            return data["teachers"][nfc_str], "teacher"
-        
-        return None, None
-    
-    def user_exists(self, nfc_id):
-        """Check if user exists"""
-        user, role = self.get_user(nfc_id)
-        return user is not None
-    
-    def tamtap_id_exists(self, tamtap_id):
-        """Check if tamtap_id already exists"""
-        tamtap_str = str(tamtap_id).zfill(3)
-        
-        if self.is_connected():
-            try:
-                if self.mongo_db.students.find_one({"tamtap_id": tamtap_str}):
-                    return True
-                if self.mongo_db.teachers.find_one({"tamtap_id": tamtap_str}):
-                    return True
-            except Exception as e:
-                logger.error("MongoDB tamtap_id check error: %s", e)
-        
-        # Check JSON
-        data = self._load_json()
-        for user in data.get("students", {}).values():
-            if user.get("tamtap_id") == tamtap_str:
-                return True
-        for user in data.get("teachers", {}).values():
-            if user.get("tamtap_id") == tamtap_str:
-                return True
-        
-        return False
-    
-    def get_next_tamtap_id(self):
-        """Get next available tamtap_id (auto-increment)"""
-        next_id = 1
-        
-        # Get from MongoDB
-        if self.is_connected():
-            try:
-                # Find highest tamtap_id
-                for collection in ['students', 'teachers']:
-                    cursor = self.mongo_db[collection].find({}, {"tamtap_id": 1}).sort("tamtap_id", -1).limit(1)
-                    for doc in cursor:
-                        try:
-                            doc_id = int(doc.get("tamtap_id", "0"))
-                            next_id = max(next_id, doc_id + 1)
-                        except ValueError:
-                            pass
-            except Exception as e:
-                logger.error("MongoDB get_next_tamtap_id error: %s", e)
-        
-        # Also check JSON
-        data = self._load_json()
-        json_next = data.get("next_tamtap_id", 1)
-        next_id = max(next_id, json_next)
-        
-        # Check all existing IDs to be safe
-        for user in data.get("students", {}).values():
-            try:
-                user_id = int(user.get("tamtap_id", "0"))
-                next_id = max(next_id, user_id + 1)
-            except ValueError:
-                pass
-        for user in data.get("teachers", {}).values():
-            try:
-                user_id = int(user.get("tamtap_id", "0"))
-                next_id = max(next_id, user_id + 1)
-            except ValueError:
-                pass
-        
-        return next_id
-    
-    def _update_next_tamtap_id(self, used_id):
-        """Update next_tamtap_id counter after saving"""
-        data = self._load_json()
-        try:
-            used_int = int(used_id)
-            current_next = data.get("next_tamtap_id", 1)
-            if used_int >= current_next:
-                data["next_tamtap_id"] = used_int + 1
-                self._save_json(data)
-        except ValueError:
-            pass
-
-    def add_user(self, nfc_id, user_data, role):
-        """Add new user (student or teacher)"""
-        nfc_str = str(nfc_id)
-        collection = "students" if role == "student" else "teachers"
-        
-        # Always save to JSON as backup
-        json_data = self._load_json()
-        json_data[collection][nfc_str] = user_data
-        self._save_json(json_data)
-        
-        # Update next_tamtap_id counter
-        if "tamtap_id" in user_data:
-            self._update_next_tamtap_id(user_data["tamtap_id"])
-        
-        # Try to save to MongoDB
-        if self.is_connected():
-            try:
-                doc = {"nfc_id": nfc_str, **user_data}
-                self.mongo_db[collection].insert_one(doc)
-                logger.info("User saved to MongoDB: %s", nfc_str)
-                return True
-            except Exception as e:
-                logger.warning("MongoDB save failed: %s - saved to JSON", e)
-        
-        logger.info("User saved to JSON: %s", nfc_str)
-        return True
-    
-    def delete_user(self, nfc_id):
-        """Delete user by NFC ID"""
-        nfc_str = str(nfc_id)
-        deleted = False
-        
-        # Delete from JSON
-        json_data = self._load_json()
-        if nfc_str in json_data.get("students", {}):
-            del json_data["students"][nfc_str]
-            deleted = True
-        elif nfc_str in json_data.get("teachers", {}):
-            del json_data["teachers"][nfc_str]
-            deleted = True
-        
-        if deleted:
-            self._save_json(json_data)
-        
-        # Delete from MongoDB
-        if self.is_connected():
-            try:
-                result = self.mongo_db.students.delete_one({"nfc_id": nfc_str})
-                if result.deleted_count == 0:
-                    self.mongo_db.teachers.delete_one({"nfc_id": nfc_str})
-                logger.info("User deleted from MongoDB: %s", nfc_str)
-            except Exception as e:
-                logger.warning("MongoDB delete error: %s", e)
-        
-        return deleted
-    
-    def get_all_users(self):
-        """Get all users"""
-        if self.is_connected():
-            try:
-                students = list(self.mongo_db.students.find({}, {"_id": 0}))
-                teachers = list(self.mongo_db.teachers.find({}, {"_id": 0}))
-                return students, teachers
-            except Exception as e:
-                logger.error("MongoDB get_all_users error: %s", e)
-        
-        # Fallback to JSON
-        json_data = self._load_json()
-        students = [{"nfc_id": k, **v} for k, v in json_data.get("students", {}).items()]
-        teachers = [{"nfc_id": k, **v} for k, v in json_data.get("teachers", {}).items()]
-        return students, teachers
-    
-    def close(self):
-        """Close database connection"""
-        if self.mongo_client:
-            self.mongo_client.close()
-            logger.info("MongoDB connection closed")
 
 
 # ========================================
@@ -600,7 +262,7 @@ def clear_screen():
 def print_header(db, nfc_reader):
     """Print application header with DB and Arduino status"""
     print("=" * 50)
-    print("   TAMTAP v6.3 - REGISTRATION SYSTEM")
+    print("   TAMTAP v7.0 - REGISTRATION SYSTEM")
     print("   NFC-Based Attendance | Arduino CLI Version")
     db_status = "[MongoDB]" if db.is_connected() else "[JSON Fallback]"
     arduino_status = f"[Arduino: {nfc_reader.port}]" if nfc_reader.connected else "[Arduino: NOT CONNECTED]"
@@ -967,7 +629,7 @@ def reconnect_arduino(nfc_reader):
 
 def main():
     """Main entry point"""
-    logger.info("Starting TAMTAP v6.3 Registration CLI (Arduino Version)...")
+    logger.info("Starting TAMTAP v7.0 Registration CLI (Arduino Version)...")
     
     # Initialize database (MongoDB with JSON fallback)
     db = Database()

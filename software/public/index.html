@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAMTAP Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .pulse-green { animation: pulse-green 1s ease-in-out; }
+        @keyframes pulse-green { 
+            0%, 100% { background-color: rgb(34 197 94); }
+            50% { background-color: rgb(74 222 128); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">TAMTAP</h1>
+                <p class="text-blue-200 text-sm">NFC-Based Attendance System</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="status-badge" class="px-3 py-1 rounded-full text-sm bg-green-500">
+                    ● Connected
+                </span>
+                <span id="current-time" class="text-blue-200"></span>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- Total Students -->
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Total Students</p>
+                        <p id="stat-students" class="text-3xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Today's Attendance -->
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Today's Attendance</p>
+                        <p id="stat-today" class="text-3xl font-bold text-green-600">--</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AM Sessions -->
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">AM Session</p>
+                        <p id="stat-am" class="text-3xl font-bold text-yellow-600">--</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- PM Sessions -->
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">PM Session</p>
+                        <p id="stat-pm" class="text-3xl font-bold text-purple-600">--</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Live Attendance Feed -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-700">Live Attendance Feed</h2>
+                    <span class="flex items-center text-green-500 text-sm">
+                        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        Real-time
+                    </span>
+                </div>
+                <div id="attendance-feed" class="p-4 max-h-96 overflow-y-auto">
+                    <p class="text-gray-400 text-center py-8">Waiting for attendance...</p>
+                </div>
+            </div>
+
+            <!-- Weekly Chart -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b">
+                    <h2 class="text-lg font-semibold text-gray-700">Weekly Attendance</h2>
+                </div>
+                <div class="p-4">
+                    <canvas id="weeklyChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Attendance Table -->
+        <div class="mt-6 bg-white rounded-lg shadow">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-700">Today's Attendance Records</h2>
+                <button onclick="refreshData()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
+                    Refresh
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-table" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="6" class="px-4 py-8 text-center text-gray-400">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-gray-400 text-center py-4 mt-8">
+        <p>TAMTAP v1.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
+    </footer>
+
+    <script>
+        // ========================================
+        // SOCKET.IO CONNECTION
+        // ========================================
+        const socket = io();
+        let isConnected = false;
+
+        socket.on('connect', () => {
+            isConnected = true;
+            updateConnectionStatus(true);
+            console.log('[INFO] Socket.IO connected');
+        });
+
+        socket.on('disconnect', () => {
+            isConnected = false;
+            updateConnectionStatus(false);
+            console.log('[WARN] Socket.IO disconnected');
+        });
+
+        // Real-time attendance event
+        socket.on('attendance:new', (data) => {
+            console.log('[INFO] New attendance:', data);
+            addToLiveFeed(data);
+            addToTable(data);
+            updateStats();
+            
+            // Show toast notification
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: `${data.name} checked in!`,
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            });
+        });
+
+        // Attendance failure event
+        socket.on('attendance:fail', (data) => {
+            console.log('[WARN] Attendance failed:', data);
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'error',
+                title: `Failed: ${data.reason}`,
+                showConfirmButton: false,
+                timer: 3000
+            });
+        });
+
+        // System status event
+        socket.on('system:status', (data) => {
+            console.log('[INFO] System status:', data);
+        });
+
+        // ========================================
+        // UI FUNCTIONS
+        // ========================================
+        function updateConnectionStatus(connected) {
+            const badge = document.getElementById('status-badge');
+            if (connected) {
+                badge.className = 'px-3 py-1 rounded-full text-sm bg-green-500';
+                badge.textContent = '● Connected';
+            } else {
+                badge.className = 'px-3 py-1 rounded-full text-sm bg-red-500';
+                badge.textContent = '○ Disconnected';
+            }
+        }
+
+        function addToLiveFeed(data) {
+            const feed = document.getElementById('attendance-feed');
+            
+            // Remove "Waiting" message
+            if (feed.querySelector('.text-gray-400')) {
+                feed.innerHTML = '';
+            }
+            
+            const item = document.createElement('div');
+            item.className = 'flex items-center gap-3 p-3 rounded-lg bg-green-50 mb-2 fade-in pulse-green';
+            item.innerHTML = `
+                <img src="/photos/${data.date?.split(' ')[0]}/${data.photo}" 
+                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23e5e7eb%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 font-size=%2240%22 text-anchor=%22middle%22>👤</text></svg>'"
+                     class="w-10 h-10 rounded-full object-cover">
+                <div class="flex-1">
+                    <p class="font-medium text-gray-800">${data.name}</p>
+                    <p class="text-xs text-gray-500">${data.role} • ${data.time} ${data.session}</p>
+                </div>
+                <span class="text-green-600 text-sm font-medium">Just now</span>
+            `;
+            
+            feed.insertBefore(item, feed.firstChild);
+            
+            // Keep only last 20 items
+            while (feed.children.length > 20) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        function addToTable(data) {
+            const tbody = document.getElementById('attendance-table');
+            
+            // Remove "Loading" row
+            if (tbody.querySelector('.text-gray-400')) {
+                tbody.innerHTML = '';
+            }
+            
+            const row = document.createElement('tr');
+            row.className = 'fade-in';
+            row.innerHTML = `
+                <td class="px-4 py-3">
+                    <img src="/photos/${data.date?.split(' ')[0]}/${data.photo}" 
+                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23e5e7eb%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 font-size=%2240%22 text-anchor=%22middle%22>👤</text></svg>'"
+                         class="w-10 h-10 rounded-full object-cover">
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">${data.tamtap_id || '--'}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${data.name}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 rounded text-xs ${data.role === 'student' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}">
+                        ${data.role}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">${data.time}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 rounded text-xs ${data.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
+                        ${data.session}
+                    </span>
+                </td>
+            `;
+            
+            tbody.insertBefore(row, tbody.firstChild);
+        }
+
+        // ========================================
+        // DATA FETCHING
+        // ========================================
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+                
+                if (data.success) {
+                    document.getElementById('stat-students').textContent = data.stats.students;
+                    document.getElementById('stat-today').textContent = data.stats.todayAttendance;
+                    document.getElementById('stat-am').textContent = data.stats.todayAM;
+                    document.getElementById('stat-pm').textContent = data.stats.todayPM;
+                }
+            } catch (error) {
+                console.error('[ERROR] Failed to fetch stats:', error);
+            }
+        }
+
+        async function fetchTodayAttendance() {
+            try {
+                const res = await fetch('/api/attendance');
+                const data = await res.json();
+                
+                if (data.success && data.records.length > 0) {
+                    const tbody = document.getElementById('attendance-table');
+                    tbody.innerHTML = '';
+                    
+                    data.records.forEach(record => {
+                        addToTable({
+                            ...record,
+                            date: record.date
+                        });
+                    });
+                }
+            } catch (error) {
+                console.error('[ERROR] Failed to fetch attendance:', error);
+            }
+        }
+
+        async function fetchWeeklyData() {
+            try {
+                const res = await fetch('/api/stats/daily?days=7');
+                const data = await res.json();
+                
+                if (data.success) {
+                    renderWeeklyChart(data.data);
+                }
+            } catch (error) {
+                console.error('[ERROR] Failed to fetch weekly data:', error);
+            }
+        }
+
+        function renderWeeklyChart(data) {
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.day),
+                    datasets: [{
+                        label: 'Attendance',
+                        data: data.map(d => d.count),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function updateStats() {
+            fetchStats();
+        }
+
+        function refreshData() {
+            fetchStats();
+            fetchTodayAttendance();
+            fetchWeeklyData();
+        }
+
+        // ========================================
+        // CLOCK
+        // ========================================
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ========================================
+        // INITIALIZATION
+        // ========================================
+        document.addEventListener('DOMContentLoaded', () => {
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            fetchStats();
+            fetchTodayAttendance();
+            fetchWeeklyData();
+        });
+    </script>
+</body>
+</html>

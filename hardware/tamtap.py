@@ -779,17 +779,46 @@ def main():
     time.sleep(0.5)
     led_off(GPIO_GREEN_LED)
     
-    # Camera test
-    logger.info("Testing camera...")
-    try:
-        subprocess.run(
-            ['rpicam-hello', '-t', '500'],
-            capture_output=True,
-            timeout=2
-        )
-        logger.info("Camera OK")
-    except Exception as e:
-        logger.warning("Camera test warning: %s", e)
+    # Camera warm-up (required on cold boot)
+    lcd.show("WARMING UP", "CAMERA...")
+    logger.info("Camera warm-up starting (3 seconds)...")
+    
+    camera_ready = False
+    for attempt in range(2):
+        try:
+            # Run camera preview for 3 seconds to initialize sensor
+            result = subprocess.run(
+                ['rpicam-hello', '-t', '3000'],
+                capture_output=True,
+                timeout=5
+            )
+            if result.returncode == 0:
+                camera_ready = True
+                logger.info("Camera warm-up complete")
+                break
+            else:
+                logger.warning("Camera warm-up attempt %d failed", attempt + 1)
+        except subprocess.TimeoutExpired:
+            logger.warning("Camera warm-up timeout, attempt %d", attempt + 1)
+        except Exception as e:
+            logger.warning("Camera warm-up error: %s", e)
+        
+        if attempt < 1:
+            time.sleep(1)
+    
+    if camera_ready:
+        lcd.show("CAMERA READY", "OK")
+        led_on(GPIO_GREEN_LED)
+        beep(count=1, duration=0.1)
+        time.sleep(0.5)
+        led_off(GPIO_GREEN_LED)
+    else:
+        lcd.show("CAMERA WARNING", "CHECK HARDWARE")
+        led_on(GPIO_RED_LED)
+        beep(count=3, duration=0.2, pause=0.1)
+        time.sleep(1)
+        led_off(GPIO_RED_LED)
+        logger.error("Camera warm-up failed - may cause issues")
     
     # Enter IDLE state
     current_state = State.IDLE

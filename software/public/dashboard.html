@@ -397,19 +397,26 @@
                 }
                 // When "All My Sections" selected (empty value), don't filter - show all
                 
+                console.log('[DEBUG] Fetching attendance from:', url);
+                
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json();
+                
+                console.log('[DEBUG] Attendance response:', data);
                 
                 const tbody = document.getElementById('attendance-table');
                 const feed = document.getElementById('attendance-feed');
                 
                 if (!data.success || data.records.length === 0) {
+                    console.log('[DEBUG] No records found - success:', data.success, 'count:', data.records?.length);
                     tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No records found</td></tr>';
                     feed.innerHTML = '<p class="text-gray-400 text-center py-8">No attendance yet</p>';
                     currentRecords = [];
                     document.getElementById('record-count').textContent = '0 records';
                     return;
                 }
+                
+                console.log('[DEBUG] Found', data.records.length, 'records');
                 
                 currentRecords = data.records;
                 document.getElementById('record-count').textContent = `${data.records.length} records`;

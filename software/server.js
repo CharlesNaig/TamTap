@@ -52,6 +52,9 @@ let mongoClient = null;
 
 async function connectMongoDB() {
     try {
+        console.log('[INFO] Connecting to MongoDB:', config.mongodb.uri.replace(/:[^:@]+@/, ':****@'));
+        console.log('[INFO] Database name:', config.mongodb.database);
+        
         mongoClient = new MongoClient(config.mongodb.uri, config.mongodb.options);
         await mongoClient.connect();
         db = mongoClient.db(config.mongodb.database);

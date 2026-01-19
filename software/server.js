@@ -1,15 +1,19 @@
 /**
- * TAMTAP v1.0 - Express.js API Server
+ * TAMTAP v2.0 - Express.js API Server with Auth
  * NFC-Based Attendance System | FEU Roosevelt Marikina
  * 
  * Features:
  * - REST API for attendance and student data
  * - Socket.IO for real-time dashboard updates
+ * - Session-based auth for admin/teacher login
  * - Static file serving for attendance photos
+ * 
+ * Contract: No public registration - admin creates all accounts
  */
 
 const express = require('express');
 const http = require('http');
+const session = require('express-session');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
@@ -23,9 +27,15 @@ const app = express();
 const server = http.createServer(app);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Session middleware (before routes)
+app.use(session(config.session));
 
 // Request logging (INFO level)
 app.use((req, res, next) => {
@@ -142,11 +152,15 @@ app.use('/photos', express.static(photosPath, {
 // ========================================
 
 // Import route modules
+const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 const attendanceRoutes = require('./routes/attendance');
 const studentsRoutes = require('./routes/students');
 const statsRoutes = require('./routes/stats');
 
 // Mount routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/teachers', studentsRoutes);  // Reuse for teachers
@@ -273,7 +287,7 @@ app.use((req, res) => {
 // ========================================
 async function startServer() {
     console.log('========================================');
-    console.log('  TAMTAP v1.0 - API Server');
+    console.log('  TAMTAP v2.0 - API Server with Auth');
     console.log('  NFC-Based Attendance System');
     console.log('========================================');
     

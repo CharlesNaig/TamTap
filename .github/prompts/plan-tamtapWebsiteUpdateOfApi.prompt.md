@@ -1,238 +1,278 @@
-# TAMTAP Dashboard Prompt Plan (prompt.md)
+Got it. Below is a **cleanly UPDATED version of the prompt**, rewritten to **explicitly lock in** the rule you just approved:
 
-**Purpose:** Clear, implementation-ready prompt for building the TAMTAP teacher-first dashboard, API, and hardware→API bridge. Use this as the single-source prompt for Copilot, a developer, or documentation. This plan follows the project contract and extends the API plan already created. 
+> ✅ **Only ADMIN can register teachers and students**
+> ❌ **No manual / self-registration for teachers**
+> ❌ **No manual / self-registration for students**
 
----
-
-## 1. Overview & Goals
-
-* Build a teacher-first dashboard that integrates with the Raspberry Pi NFC system and MongoDB.
-* Primary users: teachers (full dashboard), admin (system settings), students (optional read-only view).
-* Main priorities: usability, reliable backtracking by section, real-time updates, LAN-only operation, and defensible architecture for your research.
-* Bridge approach: **Option A - HTTP POST** from `tamtap.py` to the Express API; Express will broadcast to connected dashboards with Socket.IO.
+This version is **final-policy clear**, Copilot-safe, and defense-ready.
 
 ---
 
-## 2. High-level Architecture (reminder)
+# 📘 TAMTAP Dashboard & System Prompt Plan
 
-* `tamtap.py` (Pi) → HTTP POST → `software/server.js` (Express + Socket.IO) → MongoDB (local)
-* Frontend clients connect via Socket.IO for live updates and via REST for historical queries. 
-
----
-
-## 3. Roles & Permissions
-
-* `teacher`
-
-  * properties: id, name, email, sections_handled: [sectionId,...]
-  * capabilities: view section attendance, export CSV, view snapshots, filter by date, mark attendance issues (optional)
-* `admin`
-
-  * properties: id, name, role=admin
-  * capabilities: manage teachers, assign sections, system status, view all sections
-* `student` (optional read-only)
-
-  * properties: id, name, nfc_id, sectionId
-  * capabilities: view own attendance history
-
-Authentication: Basic session-based login for demo. Document as "replace with school SSO later" for future work.
+**File:** `plan.prompt.md`
+**Project:** TAMTAP – NFC-Based Attendance System
+**Primary Users:** Teachers
+**System Authority:** Admin
+**Student Interaction:** Hardware only (NFC tap)
 
 ---
 
-## 4. Section Assignment Model (Chosen)
+## 1. System Philosophy (Single Source of Truth)
 
-**Model B - Multiple Sections per Teacher (recommended)**
+**Core principle:**
 
-* Teacher record contains `sections_handled: Array<sectionId>`.
-* On login, teacher sees a section selector defaulting to the first assigned section for today.
-* Admin can edit `sections_handled`. Assignment changes propagate immediately.
+> Students interact with the TAMTAP device.
+> Teachers interact with the TAMTAP website.
+> **Admins control all user registration and access.**
 
----
+TAMTAP is an **internal school system**, not a public web application.
 
-## 5. Data Models (minimal, extendable)
-
-```js
-// students
-{
-  _id,
-  uid,           // student unique id
-  name,
-  grade,
-  section,       // sectionId
-  nfc_id
-}
-
-// teachers
-{
-  _id,
-  uid,
-  name,
-  email,
-  sections_handled: [sectionId, ...]
-}
-
-// sections
-{
-  _id,
-  name,          // e.g., "11-A"
-  grade
-}
-
-// attendance
-{
-  _id,
-  uid,           // student uid
-  student_name,
-  date: "YYYY-MM-DD",
-  time: "HH:MM:SS",
-  status: "present" | "absent" | "late" | "fail",
-  photo_path,    // relative path served by Express
-  session,       // optional session id
-  section
-}
-```
+There are **no public sign-up or self-registration features**.
 
 ---
 
-## 6. API Endpoints (server.js - REST)
+## 2. User Roles & Responsibilities
 
-```
-GET  /api/attendance?section={id}&date={YYYY-MM-DD}        // today's or specified date
-GET  /api/attendance/:date?section={id}                    // by date
-GET  /api/attendance/range?section={id}&from=YYYY-MM-DD&to=YYYY-MM-DD
+### 👨‍🎓 Students
 
-GET  /api/students?section={id}
-GET  /api/teachers
-GET  /api/sections
-GET  /api/stats?section={id}&range=week|month
+* ❌ No website registration
+* ❌ No login required
+* ❌ No dashboard access
+* ✅ Registered **only by Admin**
+* ✅ Identified by:
 
-POST /api/webhook/attendance   // tamtap.py -> HTTP POST payload on new record
-```
+  * Student ID
+  * Section
+  * NFC Card UID
 
-**Static photo serving**
-
-```
-GET /photos/:date/:filename
-```
+Students exist in the system **only as attendance records**, not as active web users.
 
 ---
 
-## 7. Socket.IO Events (server publishes)
+### 👩‍🏫 Teachers (Primary Dashboard Users)
 
-* `attendance:new`   - payload: the newly saved attendance object
-* `attendance:fail`  - payload: reason + partial data
-* `camera:snapshot`  - payload: { uid, photo_url, date, time }
-* `system:status`    - payload: health info
+* ❌ No self-registration
+* ❌ No section self-assignment
+* ✅ Accounts are **created by Admin only**
+* ✅ Can log in **after admin registration**
+* ✅ Can only access sections assigned by Admin
 
-Event naming must match the Copilot Contract. 
+Teachers use the website to:
+
+* Track attendance
+* Backtrack records by section/date
+* Export attendance reports
+* Verify records via snapshots
+
+Teachers **cannot**:
+
+* Register users
+* Modify attendance data
+* View unassigned sections
 
 ---
 
-## 8. tamtap.py -> POST Payload Example
+### 🛠️ Admin (System Authority)
+
+* ✅ Admin accounts are created **manually (bootstrap)**
+* ✅ Admin has exclusive rights to:
+
+  * Register teachers
+  * Register students
+  * Assign sections to teachers
+  * Manage system configuration
+
+Admin access is restricted and not publicly available.
+
+---
+
+## 3. Registration Policy (STRICT)
+
+### 🔒 Registration Rules
+
+* There is **NO public registration page**
+* There is **NO “Sign Up” button**
+* All users are provisioned by Admin
+
+### 👩‍🏫 Teacher Registration
+
+* Admin creates teacher accounts via Admin Panel
+* Admin assigns one or more sections per teacher
+* Teachers cannot edit their assignments
+
+Example teacher record:
 
 ```json
 {
-  "uid": "S12345",
-  "name": "Juan Dela Cruz",
-  "section": "11-A",
-  "date": "2026-01-16",
-  "time": "07:45:12",
-  "status": "present",
-  "photo_path": "/photos/2026-01-16/j12345.jpg",
-  "session": "morning"
+  "username": "ms.santos",
+  "role": "teacher",
+  "sections_handled": ["11-A", "11-C"]
 }
 ```
 
-tamtap.py should POST to `/api/webhook/attendance` and retry on network errors (exponential backoff x3).
-
 ---
 
-## 9. Frontend Pages & UI Goals
+### 👨‍🎓 Student Registration
 
-* Login page - role redirect
-* Teacher Dashboard (main) - default: My Section Today
+* Students are registered **only by Admin**
+* Registration methods:
 
-  * Top bar: Section selector (left), date picker (center), Export button (right)
-  * Main: Live feed and table of students with small badges (status) and a click-to-view snapshot modal
-  * Quick filters: Today / Week / Month
-* Attendance Records page - robust filters and CSV export
-* Stats page - Chart.js for trends
-* Admin page - section management and teacher assignments
+  * CSV import
+  * Manual Admin Panel entry
+  * Enrollment data sync (future work)
 
-UI principles:
+Example student record:
 
-* Section-first flow
-* Minimal clicks: section + date → data
-* Visual statuses (colored badges) and on-demand photos
-* Action buttons consistent across pages and always visible in same locations
-
----
-
-## 10. UX Details (teacher-first)
-
-* On login, auto-load first assigned section with Today filter
-* Section dropdown shows number of students and last tap time
-* Each student row: name, uid, time, status badge, snapshot icon
-* Clicking a student row opens history in a side panel (last 7 entries)
-* Export button applies to current filters only
-* Admin can assign/unassign sections in Admin page
-
----
-
-## 11. Acceptance Criteria (done when)
-
-* Teacher can log in and see only assigned sections
-* Teacher selects section/date and gets attendance list within 1 second for local LAN
-* Live updates appear within 500 ms after POST → Socket.IO broadcast
-* CSV export for current filter works and contains photo_path
-* Clicking a student shows last 7 records with thumbnails
-* Server logs show `attendance:new` emitted on insert
-
----
-
-## 12. Implementation Notes for Copilot / Devs (prompt header)
-
-Paste this at top of generated server file or Copilot snippet:
-
-```text
-# TAMTAP SERVER: Express + Socket.IO
-# Follow contract: local MongoDB, no cloud, events: attendance:new, attendance:fail, camera:snapshot, system:status
-# Use environment variables in config.js (MONGODB_URI, PORT). No hardcoded credentials.
+```json
+{
+  "uid": "2025-00123",
+  "name": "Juan Dela Cruz",
+  "section": "11-A",
+  "nfc_id": "04A1B23C"
+}
 ```
 
 ---
 
-## 13. Testing & QA Checklist
+## 4. Section-Based Access Control (Enforced)
 
-* [ ] POST a mock payload from a dev script and verify DB insert + Socket.IO broadcast
-* [ ] Login as teacher user with 2 sections assigned; ensure dropdown lists both
-* [ ] Export CSV for a date range and verify file integrity
-* [ ] Simulate camera fail and ensure `attendance:fail` is emitted
-* [ ] Security: ensure REST endpoints require auth for write operations
+### ✅ Model: Teacher → Multiple Sections (Admin Assigned)
 
----
+* Teacher accounts contain `sections_handled[]`
+* Backend restricts access by section
+* Frontend only displays assigned sections
+* No override from UI
 
-## 14. Next Actions (concrete)
-
-1. Implement `software/server.js` with endpoints and Socket.IO according to section 6. Use the header in section 12.
-2. Add `POST /api/webhook/attendance` handler that saves to MongoDB and emits `attendance:new`.
-3. Modify `tamtap.py` to send HTTP POST (payload per section 8).
-4. Build `public/index.html` + `public/js/dashboard.js` to connect via Socket.IO and REST.
-5. Test on LAN and iterate.
+This control is enforced at **both UI and API levels**.
 
 ---
 
-## 15. Notes for Defense / Paper
+## 5. Functional Flow (End-to-End)
 
-* Emphasize teacher-first design and section-based permissions.
-* Explain HTTP POST choice as simplest reliable LAN approach with clear retry semantics.
-* Show acceptance criteria and testing checklist as evidence of reproducibility.
+### 📍 Attendance Recording (Student Side)
+
+1. Student taps NFC card
+2. Camera snapshot captured
+3. Attendance recorded by `tamtap.py`
+4. Data sent to backend
+5. Stored in MongoDB
+6. Broadcast to dashboard
+
+Students never interact with the website.
 
 ---
 
-If you approve this prompt.md, I will:
+### 📍 Attendance Monitoring (Teacher Side)
 
-* Create the actual `prompt.md` file content in the repo (or paste it here ready to save), and
-* Begin scaffolding `software/server.js` and the webhook handler next.
+1. Teacher logs in
+2. Dashboard auto-loads:
 
-Want me to create the file now? ✅
+   * First assigned section
+   * Today’s attendance
+3. Teacher filters by:
+
+   * Section
+   * Date / range
+4. Teacher exports or reviews records
+
+---
+
+## 6. Dashboard Functional Pages
+
+### 6.1 Login Page
+
+* Admin & Teacher login only
+* No registration links
+* Role-based redirect
+
+---
+
+### 6.2 Teacher Dashboard (Core Page)
+
+* Section selector (assigned only)
+* Date selector
+* Attendance table:
+
+  * Student name
+  * Student ID
+  * Time
+  * Status
+  * Snapshot view (on click)
+
+Read-only attendance data.
+
+---
+
+### 6.3 Attendance Backtracking
+
+* Filter by section
+* Filter by date/range
+* Export CSV
+* Drill-down per student
+
+---
+
+### 6.4 Admin Panel
+
+Admin can:
+
+* Register teachers
+* Register students
+* Assign sections
+* View system status
+
+Admin cannot:
+
+* Edit attendance records manually
+
+---
+
+## 7. UI/UX Rules (Function First)
+
+* Teacher-first design
+* Section-first navigation
+* Predictable button placement
+* Minimal actions
+* No hidden menus
+* No unnecessary animations
+
+The goal is **fast comprehension**, not decoration.
+
+---
+
+## 8. What the System MUST NOT Include
+
+* ❌ Public sign-up
+* ❌ Student login
+* ❌ Teacher self-registration
+* ❌ Manual attendance editing
+* ❌ Cloud services
+
+---
+
+## 9. Success Criteria
+
+The system is successful if:
+
+* Only admin can create users
+* Teachers only see assigned sections
+* Students never need web access
+* Attendance can be backtracked easily
+* CSV export works reliably
+
+---
+
+## 10. Defense-Ready Statement
+
+> “TAMTAP is an internal attendance system where user accounts are provisioned exclusively by administrators. Students interact only with the physical device, while teachers use the web dashboard solely for monitoring and historical analysis.”
+
+---
+
+## 11. Next Steps After Approval
+
+1. Implement admin user bootstrap
+2. Build Admin Panel (registration + assignment)
+3. Implement backend access control
+4. Build teacher dashboard
+5. Integrate hardware data flow

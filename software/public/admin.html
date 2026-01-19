@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAMTAP - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">TAMTAP Admin</h1>
+                <p class="text-blue-200 text-sm">User Management Panel</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="user-name" class="text-blue-100">Admin</span>
+                <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-sm">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow">
+        <div class="container mx-auto px-4">
+            <div class="flex gap-6">
+                <a href="/dashboard.html" class="py-4 text-gray-600 hover:text-blue-600">Dashboard</a>
+                <a href="/admin.html" class="py-4 tab-active font-medium">Admin Panel</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Tab Navigation -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <div class="flex border-b">
+                <button onclick="showTab('teachers')" id="tab-teachers" 
+                        class="tab-btn px-6 py-4 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent tab-active">
+                    Teachers
+                </button>
+                <button onclick="showTab('students')" id="tab-students"
+                        class="tab-btn px-6 py-4 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent">
+                    Students
+                </button>
+                <button onclick="showTab('sections')" id="tab-sections"
+                        class="tab-btn px-6 py-4 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent">
+                    Sections
+                </button>
+            </div>
+        </div>
+
+        <!-- Teachers Tab -->
+        <div id="panel-teachers" class="tab-panel">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-700">Teacher Accounts</h2>
+                    <button onclick="showAddTeacherModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
+                        + Add Teacher
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sections</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teachers-table" class="divide-y divide-gray-200">
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Students Tab -->
+        <div id="panel-students" class="tab-panel hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b flex justify-between items-center flex-wrap gap-4">
+                    <h2 class="text-lg font-semibold text-gray-700">Student Records</h2>
+                    <div class="flex gap-2">
+                        <select id="student-section-filter" onchange="loadStudents()" 
+                                title="Filter by section"
+                                class="border rounded px-3 py-2 text-sm">
+                            <option value="">All Sections</option>
+                        </select>
+                        <button onclick="showAddStudentModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
+                            + Add Student
+                        </button>
+                        <button onclick="showBulkImportModal()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                            Import CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">NFC ID</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="students-table" class="divide-y divide-gray-200">
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sections Tab -->
+        <div id="panel-sections" class="tab-panel hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b">
+                    <h2 class="text-lg font-semibold text-gray-700">Sections Overview</h2>
+                    <p class="text-sm text-gray-500">Sections are auto-created from student records</p>
+                </div>
+                <div class="p-4">
+                    <div id="sections-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <p class="text-gray-400">Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add Teacher Modal -->
+    <div id="add-teacher-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Add New Teacher</h3>
+                <button onclick="closeModal('add-teacher-modal')" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <form id="add-teacher-form" class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" name="username" required class="w-full border rounded px-3 py-2" placeholder="e.g., ms.santos">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" name="name" required class="w-full border rounded px-3 py-2" placeholder="e.g., Maria Santos">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email (optional)</label>
+                    <input type="email" name="email" class="w-full border rounded px-3 py-2" placeholder="e.g., msantos@school.edu">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" name="password" required minlength="6" class="w-full border rounded px-3 py-2" placeholder="Min 6 characters">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Sections</label>
+                    <div id="teacher-sections-checkboxes" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('add-teacher-modal')" class="flex-1 border px-4 py-2 rounded">Cancel</button>
+                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Add Teacher</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Student Modal -->
+    <div id="add-student-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Add New Student</h3>
+                <button onclick="closeModal('add-student-modal')" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <form id="add-student-form" class="p-4 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">NFC Card ID</label>
+                    <input type="text" name="nfc_id" required class="w-full border rounded px-3 py-2" placeholder="Scan or enter NFC ID">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" name="first_name" class="w-full border rounded px-3 py-2" placeholder="Juan">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" name="last_name" class="w-full border rounded px-3 py-2" placeholder="Dela Cruz">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                        <input type="text" name="grade" class="w-full border rounded px-3 py-2" placeholder="e.g., 11">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                        <input type="text" name="section" required class="w-full border rounded px-3 py-2" placeholder="e.g., 11-A">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('add-student-modal')" class="flex-1 border px-4 py-2 rounded">Cancel</button>
+                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Add Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Teacher Modal -->
+    <div id="edit-teacher-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Edit Teacher</h3>
+                <button onclick="closeModal('edit-teacher-modal')" class="text-gray-400 hover:text-gray-600">&times;</button>
+            </div>
+            <form id="edit-teacher-form" class="p-4 space-y-4">
+                <input type="hidden" name="id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" name="name" required placeholder="Teacher name" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" placeholder="Email address" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">New Password (leave blank to keep)</label>
+                    <input type="password" name="password" minlength="6" placeholder="Leave blank to keep" class="w-full border rounded px-3 py-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Sections</label>
+                    <div id="edit-teacher-sections-checkboxes" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('edit-teacher-modal')" class="flex-1 border px-4 py-2 rounded">Cancel</button>
+                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-gray-400 text-center py-4 mt-8">
+        <p>TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
+    </footer>
+
+    <script>
+        let currentUser = null;
+        let allSections = [];
+
+        // ========================================
+        // AUTH CHECK
+        // ========================================
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me', { credentials: 'include' });
+                if (!res.ok) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success || data.user.role !== 'admin') {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Access Denied',
+                        text: 'Admin access required',
+                        confirmButtonColor: '#2563eb'
+                    }).then(() => {
+                        window.location.href = '/dashboard.html';
+                    });
+                    return;
+                }
+                currentUser = data.user;
+                document.getElementById('user-name').textContent = currentUser.name;
+                loadData();
+            } catch (e) {
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            window.location.href = '/login.html';
+        }
+
+        // ========================================
+        // TAB NAVIGATION
+        // ========================================
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+            
+            document.getElementById(`panel-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('tab-active');
+        }
+
+        // ========================================
+        // DATA LOADING
+        // ========================================
+        async function loadData() {
+            await loadSections();
+            loadTeachers();
+            loadStudents();
+        }
+
+        async function loadSections() {
+            try {
+                const res = await fetch('/api/admin/sections', { credentials: 'include' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    allSections = data.data;
+                    
+                    // Update section filter dropdown
+                    const filter = document.getElementById('student-section-filter');
+                    filter.innerHTML = '<option value="">All Sections</option>' + 
+                        allSections.map(s => `<option value="${s.name}">${s.name} (${s.studentCount})</option>`).join('');
+                    
+                    // Update sections grid
+                    const grid = document.getElementById('sections-grid');
+                    if (allSections.length === 0) {
+                        grid.innerHTML = '<p class="text-gray-400">No sections found. Add students to create sections.</p>';
+                    } else {
+                        grid.innerHTML = allSections.map(s => `
+                            <div class="bg-gray-50 rounded-lg p-4 border">
+                                <h3 class="font-semibold text-lg text-gray-800">${s.name}</h3>
+                                <p class="text-gray-500">${s.studentCount} students</p>
+                            </div>
+                        `).join('');
+                    }
+                    
+                    // Update teacher section checkboxes
+                    updateSectionCheckboxes();
+                }
+            } catch (e) {
+                console.error('Load sections error:', e);
+            }
+        }
+
+        function updateSectionCheckboxes() {
+            const html = allSections.map(s => `
+                <label class="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="sections" value="${s.name}">
+                    ${s.name}
+                </label>
+            `).join('');
+            
+            document.getElementById('teacher-sections-checkboxes').innerHTML = html || '<p class="text-gray-400 text-sm">No sections available</p>';
+            document.getElementById('edit-teacher-sections-checkboxes').innerHTML = html || '<p class="text-gray-400 text-sm">No sections available</p>';
+        }
+
+        async function loadTeachers() {
+            try {
+                const res = await fetch('/api/admin/teachers', { credentials: 'include' });
+                const data = await res.json();
+                
+                const tbody = document.getElementById('teachers-table');
+                
+                if (!data.success || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No teachers found</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.data.map(t => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">${t.username}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${t.name}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">${t.email || '-'}</td>
+                        <td class="px-4 py-3 text-sm">
+                            ${t.sections_handled.length > 0 
+                                ? t.sections_handled.map(s => `<span class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs mr-1">${s}</span>`).join('')
+                                : '<span class="text-gray-400">None</span>'
+                            }
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <button onclick="editTeacher('${t.id}')" class="text-blue-600 hover:text-blue-800 mr-2">Edit</button>
+                            <button onclick="deleteTeacher('${t.id}', '${t.name}')" class="text-red-600 hover:text-red-800">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Load teachers error:', e);
+            }
+        }
+
+        async function loadStudents() {
+            try {
+                const section = document.getElementById('student-section-filter').value;
+                const url = section ? `/api/admin/students?section=${encodeURIComponent(section)}` : '/api/admin/students';
+                
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                
+                const tbody = document.getElementById('students-table');
+                
+                if (!data.success || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No students found</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.data.map(s => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">${s.tamtap_id}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 font-mono">${s.nfc_id}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700">${s.name}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">${s.grade || '-'}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">${s.section}</span>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error('Load students error:', e);
+            }
+        }
+
+        // ========================================
+        // MODALS
+        // ========================================
+        function showModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            document.getElementById(id).classList.add('flex');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            document.getElementById(id).classList.remove('flex');
+        }
+
+        function showAddTeacherModal() {
+            document.getElementById('add-teacher-form').reset();
+            showModal('add-teacher-modal');
+        }
+
+        function showAddStudentModal() {
+            document.getElementById('add-student-form').reset();
+            showModal('add-student-modal');
+        }
+
+        // ========================================
+        // TEACHER CRUD
+        // ========================================
+        document.getElementById('add-teacher-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const sections = Array.from(form.querySelectorAll('input[name="sections"]:checked')).map(cb => cb.value);
+            
+            try {
+                const res = await fetch('/api/admin/teachers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: form.username.value,
+                        name: form.name.value,
+                        email: form.email.value,
+                        password: form.password.value,
+                        sections_handled: sections
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Teacher Added', timer: 1500, showConfirmButton: false });
+                    closeModal('add-teacher-modal');
+                    loadTeachers();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add teacher' });
+            }
+        });
+
+        async function editTeacher(id) {
+            try {
+                const res = await fetch('/api/admin/teachers', { credentials: 'include' });
+                const data = await res.json();
+                const teacher = data.data.find(t => t.id === id);
+                
+                if (!teacher) return;
+                
+                const form = document.getElementById('edit-teacher-form');
+                form.id.value = id;
+                form.name.value = teacher.name;
+                form.email.value = teacher.email || '';
+                form.password.value = '';
+                
+                // Check assigned sections
+                form.querySelectorAll('input[name="sections"]').forEach(cb => {
+                    cb.checked = teacher.sections_handled.includes(cb.value);
+                });
+                
+                showModal('edit-teacher-modal');
+            } catch (e) {
+                console.error('Edit teacher error:', e);
+            }
+        }
+
+        document.getElementById('edit-teacher-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const id = form.id.value;
+            const sections = Array.from(form.querySelectorAll('input[name="sections"]:checked')).map(cb => cb.value);
+            
+            const updateData = {
+                name: form.name.value,
+                email: form.email.value,
+                sections_handled: sections
+            };
+            
+            if (form.password.value) {
+                updateData.password = form.password.value;
+            }
+            
+            try {
+                const res = await fetch(`/api/admin/teachers/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Teacher Updated', timer: 1500, showConfirmButton: false });
+                    closeModal('edit-teacher-modal');
+                    loadTeachers();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update teacher' });
+            }
+        });
+
+        async function deleteTeacher(id, name) {
+            const result = await Swal.fire({
+                title: 'Delete Teacher?',
+                text: `Remove ${name}'s account?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Delete'
+            });
+            
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/admin/teachers/${id}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+                    
+                    if (res.ok) {
+                        Swal.fire({ icon: 'success', title: 'Deleted', timer: 1500, showConfirmButton: false });
+                        loadTeachers();
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete' });
+                }
+            }
+        }
+
+        // ========================================
+        // STUDENT CRUD
+        // ========================================
+        document.getElementById('add-student-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            
+            try {
+                const res = await fetch('/api/admin/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        nfc_id: form.nfc_id.value,
+                        first_name: form.first_name.value,
+                        last_name: form.last_name.value,
+                        grade: form.grade.value,
+                        section: form.section.value
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Student Added', text: `ID: ${data.data.tamtap_id}`, timer: 2000, showConfirmButton: false });
+                    closeModal('add-student-modal');
+                    loadStudents();
+                    loadSections();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add student' });
+            }
+        });
+
+        async function deleteStudent(nfcId, name) {
+            const result = await Swal.fire({
+                title: 'Delete Student?',
+                text: `Remove ${name}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                confirmButtonText: 'Delete'
+            });
+            
+            if (result.isConfirmed) {
+                try {
+                    const res = await fetch(`/api/admin/students/${nfcId}`, {
+                        method: 'DELETE',
+                        credentials: 'include'
+                    });
+                    
+                    if (res.ok) {
+                        Swal.fire({ icon: 'success', title: 'Deleted', timer: 1500, showConfirmButton: false });
+                        loadStudents();
+                        loadSections();
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete' });
+                }
+            }
+        }
+
+        function showBulkImportModal() {
+            Swal.fire({
+                title: 'Bulk Import Students',
+                html: `
+                    <p class="text-sm text-gray-600 mb-4">Paste CSV data (nfc_id, first_name, last_name, grade, section)</p>
+                    <textarea id="csv-data" class="w-full border rounded p-2 h-32 text-sm font-mono" placeholder="04A1B2C3,Juan,Dela Cruz,11,11-A
+04D5E6F7,Maria,Santos,11,11-A"></textarea>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Import',
+                preConfirm: () => {
+                    const csv = document.getElementById('csv-data').value;
+                    return parseCSV(csv);
+                }
+            }).then(async (result) => {
+                if (result.isConfirmed && result.value.length > 0) {
+                    try {
+                        const res = await fetch('/api/admin/students/bulk', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ students: result.value })
+                        });
+                        
+                        const data = await res.json();
+                        
+                        Swal.fire({
+                            icon: data.results.failed > 0 ? 'warning' : 'success',
+                            title: 'Import Complete',
+                            html: `<p>Success: ${data.results.success}</p><p>Failed: ${data.results.failed}</p>`
+                        });
+                        
+                        loadStudents();
+                        loadSections();
+                    } catch (e) {
+                        Swal.fire({ icon: 'error', title: 'Import Failed' });
+                    }
+                }
+            });
+        }
+
+        function parseCSV(csv) {
+            return csv.trim().split('\n').map(line => {
+                const [nfc_id, first_name, last_name, grade, section] = line.split(',').map(s => s.trim());
+                return { nfc_id, first_name, last_name, grade, section };
+            }).filter(s => s.nfc_id && s.section);
+        }
+
+        // ========================================
+        // INIT
+        // ========================================
+        checkAuth();
+    </script>
+</body>
+</html>

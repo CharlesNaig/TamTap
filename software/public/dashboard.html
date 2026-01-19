@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAMTAP - Teacher Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        .stat-card { transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .pulse-green { animation: pulse-green 1s ease-in-out; }
+        @keyframes pulse-green { 
+            0%, 100% { background-color: rgb(34 197 94); }
+            50% { background-color: rgb(74 222 128); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">TAMTAP</h1>
+                <p class="text-blue-200 text-sm">NFC-Based Attendance System</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="status-badge" class="px-3 py-1 rounded-full text-sm bg-green-500">
+                    ● Connected
+                </span>
+                <span id="user-name" class="text-blue-100">Teacher</span>
+                <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-sm">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="bg-white shadow">
+        <div class="container mx-auto px-4">
+            <div class="flex gap-6">
+                <a href="/dashboard.html" class="py-4 text-blue-600 font-medium border-b-2 border-blue-600">Dashboard</a>
+                <a href="/admin.html" id="admin-link" class="py-4 text-gray-600 hover:text-blue-600 hidden">Admin Panel</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Filter Bar -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-4 items-center">
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                <select id="section-filter" onchange="onFilterChange()" 
+                        title="Select section to filter"
+                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Sections</option>
+                </select>
+            </div>
+            <div class="flex-1 min-w-[200px]">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input type="date" id="date-filter" onchange="onFilterChange()" 
+                       title="Select date to filter"
+                       class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex items-end gap-2">
+                <button onclick="exportCSV()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+                    Export CSV
+                </button>
+                <button onclick="refreshData()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                    Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Section Students</p>
+                        <p id="stat-students" class="text-3xl font-bold text-blue-600">--</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Present Today</p>
+                        <p id="stat-present" class="text-3xl font-bold text-green-600">--</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">AM Session</p>
+                        <p id="stat-am" class="text-3xl font-bold text-yellow-600">--</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="stat-card bg-white rounded-lg shadow p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">PM Session</p>
+                        <p id="stat-pm" class="text-3xl font-bold text-purple-600">--</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Live Attendance Feed -->
+            <div class="lg:col-span-2 bg-white rounded-lg shadow">
+                <div class="p-4 border-b flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-gray-700">Live Attendance Feed</h2>
+                    <span class="flex items-center text-green-500 text-sm">
+                        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        Real-time
+                    </span>
+                </div>
+                <div id="attendance-feed" class="p-4 max-h-96 overflow-y-auto">
+                    <p class="text-gray-400 text-center py-8">Waiting for attendance...</p>
+                </div>
+            </div>
+
+            <!-- Weekly Chart -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-4 border-b">
+                    <h2 class="text-lg font-semibold text-gray-700">Weekly Attendance</h2>
+                </div>
+                <div class="p-4">
+                    <canvas id="weeklyChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Attendance Table -->
+        <div class="mt-6 bg-white rounded-lg shadow">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-gray-700">Attendance Records</h2>
+                <span id="record-count" class="text-sm text-gray-500">0 records</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-table" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Photo Modal -->
+    <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 fade-in">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h3 id="photo-modal-title" class="text-lg font-semibold">Attendance Photo</h3>
+                <button onclick="closePhotoModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <div class="p-4">
+                <img id="photo-modal-img" src="" alt="Attendance Photo" class="w-full rounded-lg">
+                <div id="photo-modal-info" class="mt-4 text-sm text-gray-600"></div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-800 text-gray-400 text-center py-4 mt-8">
+        <p>TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
+    </footer>
+
+    <script>
+        // ========================================
+        // GLOBALS
+        // ========================================
+        let currentUser = null;
+        let socket = null;
+        let weeklyChart = null;
+        let currentRecords = [];
+
+        // ========================================
+        // AUTH CHECK
+        // ========================================
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/auth/me', { credentials: 'include' });
+                if (!res.ok) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                const data = await res.json();
+                if (!data.success) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+                currentUser = data.user;
+                document.getElementById('user-name').textContent = currentUser.name;
+                
+                // Show admin link for admins
+                if (currentUser.role === 'admin') {
+                    document.getElementById('admin-link').classList.remove('hidden');
+                }
+                
+                initDashboard();
+            } catch (e) {
+                window.location.href = '/login.html';
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            window.location.href = '/login.html';
+        }
+
+        // ========================================
+        // INITIALIZATION
+        // ========================================
+        function initDashboard() {
+            // Set today's date
+            document.getElementById('date-filter').value = new Date().toISOString().split('T')[0];
+            
+            // Populate section dropdown based on user role
+            populateSectionDropdown();
+            
+            // Connect Socket.IO
+            initSocket();
+            
+            // Load data
+            refreshData();
+        }
+
+        function populateSectionDropdown() {
+            const select = document.getElementById('section-filter');
+            
+            if (currentUser.role === 'admin') {
+                // Admin sees all sections
+                fetchAllSections().then(sections => {
+                    select.innerHTML = '<option value="">All Sections</option>' +
+                        sections.map(s => `<option value="${s}">${s}</option>`).join('');
+                });
+            } else {
+                // Teacher sees only assigned sections
+                const sections = currentUser.sections_handled || [];
+                if (sections.length === 0) {
+                    select.innerHTML = '<option value="">No sections assigned</option>';
+                } else {
+                    select.innerHTML = sections.map((s, i) => 
+                        `<option value="${s}" ${i === 0 ? 'selected' : ''}>${s}</option>`
+                    ).join('');
+                    // Auto-select first section
+                    select.value = sections[0];
+                }
+            }
+        }
+
+        async function fetchAllSections() {
+            try {
+                const res = await fetch('/api/students', { credentials: 'include' });
+                const data = await res.json();
+                if (data.success) {
+                    const sections = [...new Set(data.data.map(s => s.section).filter(Boolean))];
+                    return sections.sort();
+                }
+            } catch (e) {
+                console.error('Fetch sections error:', e);
+            }
+            return [];
+        }
+
+        // ========================================
+        // SOCKET.IO
+        // ========================================
+        function initSocket() {
+            socket = io();
+
+            socket.on('connect', () => {
+                updateConnectionStatus(true);
+                console.log('[INFO] Socket.IO connected');
+            });
+
+            socket.on('disconnect', () => {
+                updateConnectionStatus(false);
+                console.log('[WARN] Socket.IO disconnected');
+            });
+
+            socket.on('attendance:new', (data) => {
+                console.log('[INFO] New attendance:', data);
+                
+                // Check if matches current filter
+                const currentSection = document.getElementById('section-filter').value;
+                if (!currentSection || data.section === currentSection) {
+                    addToLiveFeed(data);
+                    addToTable(data, true);
+                    updateStats();
+                }
+                
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: `${data.name} checked in!`,
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+
+            socket.on('attendance:fail', (data) => {
+                console.log('[WARN] Attendance failed:', data);
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: `Failed: ${data.reason}`,
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            });
+
+            socket.on('system:status', (data) => {
+                console.log('[INFO] System status:', data);
+            });
+        }
+
+        function updateConnectionStatus(connected) {
+            const badge = document.getElementById('status-badge');
+            if (connected) {
+                badge.className = 'px-3 py-1 rounded-full text-sm bg-green-500';
+                badge.textContent = '● Connected';
+            } else {
+                badge.className = 'px-3 py-1 rounded-full text-sm bg-red-500';
+                badge.textContent = '○ Disconnected';
+            }
+        }
+
+        // ========================================
+        // DATA LOADING
+        // ========================================
+        function onFilterChange() {
+            refreshData();
+        }
+
+        async function refreshData() {
+            await loadAttendance();
+            updateStats();
+            loadWeeklyData();
+        }
+
+        async function loadAttendance() {
+            try {
+                const section = document.getElementById('section-filter').value;
+                const date = document.getElementById('date-filter').value;
+                
+                let url = `/api/attendance/${date}`;
+                if (section) {
+                    url += `?section=${encodeURIComponent(section)}`;
+                }
+                
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                
+                const tbody = document.getElementById('attendance-table');
+                const feed = document.getElementById('attendance-feed');
+                
+                if (!data.success || data.records.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No records found</td></tr>';
+                    feed.innerHTML = '<p class="text-gray-400 text-center py-8">No attendance yet</p>';
+                    currentRecords = [];
+                    document.getElementById('record-count').textContent = '0 records';
+                    return;
+                }
+                
+                currentRecords = data.records;
+                document.getElementById('record-count').textContent = `${data.records.length} records`;
+                
+                // Populate table
+                tbody.innerHTML = '';
+                data.records.forEach(record => addToTable(record, false));
+                
+                // Populate feed (last 10)
+                feed.innerHTML = '';
+                data.records.slice(0, 10).forEach(record => addToLiveFeed(record));
+                
+            } catch (error) {
+                console.error('[ERROR] Load attendance error:', error);
+            }
+        }
+
+        function updateStats() {
+            const section = document.getElementById('section-filter').value;
+            const records = currentRecords;
+            
+            // Filter by section if needed
+            const filtered = section ? records.filter(r => r.section === section) : records;
+            
+            const amCount = filtered.filter(r => r.session === 'AM').length;
+            const pmCount = filtered.filter(r => r.session === 'PM').length;
+            
+            document.getElementById('stat-present').textContent = filtered.length;
+            document.getElementById('stat-am').textContent = amCount;
+            document.getElementById('stat-pm').textContent = pmCount;
+            
+            // Get student count for section
+            fetchStudentCount(section);
+        }
+
+        async function fetchStudentCount(section) {
+            try {
+                let url = '/api/students';
+                if (section) {
+                    url += `/section/${encodeURIComponent(section)}`;
+                }
+                
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                
+                document.getElementById('stat-students').textContent = data.count || 0;
+            } catch (e) {
+                console.error('Fetch student count error:', e);
+            }
+        }
+
+        async function loadWeeklyData() {
+            try {
+                const section = document.getElementById('section-filter').value;
+                let url = '/api/stats/daily?days=7';
+                if (section) {
+                    url += `&section=${encodeURIComponent(section)}`;
+                }
+                
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    renderWeeklyChart(data.data);
+                }
+            } catch (error) {
+                console.error('[ERROR] Load weekly data error:', error);
+            }
+        }
+
+        function renderWeeklyChart(data) {
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+            
+            if (weeklyChart) {
+                weeklyChart.destroy();
+            }
+            
+            weeklyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.map(d => d.day),
+                    datasets: [{
+                        label: 'Attendance',
+                        data: data.map(d => d.count),
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgb(59, 130, 246)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        // ========================================
+        // UI UPDATES
+        // ========================================
+        function addToLiveFeed(data) {
+            const feed = document.getElementById('attendance-feed');
+            
+            if (feed.querySelector('.text-gray-400')) {
+                feed.innerHTML = '';
+            }
+            
+            const photoUrl = data.photo 
+                ? `/photos/${data.date?.split(' ')[0] || data.date?.split('T')[0]}/${data.photo}`
+                : '';
+            
+            const item = document.createElement('div');
+            item.className = 'flex items-center gap-3 p-3 rounded-lg bg-green-50 mb-2 fade-in';
+            item.innerHTML = `
+                <img src="${photoUrl}" 
+                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23e5e7eb%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 font-size=%2240%22 text-anchor=%22middle%22>👤</text></svg>'"
+                     class="w-10 h-10 rounded-full object-cover cursor-pointer"
+                     onclick="showPhoto('${photoUrl}', '${data.name}', '${data.time}')">
+                <div class="flex-1">
+                    <p class="font-medium text-gray-800">${data.name}</p>
+                    <p class="text-xs text-gray-500">${data.section || ''} • ${data.time} ${data.session}</p>
+                </div>
+                <span class="px-2 py-1 rounded text-xs ${getStatusClass(data.status)}">${data.status || 'present'}</span>
+            `;
+            
+            feed.insertBefore(item, feed.firstChild);
+            
+            while (feed.children.length > 20) {
+                feed.removeChild(feed.lastChild);
+            }
+        }
+
+        function addToTable(data, prepend = false) {
+            const tbody = document.getElementById('attendance-table');
+            
+            if (tbody.querySelector('.text-gray-400')) {
+                tbody.innerHTML = '';
+            }
+            
+            const photoUrl = data.photo 
+                ? `/photos/${data.date?.split(' ')[0] || data.date?.split('T')[0]}/${data.photo}`
+                : '';
+            
+            const row = document.createElement('tr');
+            row.className = 'fade-in hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="px-4 py-3">
+                    <img src="${photoUrl}" 
+                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23e5e7eb%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 font-size=%2240%22 text-anchor=%22middle%22>👤</text></svg>'"
+                         class="w-10 h-10 rounded-full object-cover cursor-pointer"
+                         onclick="showPhoto('${photoUrl}', '${data.name}', '${data.time}')">
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">${data.tamtap_id || '--'}</td>
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${data.name}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">${data.section || '-'}</span>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-700">${data.time}</td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 rounded text-xs ${data.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
+                        ${data.session}
+                    </span>
+                </td>
+                <td class="px-4 py-3 text-sm">
+                    <span class="px-2 py-1 rounded text-xs ${getStatusClass(data.status)}">${data.status || 'present'}</span>
+                </td>
+            `;
+            
+            if (prepend) {
+                tbody.insertBefore(row, tbody.firstChild);
+            } else {
+                tbody.appendChild(row);
+            }
+        }
+
+        function getStatusClass(status) {
+            switch (status) {
+                case 'present': return 'bg-green-100 text-green-700';
+                case 'late': return 'bg-yellow-100 text-yellow-700';
+                case 'absent': return 'bg-red-100 text-red-700';
+                case 'fail': return 'bg-gray-100 text-gray-700';
+                default: return 'bg-green-100 text-green-700';
+            }
+        }
+
+        // ========================================
+        // PHOTO MODAL
+        // ========================================
+        function showPhoto(url, name, time) {
+            if (!url) return;
+            
+            document.getElementById('photo-modal-img').src = url;
+            document.getElementById('photo-modal-title').textContent = name;
+            document.getElementById('photo-modal-info').textContent = `Time: ${time}`;
+            document.getElementById('photo-modal').classList.remove('hidden');
+            document.getElementById('photo-modal').classList.add('flex');
+        }
+
+        function closePhotoModal() {
+            document.getElementById('photo-modal').classList.add('hidden');
+            document.getElementById('photo-modal').classList.remove('flex');
+        }
+
+        // ========================================
+        // EXPORT
+        // ========================================
+        function exportCSV() {
+            if (currentRecords.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'No Data', text: 'No records to export' });
+                return;
+            }
+            
+            const section = document.getElementById('section-filter').value || 'all';
+            const date = document.getElementById('date-filter').value;
+            
+            const headers = ['ID', 'Name', 'Section', 'Grade', 'Date', 'Time', 'Session', 'Status', 'Photo'];
+            const rows = currentRecords.map(r => [
+                r.tamtap_id || '',
+                r.name,
+                r.section || '',
+                r.grade || '',
+                r.date,
+                r.time,
+                r.session,
+                r.status || 'present',
+                r.photo || ''
+            ]);
+            
+            const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `attendance_${section}_${date}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'CSV exported!',
+                showConfirmButton: false,
+                timer: 2000
+            });
+        }
+
+        // ========================================
+        // INIT
+        // ========================================
+        checkAuth();
+    </script>
+</body>
+</html>

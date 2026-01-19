@@ -23,6 +23,19 @@ const config = {
         }
     },
 
+    // Session Configuration (for login)
+    session: {
+        secret: process.env.SESSION_SECRET || 'tamtap-local-secret-change-in-production',
+        name: 'tamtap.sid',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            httpOnly: true,
+            secure: false,  // Set true if using HTTPS
+            maxAge: 8 * 60 * 60 * 1000  // 8 hours
+        }
+    },
+
     // Photo Configuration
     photos: {
         baseDir: '../assets/attendance_photos',
@@ -48,4 +61,4 @@ const config = {
     }
 };
 
-module.exports = config;
+module.exports = config;module.exports = config;

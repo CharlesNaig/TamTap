@@ -1,7 +1,7 @@
 /**
  * TAMTAP Attendance Routes
- * GET /api/attendance - Today's attendance
- * GET /api/attendance/:date - Attendance by date
+ * GET /api/attendance - Today's attendance (with optional section filter)
+ * GET /api/attendance/:date - Attendance by date (with optional section filter)
  * GET /api/attendance/range - Attendance by date range
  */
 
@@ -11,6 +11,7 @@ const router = express.Router();
 /**
  * GET /api/attendance
  * Get today's attendance records
+ * Query params: ?section=11-A (optional)
  */
 router.get('/', async (req, res) => {
     try {
@@ -20,17 +21,23 @@ router.get('/', async (req, res) => {
         }
         
         const today = new Date().toISOString().split('T')[0];  // YYYY-MM-DD
+        const section = req.query.section;
+        
+        // Build query
+        const query = { date: { $regex: `^${today}` } };
+        if (section) {
+            query.section = section;
+        }
         
         const records = await db.collection('attendance')
-            .find({
-                date: { $regex: `^${today}` }
-            })
+            .find(query)
             .sort({ date: -1 })
             .toArray();
         
         res.json({
             success: true,
             date: today,
+            section: section || 'all',
             count: records.length,
             records: records.map(r => ({
                 nfc_id: r.nfc_id,
@@ -57,6 +64,7 @@ router.get('/', async (req, res) => {
  * GET /api/attendance/:date
  * Get attendance for a specific date
  * @param date - Date in YYYY-MM-DD format
+ * Query params: ?section=11-A (optional)
  */
 router.get('/:date', async (req, res) => {
     try {
@@ -66,22 +74,28 @@ router.get('/:date', async (req, res) => {
         }
         
         const dateParam = req.params.date;
+        const section = req.query.section;
         
         // Validate date format
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
             return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
         }
         
+        // Build query with optional section filter
+        const query = { date: { $regex: `^${dateParam}` } };
+        if (section) {
+            query.section = section;
+        }
+        
         const records = await db.collection('attendance')
-            .find({
-                date: { $regex: `^${dateParam}` }
-            })
+            .find(query)
             .sort({ time: 1 })
             .toArray();
         
         res.json({
             success: true,
             date: dateParam,
+            section: section || 'all',
             count: records.length,
             records: records.map(r => ({
                 nfc_id: r.nfc_id,

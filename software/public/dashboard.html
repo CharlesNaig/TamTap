@@ -256,40 +256,37 @@
         // ========================================
         // INITIALIZATION
         // ========================================
-        function initDashboard() {
+        async function initDashboard() {
             // Set today's date
             document.getElementById('date-filter').value = new Date().toISOString().split('T')[0];
             
-            // Populate section dropdown based on user role
-            populateSectionDropdown();
+            // Populate section dropdown based on user role (await for async fetch)
+            await populateSectionDropdown();
             
             // Connect Socket.IO
             initSocket();
             
-            // Load data
+            // Load data AFTER dropdown is populated
             refreshData();
         }
 
-        function populateSectionDropdown() {
+        async function populateSectionDropdown() {
             const select = document.getElementById('section-filter');
             
             if (currentUser.role === 'admin') {
                 // Admin sees all sections
-                fetchAllSections().then(sections => {
-                    select.innerHTML = '<option value="">All Sections</option>' +
-                        sections.map(s => `<option value="${s}">${s}</option>`).join('');
-                });
+                const sections = await fetchAllSections();
+                select.innerHTML = '<option value="">All Sections</option>' +
+                    sections.map(s => `<option value="${s}">${s}</option>`).join('');
             } else {
-                // Teacher sees only assigned sections
+                // Teacher sees assigned sections + All Sections option
                 const sections = currentUser.sections_handled || [];
                 if (sections.length === 0) {
-                    select.innerHTML = '<option value="">No sections assigned</option>';
+                    select.innerHTML = '<option value="">All Sections</option>';
                 } else {
-                    select.innerHTML = sections.map((s, i) => 
-                        `<option value="${s}" ${i === 0 ? 'selected' : ''}>${s}</option>`
-                    ).join('');
-                    // Auto-select first section
-                    select.value = sections[0];
+                    // Add "All My Sections" option + individual sections
+                    select.innerHTML = '<option value="">All My Sections</option>' +
+                        sections.map(s => `<option value="${s}">${s}</option>`).join('');
                 }
             }
         }
@@ -393,8 +390,21 @@
                 const date = document.getElementById('date-filter').value;
                 
                 let url = `/api/attendance/${date}`;
+                
+                // Build query params
+                const params = new URLSearchParams();
+                
                 if (section) {
-                    url += `?section=${encodeURIComponent(section)}`;
+                    // Single section selected
+                    params.set('section', section);
+                } else if (currentUser.role === 'teacher' && currentUser.sections_handled?.length > 0) {
+                    // Teacher with "All My Sections" - pass all assigned sections
+                    params.set('sections', currentUser.sections_handled.join(','));
+                }
+                // Admin with empty section = no filter (all sections)
+                
+                if (params.toString()) {
+                    url += `?${params.toString()}`;
                 }
                 
                 const res = await fetch(url, { credentials: 'include' });
@@ -448,8 +458,12 @@
         async function fetchStudentCount(section) {
             try {
                 let url = '/api/students';
+                
                 if (section) {
                     url += `/section/${encodeURIComponent(section)}`;
+                } else if (currentUser.role === 'teacher' && currentUser.sections_handled?.length > 0) {
+                    // Teacher with "All My Sections" - pass all assigned sections
+                    url += `/section/${encodeURIComponent(currentUser.sections_handled.join(','))}`;
                 }
                 
                 const res = await fetch(url, { credentials: 'include' });
@@ -465,8 +479,12 @@
             try {
                 const section = document.getElementById('section-filter').value;
                 let url = '/api/stats/daily?days=7';
+                
                 if (section) {
                     url += `&section=${encodeURIComponent(section)}`;
+                } else if (currentUser.role === 'teacher' && currentUser.sections_handled?.length > 0) {
+                    // Teacher with "All My Sections" - pass all assigned sections
+                    url += `&sections=${encodeURIComponent(currentUser.sections_handled.join(','))}`;
                 }
                 
                 const res = await fetch(url, { credentials: 'include' });

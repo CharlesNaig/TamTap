@@ -137,7 +137,7 @@ router.get('/grade/:grade', async (req, res) => {
 
 /**
  * GET /api/students/section/:section
- * Get students by section
+ * Get students by section (supports comma-separated list)
  */
 router.get('/section/:section', async (req, res) => {
     try {
@@ -146,22 +146,33 @@ router.get('/section/:section', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const section = decodeURIComponent(req.params.section);
+        const sectionParam = decodeURIComponent(req.params.section);
+        
+        // Support comma-separated sections for teachers with multiple sections
+        const sectionList = sectionParam.split(',').map(s => s.trim()).filter(Boolean);
+        
+        let query = {};
+        if (sectionList.length === 1) {
+            query = { section: sectionList[0] };
+        } else if (sectionList.length > 1) {
+            query = { section: { $in: sectionList } };
+        }
         
         const students = await db.collection('students')
-            .find({ section: section })
-            .sort({ name: 1 })
+            .find(query)
+            .sort({ section: 1, name: 1 })
             .toArray();
         
         res.json({
             success: true,
-            section: section,
+            section: sectionParam,
             count: students.length,
             data: students.map(u => ({
                 nfc_id: u.nfc_id,
                 tamtap_id: u.tamtap_id || '',
                 name: u.name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
                 grade: u.grade || '',
+                section: u.section || '',
                 email: u.email || ''
             }))
         });

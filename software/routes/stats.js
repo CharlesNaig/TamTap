@@ -78,7 +78,10 @@ router.get('/', async (req, res) => {
 /**
  * GET /api/stats/daily
  * Get daily attendance summary for the last 7 days
- * Query params: ?days=7&section=11-A (optional)
+ * Query params: 
+ *   ?days=7 (number of days to fetch)
+ *   ?section=11-A (single section filter)
+ *   ?sections=11-A,11-B (multiple sections filter)
  */
 router.get('/daily', async (req, res) => {
     try {
@@ -89,6 +92,7 @@ router.get('/daily', async (req, res) => {
         
         const days = parseInt(req.query.days) || 7;
         const section = req.query.section;
+        const sections = req.query.sections;
         const dailyStats = [];
         
         for (let i = 0; i < days; i++) {
@@ -98,8 +102,14 @@ router.get('/daily', async (req, res) => {
             
             // Build query with optional section filter
             const query = { date: { $regex: `^${dateStr}` } };
+            
             if (section) {
                 query.section = section;
+            } else if (sections) {
+                const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
+                if (sectionList.length > 0) {
+                    query.section = { $in: sectionList };
+                }
             }
             
             const count = await db.collection('attendance').countDocuments(query);
@@ -114,7 +124,7 @@ router.get('/daily', async (req, res) => {
         res.json({
             success: true,
             days: days,
-            section: section || 'all',
+            section: section || sections || 'all',
             data: dailyStats.reverse()  // Oldest first
         });
         

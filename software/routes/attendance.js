@@ -11,7 +11,9 @@ const router = express.Router();
 /**
  * GET /api/attendance
  * Get today's attendance records
- * Query params: ?section=11-A (optional)
+ * Query params: 
+ *   ?section=11-A (single section filter)
+ *   ?sections=11-A,11-B,12-A (multiple sections filter)
  */
 router.get('/', async (req, res) => {
     try {
@@ -22,11 +24,20 @@ router.get('/', async (req, res) => {
         
         const today = new Date().toISOString().split('T')[0];  // YYYY-MM-DD
         const section = req.query.section;
+        const sections = req.query.sections; // comma-separated list
         
         // Build query
         const query = { date: { $regex: `^${today}` } };
+        
         if (section) {
+            // Single section filter
             query.section = section;
+        } else if (sections) {
+            // Multiple sections filter (for teachers)
+            const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
+            if (sectionList.length > 0) {
+                query.section = { $in: sectionList };
+            }
         }
         
         const records = await db.collection('attendance')
@@ -64,7 +75,9 @@ router.get('/', async (req, res) => {
  * GET /api/attendance/:date
  * Get attendance for a specific date
  * @param date - Date in YYYY-MM-DD format
- * Query params: ?section=11-A (optional)
+ * Query params: 
+ *   ?section=11-A (single section filter)
+ *   ?sections=11-A,11-B,12-A (multiple sections filter)
  */
 router.get('/:date', async (req, res) => {
     try {
@@ -75,6 +88,7 @@ router.get('/:date', async (req, res) => {
         
         const dateParam = req.params.date;
         const section = req.query.section;
+        const sections = req.query.sections; // comma-separated list
         
         // Validate date format
         if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
@@ -83,8 +97,16 @@ router.get('/:date', async (req, res) => {
         
         // Build query with optional section filter
         const query = { date: { $regex: `^${dateParam}` } };
+        
         if (section) {
+            // Single section filter
             query.section = section;
+        } else if (sections) {
+            // Multiple sections filter (for teachers)
+            const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
+            if (sectionList.length > 0) {
+                query.section = { $in: sectionList };
+            }
         }
         
         const records = await db.collection('attendance')

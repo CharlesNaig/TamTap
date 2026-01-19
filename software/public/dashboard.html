@@ -391,21 +391,11 @@
                 
                 let url = `/api/attendance/${date}`;
                 
-                // Build query params
-                const params = new URLSearchParams();
-                
+                // Build query params - only filter if specific section selected
                 if (section) {
-                    // Single section selected
-                    params.set('section', section);
-                } else if (currentUser.role === 'teacher' && currentUser.sections_handled?.length > 0) {
-                    // Teacher with "All My Sections" - pass all assigned sections
-                    params.set('sections', currentUser.sections_handled.join(','));
+                    url += `?section=${encodeURIComponent(section)}`;
                 }
-                // Admin with empty section = no filter (all sections)
-                
-                if (params.toString()) {
-                    url += `?${params.toString()}`;
-                }
+                // When "All My Sections" selected (empty value), don't filter - show all
                 
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json();
@@ -461,10 +451,8 @@
                 
                 if (section) {
                     url += `/section/${encodeURIComponent(section)}`;
-                } else if (currentUser.role === 'teacher' && currentUser.sections_handled?.length > 0) {
-                    // Teacher with "All My Sections" - pass all assigned sections
-                    url += `/section/${encodeURIComponent(currentUser.sections_handled.join(','))}`;
                 }
+                // When no section selected, get all students count
                 
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json();
@@ -482,10 +470,8 @@
                 
                 if (section) {
                     url += `&section=${encodeURIComponent(section)}`;
-                } else if (currentUser.role === 'teacher' && currentUser.sections_handled?.length > 0) {
-                    // Teacher with "All My Sections" - pass all assigned sections
-                    url += `&sections=${encodeURIComponent(currentUser.sections_handled.join(','))}`;
                 }
+                // When no section selected, get all attendance stats
                 
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json();

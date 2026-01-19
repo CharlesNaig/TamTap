@@ -83,6 +83,7 @@ router.get('/:date', async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
+            console.log('[WARN] Database not available for attendance query');
             return res.status(503).json({ error: 'Database not available' });
         }
         
@@ -109,10 +110,14 @@ router.get('/:date', async (req, res) => {
             }
         }
         
+        console.log('[DEBUG] Attendance query:', JSON.stringify(query));
+        
         const records = await db.collection('attendance')
             .find(query)
             .sort({ time: 1 })
             .toArray();
+        
+        console.log('[DEBUG] Found', records.length, 'attendance records');
         
         res.json({
             success: true,

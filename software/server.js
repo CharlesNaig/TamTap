@@ -167,6 +167,32 @@ app.use('/api/teachers', studentsRoutes);  // Reuse for teachers
 app.use('/api/stats', statsRoutes);
 
 // ========================================
+// DEBUG ENDPOINT (Remove in production)
+// ========================================
+app.get('/api/debug/attendance', async (req, res) => {
+    try {
+        if (!db) {
+            return res.json({ error: 'Database not connected' });
+        }
+        
+        const count = await db.collection('attendance').countDocuments();
+        const latest = await db.collection('attendance')
+            .find({})
+            .sort({ date: -1 })
+            .limit(5)
+            .toArray();
+        
+        res.json({
+            mongodb_connected: true,
+            total_records: count,
+            latest_5: latest
+        });
+    } catch (e) {
+        res.json({ error: e.message });
+    }
+});
+
+// ========================================
 // HARDWARE BRIDGE ENDPOINT
 // ========================================
 

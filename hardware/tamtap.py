@@ -179,10 +179,22 @@ def generate_photo_filename(user_data, suffix=""):
     return filename
 
 # ========================================
-# 📱 I2C LCD DRIVER (SMBus)
+# 📱 I2C LCD DRIVER (SMBus) - Optimized for 10kHz I2C
 # ========================================
+# Note: /boot/firmware/config.txt settings:
+#   dtparam=i2c_arm_baudrate=10000  (10kHz for stability)
+#   dtparam=i2c_arm=on
+
+# Timing constants for 10kHz I2C bus (slower = more reliable)
+LCD_E_PULSE = 0.002    # Enable pulse width (2ms for 10kHz bus)
+LCD_E_DELAY = 0.002    # Delay after enable toggle
+LCD_INIT_DELAY = 0.05  # Delay during initialization
+
 class LCD:
-    """I2C LCD 16x2 Driver using SMBus"""
+    """
+    I2C LCD 16x2 Driver using SMBus
+    Optimized for slow I2C bus (10kHz baudrate)
+    """
     
     def __init__(self, address=LCD_ADDRESS):
         self.address = address
@@ -191,22 +203,59 @@ class LCD:
         self._init_lcd()
     
     def _init_lcd(self):
-        """Initialize LCD display"""
+        """Initialize LCD display with extended timing for 10kHz I2C"""
         try:
             self.bus = smbus.SMBus(1)
-            # LCD initialization sequence
-            self._write_byte(0x33, LCD_CMD)
-            self._write_byte(0x32, LCD_CMD)
-            self._write_byte(0x06, LCD_CMD)  # Cursor move direction
-            self._write_byte(0x0C, LCD_CMD)  # Display on, cursor off
-            self._write_byte(0x28, LCD_CMD)  # 2 line, 5x8 matrix
-            self._write_byte(0x01, LCD_CMD)  # Clear display
+            time.sleep(LCD_INIT_DELAY)  # Wait for bus to stabilize
+            
+            # LCD initialization sequence (HD44780 protocol)
+            # First, put LCD into 4-bit mode
+            self._write_4bits(0x30)
             time.sleep(0.005)
+            self._write_4bits(0x30)
+            time.sleep(0.001)
+            self._write_4bits(0x30)
+            time.sleep(0.001)
+            self._write_4bits(0x20)  # Set 4-bit mode
+            time.sleep(0.001)
+            
+            # Now configure display
+            self._write_byte(0x28, LCD_CMD)  # 4-bit, 2 lines, 5x8 font
+            time.sleep(0.001)
+            self._write_byte(0x0C, LCD_CMD)  # Display on, cursor off, blink off
+            time.sleep(0.001)
+            self._write_byte(0x06, LCD_CMD)  # Entry mode: increment, no shift
+            time.sleep(0.001)
+            self._write_byte(0x01, LCD_CMD)  # Clear display
+            time.sleep(0.003)
+            
             self.initialized = True
-            logger.info("LCD initialized at address 0x%02X", self.address)
+            logger.info("LCD initialized at address 0x%02X (10kHz I2C)", self.address)
         except Exception as e:
             logger.error("LCD initialization failed: %s", e)
             self.initialized = False
+    
+    def _write_4bits(self, data):
+        """Write 4 bits to LCD (used during init)"""
+        if not self.bus:
+            return
+        try:
+            byte = (data & 0xF0) | LCD_BACKLIGHT
+            self.bus.write_byte(self.address, byte)
+            self._pulse_enable(byte)
+        except Exception:
+            pass
+    
+    def _pulse_enable(self, data):
+        """Pulse the Enable pin with timing for 10kHz I2C"""
+        try:
+            time.sleep(LCD_E_DELAY)
+            self.bus.write_byte(self.address, data | ENABLE)
+            time.sleep(LCD_E_PULSE)
+            self.bus.write_byte(self.address, data & ~ENABLE)
+            time.sleep(LCD_E_DELAY)
+        except Exception:
+            pass
     
     def _write_byte(self, bits, mode):
         """Write byte to LCD using 4-bit mode"""
@@ -216,33 +265,46 @@ class LCD:
             # High nibble
             high = mode | (bits & 0xF0) | LCD_BACKLIGHT
             self.bus.write_byte(self.address, high)
-            self._toggle_enable(high)
+            self._pulse_enable(high)
             
             # Low nibble
             low = mode | ((bits << 4) & 0xF0) | LCD_BACKLIGHT
             self.bus.write_byte(self.address, low)
-            self._toggle_enable(low)
-        except Exception:
-            pass
-    
-    def _toggle_enable(self, bits):
-        """Toggle enable pin for LCD"""
-        try:
-            time.sleep(0.0005)
-            self.bus.write_byte(self.address, bits | ENABLE)
-            time.sleep(0.0005)
-            self.bus.write_byte(self.address, bits & ~ENABLE)
-            time.sleep(0.0005)
+            self._pulse_enable(low)
         except Exception:
             pass
     
     def clear(self):
         """Clear LCD display"""
         self._write_byte(0x01, LCD_CMD)
-        time.sleep(0.005)
+        time.sleep(0.003)  # Clear command needs extra time
+    
+    def home(self):
+        """Return cursor to home position"""
+        self._write_byte(0x02, LCD_CMD)
+        time.sleep(0.003)
+    
+    def set_cursor(self, row, col):
+        """Set cursor position (row 0-1, col 0-15)"""
+        row_offsets = [0x00, 0x40]
+        if row < 0 or row > 1:
+            row = 0
+        if col < 0 or col > 15:
+            col = 0
+        self._write_byte(LCD_LINE_1 | (row_offsets[row] + col), LCD_CMD)
+    
+    def backlight(self, on=True):
+        """Control backlight"""
+        global LCD_BACKLIGHT
+        LCD_BACKLIGHT = 0x08 if on else 0x00
+        if self.bus:
+            try:
+                self.bus.write_byte(self.address, LCD_BACKLIGHT)
+            except Exception:
+                pass
     
     def show(self, line1="", line2=""):
-        """Display two lines on LCD (≤100ms)"""
+        """Display two lines on LCD"""
         if not self.initialized:
             logger.info("LCD: %s | %s", line1, line2)
             return
@@ -572,7 +634,7 @@ current_state = State.IDLE
 
 def idle_state():
     """IDLE state: Display waiting message, all LEDs off"""
-    lcd.show("WAITING FOR", "STUDENT...")
+    lcd.show("WAITING FOR", "TAMARAW...")
     all_leds_off()
 
 def card_detected_state():

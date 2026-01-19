@@ -1,13 +1,4 @@
 #!/usr/bin/env python3
-"""
-TAMTAP v7.1 REGISTRATION CLI - ARDUINO VERSION
-Student/Teacher Registration + NFC Integration via Arduino Uno
-Uses shared Database module with MongoDB + JSON sync
-
-Hardware: Arduino Uno + RC522 RFID Module
-Communication: Serial (USB)
-"""
-
 import os
 import sys
 import signal

@@ -1,6 +1,7 @@
 {
   "students": {
     "2710951593": {
+      "nfc_id": "2710951593",
       "email": "r2026001@feuroosevelt.edu.ph",
       "first_name": "Charles",
       "last_name": "Marcelo",
@@ -8,9 +9,34 @@
       "grade": "12",
       "section": "ICT B",
       "registered": "2026-01-16 21:30:11"
+    },
+    "1871942632": {
+      "nfc_id": "1871942632",
+      "tamtap_id": "052",
+      "email": "cm122927@gmail.com",
+      "first_name": "charles",
+      "last_name": "marcelo",
+      "name": "charles marcelo",
+      "grade": "12",
+      "section": "ICT B",
+      "registered": "2026-01-17 00:55:05"
     }
   },
-  "teachers": {},
+  "teachers": {
+    "580728989105": {
+      "nfc_id": "580728989105",
+      "tamtap_id": "051",
+      "email": "teacher051@feuroosevelt.edu.ph",
+      "first_name": "Nicky",
+      "last_name": "Bataluna",
+      "name": "Nicky Bataluna",
+      "grade": "12",
+      "section": "ICT B",
+      "registered": "2026-01-17 00:24:25"
+    }
+  },
   "attendance": [],
-  "pending_attendance": []
+  "pending_attendance": [],
+  "next_tamtap_id": 1,
+  "last_sync": "2026-01-19 23:07:29"
 }

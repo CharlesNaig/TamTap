@@ -1,0 +1,20 @@
+[Unit]
+Description=TAMTAP GPIO Button Controller
+Documentation=https://github.com/CharlesNaig/TamTap
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pi/TamTap/buttons/button_listener.py
+Restart=always
+RestartSec=5
+User=root
+Environment=PYTHONUNBUFFERED=1
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tamtap-buttons
+
+[Install]
+WantedBy=multi-user.target

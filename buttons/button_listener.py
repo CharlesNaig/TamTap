@@ -6,7 +6,7 @@ Controls application lifecycle via GPIO buttons using systemd.
 GPIO Layout (BCM):
     - GPIO 5:  START button
     - GPIO 6:  RESTART button
-    - GPIO 16: SHUTDOWN button (long press only)
+    - GPIO 16: STOP button (long press only)
 
 All buttons: Active LOW, internal pull-up, wired to GND.
 """
@@ -86,13 +86,7 @@ def run_systemctl(action: str) -> bool:
         return False
 
 
-def shutdown_os() -> None:
-    """Shutdown the Raspberry Pi."""
-    try:
-        logger.info("Initiating OS shutdown...")
-        subprocess.run(["sudo", "shutdown", "now"], timeout=10)
-    except Exception as e:
-        logger.error(f"OS shutdown failed: {e}")
+
 
 
 # =============================================================================
@@ -124,15 +118,15 @@ def on_restart_pressed() -> None:
         action_lock.release()
 
 
-def on_shutdown_held() -> None:
-    """SHUTDOWN button held handler - record press start time."""
+def on_stop_held() -> None:
+    """STOP button held handler - record press start time."""
     global shutdown_press_start
     shutdown_press_start = time()
-    logger.info("Shutdown button pressed, hold for 2.5 seconds...")
+    logger.info("Stop button pressed, hold for 2.5 seconds...")
 
 
-def on_shutdown_released() -> None:
-    """SHUTDOWN button released handler - execute if held long enough."""
+def on_stop_released() -> None:
+    """STOP button released handler - stop service if held long enough."""
     global shutdown_press_start
     
     if shutdown_press_start == 0.0:
@@ -142,32 +136,21 @@ def on_shutdown_released() -> None:
     shutdown_press_start = 0.0
     
     if held_duration < SHUTDOWN_HOLD_SEC:
-        logger.info(f"Shutdown cancelled (held {held_duration:.1f}s, need {SHUTDOWN_HOLD_SEC}s)")
+        logger.info(f"Stop cancelled (held {held_duration:.1f}s, need {SHUTDOWN_HOLD_SEC}s)")
         return
     
     if not action_lock.acquire(blocking=False):
-        logger.warning("Action in progress, ignoring SHUTDOWN")
+        logger.warning("Action in progress, ignoring STOP")
         return
     
     try:
-        logger.info(f"Shutdown confirmed (held {held_duration:.1f}s)")
+        logger.info(f"Stop confirmed (held {held_duration:.1f}s)")
         
-        # Step 1: Stop the service
         if is_service_active():
             logger.info("Stopping TAMTAP service...")
-            if not run_systemctl("stop"):
-                logger.error("Failed to stop service, aborting shutdown")
-                return
-            
-            # Wait for service to fully stop
-            import time as t
-            for _ in range(10):
-                if not is_service_active():
-                    break
-                t.sleep(0.5)
-        
-        # Step 2: Shutdown OS
-        shutdown_os()
+            run_systemctl("stop")
+        else:
+            logger.info("Service not running, nothing to stop")
         
     finally:
         action_lock.release()
@@ -218,10 +201,10 @@ def main() -> None:
     # Attach handlers
     btn_start.when_pressed = on_start_pressed
     btn_restart.when_pressed = on_restart_pressed
-    btn_shutdown.when_pressed = on_shutdown_held
-    btn_shutdown.when_released = on_shutdown_released
+    btn_shutdown.when_pressed = on_stop_held
+    btn_shutdown.when_released = on_stop_released
     
-    logger.info(f"Buttons initialized: START(GPIO{GPIO_START}), RESTART(GPIO{GPIO_RESTART}), SHUTDOWN(GPIO{GPIO_SHUTDOWN})")
+    logger.info(f"Buttons initialized: START(GPIO{GPIO_START}), RESTART(GPIO{GPIO_RESTART}), STOP(GPIO{GPIO_SHUTDOWN})")
     logger.info("Waiting for button events...")
     
     # Block forever (event-based, no busy loop)

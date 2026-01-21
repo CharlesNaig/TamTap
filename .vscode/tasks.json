@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "TAMTAP Server",
+			"type": "shell",
+			"command": "cd software && npm start",
+			"isBackground": true,
+			"problemMatcher": []
+		}
+	]
+}

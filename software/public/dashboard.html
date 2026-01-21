@@ -4,210 +4,435 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAMTAP - Teacher Dashboard</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // FEU Color Palette Configuration
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'feu-green': '#006A4E',
+                        'feu-green-dark': '#00523D',
+                        'feu-green-light': '#008060',
+                        'feu-gold': '#FFD700',
+                        'feu-gold-dark': '#D4AF37'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Socket.IO -->
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        .stat-card { transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); }
+        /* Animations */
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .pulse-green { animation: pulse-green 1s ease-in-out; }
-        @keyframes pulse-green { 
-            0%, 100% { background-color: rgb(34 197 94); }
-            50% { background-color: rgb(74 222 128); }
+        
+        /* Status Dots */
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .status-present { background-color: #22c55e; }
+        .status-late { background-color: #eab308; }
+        .status-absent { background-color: #1f2937; }
+        .status-unknown { background-color: #9ca3af; }
+        
+        /* Clickable Row */
+        .clickable-row { cursor: pointer; transition: background-color 0.2s; }
+        .clickable-row:hover { background-color: #f3f4f6; }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Disabled Card */
+        .card-disabled {
+            opacity: 0.5;
+            pointer-events: none;
         }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-blue-600 text-white shadow-lg">
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- ========================================
+         HEADER
+         Backend: GET /api/auth/me (user info)
+    ======================================== -->
+    <header class="bg-feu-green text-white shadow-lg">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold">TAMTAP</h1>
-                <p class="text-blue-200 text-sm">NFC-Based Attendance System</p>
+            <!-- Logo & Title -->
+            <div class="flex items-center gap-3">
+                <img src="/assets/logos/TamTap-wteachers.png" 
+                     alt="TAMTAP" 
+                     class="h-10"
+                     onerror="this.style.display='none'">
+                <div>
+                    <h1 class="text-xl font-bold">TAMTAP</h1>
+                    <p class="text-feu-gold text-xs">Teacher Dashboard</p>
+                </div>
             </div>
+            
+            <!-- Right Section: User, Notifications, Settings -->
             <div class="flex items-center gap-4">
-                <span id="status-badge" class="px-3 py-1 rounded-full text-sm bg-green-500">
-                    ● Connected
+                <!-- Connection Status -->
+                <span id="connection-status" class="px-2 py-1 rounded-full text-xs bg-green-500 hidden sm:inline">
+                    <i class="fas fa-circle text-[8px] mr-1"></i> Live
                 </span>
-                <span id="user-name" class="text-blue-100">Teacher</span>
-                <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-sm">
-                    Logout
+                
+                <!-- Notification Icon (Disabled - No backend support) -->
+                <button id="notification-btn" 
+                        class="text-white/50 cursor-not-allowed relative" 
+                        title="Notifications unavailable"
+                        disabled>
+                    <i class="fas fa-bell text-lg"></i>
                 </button>
+                
+                <!-- Settings Dropdown -->
+                <div class="relative">
+                    <button onclick="toggleSettingsMenu()" 
+                            class="flex items-center gap-2 hover:bg-feu-green-dark px-3 py-2 rounded-lg transition">
+                        <i class="fas fa-user-circle text-2xl"></i>
+                        <span id="user-name" class="hidden sm:inline text-sm">Teacher</span>
+                        <i class="fas fa-chevron-down text-xs"></i>
+                    </button>
+                    
+                    <!-- Settings Dropdown Menu -->
+                    <div id="settings-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50 border">
+                        <div class="p-4 border-b">
+                            <p id="menu-user-name" class="font-semibold text-gray-800">Teacher Name</p>
+                            <p id="menu-user-role" class="text-xs text-gray-500">Role</p>
+                        </div>
+                        <ul class="py-2">
+                            <li>
+                                <button onclick="showPersonalInfo()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <i class="fas fa-user text-feu-green w-5"></i> Personal Information
+                                </button>
+                            </li>
+                            <li>
+                                <button onclick="showHelpCenter()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                    <i class="fas fa-circle-question text-feu-green w-5"></i> Help Center
+                                </button>
+                            </li>
+                            <li class="border-t mt-2 pt-2">
+                                <button onclick="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <i class="fas fa-right-from-bracket w-5"></i> Log Out
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Navigation -->
-    <nav class="bg-white shadow">
-        <div class="container mx-auto px-4">
-            <div class="flex gap-6">
-                <a href="/dashboard.html" class="py-4 text-blue-600 font-medium border-b-2 border-blue-600">Dashboard</a>
-                <a href="/admin.html" id="admin-link" class="py-4 text-gray-600 hover:text-blue-600 hidden">Admin Panel</a>
-            </div>
-        </div>
-    </nav>
-
-    <main class="container mx-auto px-4 py-6">
-        <!-- Filter Bar -->
-        <div class="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap gap-4 items-center">
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                <select id="section-filter" onchange="onFilterChange()" 
-                        title="Select section to filter"
-                        class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Sections</option>
+    <!-- ========================================
+         TOP FILTER BAR
+         Backend: GET /api/auth/me (sections_handled)
+    ======================================== -->
+    <div class="bg-white border-b shadow-sm">
+        <div class="container mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+            <!-- Section Selector -->
+            <div class="flex items-center gap-2">
+                <label for="section-select" class="text-sm font-medium text-gray-700">
+                    <i class="fas fa-users text-feu-green mr-1"></i> Section:
+                </label>
+                <select id="section-select" 
+                        onchange="onSectionChange()"
+                        class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-feu-green focus:border-transparent">
+                    <option value="">Loading...</option>
                 </select>
             </div>
-            <div class="flex-1 min-w-[200px]">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input type="date" id="date-filter" onchange="onFilterChange()" 
-                       title="Select date to filter"
-                       class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="flex items-end gap-2">
-                <button onclick="exportCSV()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
-                    Export CSV
+            
+            <!-- Date Range Tabs -->
+            <div class="flex items-center gap-1 ml-auto">
+                <button onclick="setDateRange('today')" 
+                        id="tab-today"
+                        class="date-tab px-4 py-2 text-sm rounded-lg bg-feu-green text-white">
+                    Today
                 </button>
-                <button onclick="refreshData()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-                    Refresh
+                <button onclick="setDateRange('week')" 
+                        id="tab-week"
+                        class="date-tab px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100">
+                    This Week
+                </button>
+                <button onclick="setDateRange('month')" 
+                        id="tab-month"
+                        class="date-tab px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100">
+                    This Month
+                </button>
+                <button onclick="setDateRange('semester')" 
+                        id="tab-semester"
+                        class="date-tab px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100"
+                        title="Feature pending backend support">
+                    This Semester
                 </button>
             </div>
-        </div>
-
-        <!-- Statistics Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="stat-card bg-white rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">Section Students</p>
-                        <p id="stat-students" class="text-3xl font-bold text-blue-600">--</p>
-                    </div>
-                    <div class="bg-blue-100 p-3 rounded-full">
-                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
             
-            <div class="stat-card bg-white rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">Present Today</p>
-                        <p id="stat-present" class="text-3xl font-bold text-green-600">--</p>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stat-card bg-white rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">AM Session</p>
-                        <p id="stat-am" class="text-3xl font-bold text-yellow-600">--</p>
-                    </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="stat-card bg-white rounded-lg shadow p-6">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-gray-500 text-sm">PM Session</p>
-                        <p id="stat-pm" class="text-3xl font-bold text-purple-600">--</p>
-                    </div>
-                    <div class="bg-purple-100 p-3 rounded-full">
-                        <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Live Attendance Feed -->
-            <div class="lg:col-span-2 bg-white rounded-lg shadow">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h2 class="text-lg font-semibold text-gray-700">Live Attendance Feed</h2>
-                    <span class="flex items-center text-green-500 text-sm">
-                        <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                        Real-time
-                    </span>
-                </div>
-                <div id="attendance-feed" class="p-4 max-h-96 overflow-y-auto">
-                    <p class="text-gray-400 text-center py-8">Waiting for attendance...</p>
-                </div>
-            </div>
-
-            <!-- Weekly Chart -->
-            <div class="bg-white rounded-lg shadow">
-                <div class="p-4 border-b">
-                    <h2 class="text-lg font-semibold text-gray-700">Weekly Attendance</h2>
-                </div>
-                <div class="p-4">
-                    <canvas id="weeklyChart" height="200"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Attendance Table -->
-        <div class="mt-6 bg-white rounded-lg shadow">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h2 class="text-lg font-semibold text-gray-700">Attendance Records</h2>
-                <span id="record-count" class="text-sm text-gray-500">0 records</span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendance-table" class="divide-y divide-gray-200">
-                        <tr>
-                            <td colspan="7" class="px-4 py-8 text-center text-gray-400">Loading...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </main>
-
-    <!-- Photo Modal -->
-    <div id="photo-modal" class="fixed inset-0 bg-black bg-opacity-75 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 fade-in">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h3 id="photo-modal-title" class="text-lg font-semibold">Attendance Photo</h3>
-                <button onclick="closePhotoModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-            <div class="p-4">
-                <img id="photo-modal-img" src="" alt="Attendance Photo" class="w-full rounded-lg">
-                <div id="photo-modal-info" class="mt-4 text-sm text-gray-600"></div>
+            <!-- Date Display -->
+            <div class="text-sm text-gray-500">
+                <i class="fas fa-calendar mr-1"></i>
+                <span id="date-display">--</span>
             </div>
         </div>
     </div>
 
-    <footer class="bg-gray-800 text-gray-400 text-center py-4 mt-8">
-        <p>TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
+    <main class="container mx-auto px-4 py-6 flex-1">
+        <!-- ========================================
+             WELCOME HEADER
+             Backend: GET /api/auth/me (name)
+        ======================================== -->
+        <div class="mb-6 flex items-center justify-between">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">
+                    Welcome, <span id="welcome-name">Teacher</span>
+                </h2>
+                <p class="text-gray-500 text-sm">
+                    <span id="current-section-display">All Sections</span> • 
+                    <span id="current-date-display">Today</span>
+                </p>
+            </div>
+            <!-- Refresh Button -->
+            <button onclick="refreshData()" 
+                    class="bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                Refresh
+            </button>
+        </div>
+
+        <!-- ========================================
+             ATTENDANCE SUMMARY CARD
+             Backend: GET /api/stats
+             Shows total students and attendance rate
+             If breakdown data missing: shows notice
+        ======================================== -->
+        <div class="bg-feu-green rounded-xl shadow-lg p-6 mb-6 text-white">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold">
+                    <i class="fas fa-chart-pie mr-2"></i> Attendance Summary
+                </h3>
+                <span id="summary-date-range" class="text-feu-gold text-sm">Today</span>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Total Students -->
+                <div class="bg-white/10 rounded-lg p-4">
+                    <p class="text-white/80 text-sm mb-1">Total Students</p>
+                    <p id="total-students" class="text-4xl font-bold">--</p>
+                </div>
+                
+                <!-- Attendance Percentage -->
+                <div class="bg-white/10 rounded-lg p-4">
+                    <p class="text-white/80 text-sm mb-1">Attendance Rate</p>
+                    <p id="attendance-rate" class="text-4xl font-bold">--%</p>
+                    <!-- Progress Bar -->
+                    <div class="mt-2 bg-white/20 rounded-full h-3">
+                        <div id="attendance-bar" 
+                             class="bg-feu-gold h-3 rounded-full transition-all duration-500" 
+                             style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Breakdown Notice (shown if detailed data unavailable) -->
+            <div id="breakdown-notice" class="hidden mt-4 bg-white/10 rounded-lg p-3 text-center">
+                <i class="fas fa-info-circle mr-2"></i>
+                <span class="text-sm">Detailed breakdown unavailable</span>
+            </div>
+        </div>
+
+        <!-- ========================================
+             SUMMARY CARDS (On-time / Late / Absent)
+             Backend: GET /api/stats (status breakdown)
+             NOTE: These may be disabled if backend 
+                   doesn't return breakdown data
+        ======================================== -->
+        <div id="summary-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Arrived On Time -->
+            <div id="card-ontime" class="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Arrived On Time</p>
+                        <p id="count-ontime" class="text-3xl font-bold text-green-600">--</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Arrived Late -->
+            <div id="card-late" class="bg-white rounded-xl shadow p-5 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Arrived Late</p>
+                        <p id="count-late" class="text-3xl font-bold text-yellow-600">--</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-clock text-2xl text-yellow-600"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Didn't Arrive -->
+            <div id="card-absent" class="bg-white rounded-xl shadow p-5 border-l-4 border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Didn't Arrive</p>
+                        <p id="count-absent" class="text-3xl font-bold text-gray-700">--</p>
+                    </div>
+                    <div class="bg-gray-200 p-3 rounded-full">
+                        <i class="fas fa-user-xmark text-2xl text-gray-700"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Cards Unavailable Notice -->
+        <div id="summary-unavailable" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+            <span class="text-yellow-700 text-sm">
+                Status breakdown pending backend support. Showing attendance records only.
+            </span>
+        </div>
+
+        <!-- ========================================
+             STUDENT ATTENDANCE TABLE
+             Backend: GET /api/attendance?section=&date=
+             Rows clickable → shows history modal
+        ======================================== -->
+        <div class="bg-white rounded-xl shadow overflow-hidden">
+            <!-- Table Header -->
+            <div class="p-4 border-b flex flex-wrap items-center justify-between gap-4">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-table text-feu-green mr-2"></i> Student Attendance
+                </h3>
+                <div class="flex items-center gap-4">
+                    <!-- Record Count -->
+                    <span id="record-count" class="text-sm text-gray-500">0 records</span>
+                    <!-- Export Button -->
+                    <button onclick="exportCSV()" 
+                            class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
+                        <i class="fas fa-file-csv"></i> Export
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-4 text-xs text-gray-600">
+                <span><span class="status-dot status-present mr-1"></span> Present (P)</span>
+                <span><span class="status-dot status-late mr-1"></span> Late (L)</span>
+                <span><span class="status-dot status-absent mr-1"></span> Absent (A)</span>
+                <span><span class="status-dot status-unknown mr-1"></span> Unknown</span>
+            </div>
+            
+            <!-- Table -->
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-table" class="divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                                <i class="fas fa-spinner fa-spin mr-2"></i> Loading...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden p-8 text-center text-gray-400">
+                <i class="fas fa-inbox text-4xl mb-3"></i>
+                <p>No attendance records found</p>
+                <p class="text-sm">Select a section and date to view records</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================
+         STUDENT HISTORY MODAL
+         Backend: GET /api/attendance/student/:nfc_id
+    ======================================== -->
+    <div id="history-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col fade-in">
+            <!-- Modal Header -->
+            <div class="p-4 border-b flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-history text-feu-green mr-2"></i>
+                    <span id="history-student-name">Student</span> - Attendance History
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div id="history-content" class="p-4 overflow-y-auto flex-1">
+                <p class="text-gray-400 text-center py-4">Loading...</p>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="p-4 border-t text-center">
+                <button onclick="closeHistoryModal()" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         PERSONAL INFO MODAL
+         Backend: GET /api/auth/me
+    ======================================== -->
+    <div id="personal-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 fade-in">
+            <div class="p-4 border-b flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-user text-feu-green mr-2"></i> Personal Information
+                </h3>
+                <button onclick="closePersonalModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="personal-content" class="p-6">
+                <p class="text-gray-400 text-center">Loading...</p>
+            </div>
+            <div class="p-4 border-t text-center">
+                <button onclick="closePersonalModal()" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         FOOTER
+    ======================================== -->
+    <footer class="bg-gray-100 border-t py-4 mt-auto">
+        <div class="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+            <img src="/assets/logos/TamTap-wteachers.png" 
+                 alt="TAMTAP" 
+                 class="h-6"
+                 onerror="this.style.display='none'">
+            <span class="text-gray-400 text-sm">×</span>
+            <span class="text-gray-500 text-xs">FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</span>
+        </div>
     </footer>
 
     <script>
@@ -216,11 +441,13 @@
         // ========================================
         let currentUser = null;
         let socket = null;
-        let weeklyChart = null;
         let currentRecords = [];
+        let currentDateRange = 'today';
+        let breakdownAvailable = false; // Track if backend provides status breakdown
 
         // ========================================
-        // AUTH CHECK
+        // AUTH CHECK (GET /api/auth/me)
+        // Redirect to login if not authenticated
         // ========================================
         async function checkAuth() {
             try {
@@ -230,423 +457,602 @@
                     return;
                 }
                 const data = await res.json();
-                if (!data.success) {
+                if (!data.success || !data.user) {
                     window.location.href = '/login.html';
                     return;
                 }
+                
                 currentUser = data.user;
+                
+                // Update UI with user info
                 document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('welcome-name').textContent = currentUser.name;
+                document.getElementById('menu-user-name').textContent = currentUser.name;
+                document.getElementById('menu-user-role').textContent = 
+                    currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
                 
-                // Show admin link for admins
-                if (currentUser.role === 'admin') {
-                    document.getElementById('admin-link').classList.remove('hidden');
-                }
-                
+                // Initialize dashboard
                 initDashboard();
+                
             } catch (e) {
+                console.error('[ERROR] Auth check failed:', e);
                 window.location.href = '/login.html';
             }
         }
 
+        // ========================================
+        // LOGOUT (POST /api/auth/logout)
+        // ========================================
         async function logout() {
-            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            try {
+                await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            } catch (e) {
+                console.error('[ERROR] Logout error:', e);
+            }
             window.location.href = '/login.html';
         }
 
         // ========================================
-        // INITIALIZATION
+        // DASHBOARD INITIALIZATION
         // ========================================
         async function initDashboard() {
-            // Set today's date
-            document.getElementById('date-filter').value = new Date().toISOString().split('T')[0];
+            // Populate section dropdown from user's sections_handled
+            populateSectionDropdown();
             
-            // Populate section dropdown based on user role (await for async fetch)
-            await populateSectionDropdown();
+            // Set default date display
+            updateDateDisplay();
             
             // Connect Socket.IO
             initSocket();
             
-            // Load data AFTER dropdown is populated
+            // Load initial data
             refreshData();
         }
 
-        async function populateSectionDropdown() {
-            const select = document.getElementById('section-filter');
+        // ========================================
+        // SECTION DROPDOWN
+        // Backend: Uses sections_handled from GET /api/auth/me
+        // ========================================
+        function populateSectionDropdown() {
+            const select = document.getElementById('section-select');
+            const sections = currentUser.sections_handled || [];
             
-            if (currentUser.role === 'admin') {
-                // Admin sees all sections
-                const sections = await fetchAllSections();
-                select.innerHTML = '<option value="">All Sections</option>' +
-                    sections.map(s => `<option value="${s}">${s}</option>`).join('');
-            } else {
-                // Teacher sees assigned sections + All Sections option
-                const sections = currentUser.sections_handled || [];
-                if (sections.length === 0) {
-                    select.innerHTML = '<option value="">All Sections</option>';
-                } else {
-                    // Add "All My Sections" option + individual sections
-                    select.innerHTML = '<option value="">All My Sections</option>' +
-                        sections.map(s => `<option value="${s}">${s}</option>`).join('');
-                }
+            if (sections.length === 0) {
+                // No sections assigned - show empty state
+                select.innerHTML = '<option value="">No sections assigned</option>';
+                document.getElementById('current-section-display').textContent = 'No sections';
+                return;
             }
+            
+            // Build options
+            let html = '<option value="">All My Sections</option>';
+            sections.forEach(s => {
+                html += `<option value="${s}">${s}</option>`;
+            });
+            select.innerHTML = html;
+            document.getElementById('current-section-display').textContent = 'All Sections';
         }
 
-        async function fetchAllSections() {
-            try {
-                const res = await fetch('/api/students', { credentials: 'include' });
-                const data = await res.json();
-                if (data.success) {
-                    const sections = [...new Set(data.data.map(s => s.section).filter(Boolean))];
-                    return sections.sort();
-                }
-            } catch (e) {
-                console.error('Fetch sections error:', e);
-            }
-            return [];
+        function onSectionChange() {
+            const section = document.getElementById('section-select').value;
+            document.getElementById('current-section-display').textContent = section || 'All Sections';
+            refreshData();
         }
 
         // ========================================
-        // SOCKET.IO
+        // DATE RANGE TABS
+        // ========================================
+        function setDateRange(range) {
+            currentDateRange = range;
+            
+            // Update tab styles
+            document.querySelectorAll('.date-tab').forEach(tab => {
+                tab.classList.remove('bg-feu-green', 'text-white');
+                tab.classList.add('text-gray-600', 'hover:bg-gray-100');
+            });
+            const activeTab = document.getElementById(`tab-${range}`);
+            activeTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+            activeTab.classList.add('bg-feu-green', 'text-white');
+            
+            updateDateDisplay();
+            refreshData();
+        }
+
+        function updateDateDisplay() {
+            const today = new Date();
+            let display = '';
+            let summaryDisplay = '';
+            
+            switch (currentDateRange) {
+                case 'today':
+                    display = today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                    summaryDisplay = 'Today';
+                    break;
+                case 'week':
+                    const weekStart = new Date(today);
+                    weekStart.setDate(today.getDate() - today.getDay());
+                    display = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                    summaryDisplay = 'This Week';
+                    break;
+                case 'month':
+                    display = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                    summaryDisplay = 'This Month';
+                    break;
+                case 'semester':
+                    display = 'Current Semester';
+                    summaryDisplay = 'This Semester';
+                    break;
+            }
+            
+            document.getElementById('date-display').textContent = display;
+            document.getElementById('current-date-display').textContent = summaryDisplay;
+            document.getElementById('summary-date-range').textContent = summaryDisplay;
+        }
+
+        // ========================================
+        // SOCKET.IO INITIALIZATION
+        // Contract events: attendance:new, system:status
         // ========================================
         function initSocket() {
-            socket = io();
-
-            socket.on('connect', () => {
-                updateConnectionStatus(true);
-                console.log('[INFO] Socket.IO connected');
-            });
-
-            socket.on('disconnect', () => {
+            try {
+                socket = io();
+                
+                socket.on('connect', () => {
+                    updateConnectionStatus(true);
+                    console.log('[INFO] Socket.IO connected');
+                });
+                
+                socket.on('disconnect', () => {
+                    updateConnectionStatus(false);
+                    console.log('[WARN] Socket.IO disconnected');
+                });
+                
+                // Real-time attendance update
+                socket.on('attendance:new', (data) => {
+                    console.log('[INFO] New attendance:', data);
+                    
+                    // Check if matches current section filter
+                    const currentSection = document.getElementById('section-select').value;
+                    const userSections = currentUser.sections_handled || [];
+                    
+                    if (!currentSection) {
+                        // "All My Sections" - check if in user's sections
+                        if (userSections.length === 0 || userSections.includes(data.section)) {
+                            addRecordToTable(data, true);
+                            updateStats();
+                        }
+                    } else if (data.section === currentSection) {
+                        addRecordToTable(data, true);
+                        updateStats();
+                    }
+                    
+                    // Show toast notification
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: `${data.name} checked in!`,
+                        showConfirmButton: false,
+                        timer: 3000
+                    });
+                });
+                
+                socket.on('system:status', (data) => {
+                    console.log('[INFO] System status:', data);
+                });
+                
+            } catch (e) {
+                console.error('[ERROR] Socket.IO init failed:', e);
                 updateConnectionStatus(false);
-                console.log('[WARN] Socket.IO disconnected');
-            });
-
-            socket.on('attendance:new', (data) => {
-                console.log('[INFO] New attendance:', data);
-                
-                // Check if matches current filter
-                const currentSection = document.getElementById('section-filter').value;
-                if (!currentSection || data.section === currentSection) {
-                    addToLiveFeed(data);
-                    addToTable(data, true);
-                    updateStats();
-                }
-                
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: `${data.name} checked in!`,
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true
-                });
-            });
-
-            socket.on('attendance:fail', (data) => {
-                console.log('[WARN] Attendance failed:', data);
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'error',
-                    title: `Failed: ${data.reason}`,
-                    showConfirmButton: false,
-                    timer: 3000
-                });
-            });
-
-            socket.on('system:status', (data) => {
-                console.log('[INFO] System status:', data);
-            });
+            }
         }
 
         function updateConnectionStatus(connected) {
-            const badge = document.getElementById('status-badge');
+            const badge = document.getElementById('connection-status');
             if (connected) {
-                badge.className = 'px-3 py-1 rounded-full text-sm bg-green-500';
-                badge.textContent = '● Connected';
+                badge.className = 'px-2 py-1 rounded-full text-xs bg-green-500 hidden sm:inline';
+                badge.innerHTML = '<i class="fas fa-circle text-[8px] mr-1"></i> Live';
             } else {
-                badge.className = 'px-3 py-1 rounded-full text-sm bg-red-500';
-                badge.textContent = '○ Disconnected';
+                badge.className = 'px-2 py-1 rounded-full text-xs bg-red-500 hidden sm:inline';
+                badge.innerHTML = '<i class="fas fa-circle text-[8px] mr-1"></i> Offline';
             }
         }
 
         // ========================================
         // DATA LOADING
         // ========================================
-        function onFilterChange() {
-            refreshData();
-        }
-
         async function refreshData() {
-            await loadAttendance();
-            updateStats();
-            loadWeeklyData();
+            const icon = document.getElementById('refresh-icon');
+            icon.classList.add('fa-spin');
+            
+            try {
+                await Promise.all([
+                    loadAttendance(),
+                    loadStats()
+                ]);
+            } finally {
+                icon.classList.remove('fa-spin');
+            }
         }
 
+        // ========================================
+        // LOAD ATTENDANCE
+        // Backend: GET /api/attendance?section=&date=
+        // ========================================
         async function loadAttendance() {
             try {
-                const section = document.getElementById('section-filter').value;
-                const date = document.getElementById('date-filter').value;
+                const section = document.getElementById('section-select').value;
+                const today = new Date().toISOString().split('T')[0];
                 
-                let url = `/api/attendance/${date}`;
+                let url = `/api/attendance/${today}`;
                 
-                // Build query params - only filter if specific section selected
                 if (section) {
                     url += `?section=${encodeURIComponent(section)}`;
+                } else {
+                    // All sections for this teacher
+                    const sections = currentUser.sections_handled || [];
+                    if (sections.length > 0) {
+                        url += `?sections=${encodeURIComponent(sections.join(','))}`;
+                    }
                 }
-                // When "All My Sections" selected (empty value), don't filter - show all
-                
-                console.log('[DEBUG] Fetching attendance from:', url);
                 
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json();
                 
-                console.log('[DEBUG] Attendance response:', data);
-                
-                const tbody = document.getElementById('attendance-table');
-                const feed = document.getElementById('attendance-feed');
-                
-                if (!data.success || data.records.length === 0) {
-                    console.log('[DEBUG] No records found - success:', data.success, 'count:', data.records?.length);
-                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No records found</td></tr>';
-                    feed.innerHTML = '<p class="text-gray-400 text-center py-8">No attendance yet</p>';
-                    currentRecords = [];
-                    document.getElementById('record-count').textContent = '0 records';
+                if (!data.success) {
+                    showEmptyState();
                     return;
                 }
                 
-                console.log('[DEBUG] Found', data.records.length, 'records');
+                currentRecords = data.records || [];
+                document.getElementById('record-count').textContent = `${currentRecords.length} records`;
                 
-                currentRecords = data.records;
-                document.getElementById('record-count').textContent = `${data.records.length} records`;
-                
-                // Populate table
-                tbody.innerHTML = '';
-                data.records.forEach(record => addToTable(record, false));
-                
-                // Populate feed (last 10)
-                feed.innerHTML = '';
-                data.records.slice(0, 10).forEach(record => addToLiveFeed(record));
-                
-            } catch (error) {
-                console.error('[ERROR] Load attendance error:', error);
-            }
-        }
-
-        function updateStats() {
-            const section = document.getElementById('section-filter').value;
-            const records = currentRecords;
-            
-            // Filter by section if needed
-            const filtered = section ? records.filter(r => r.section === section) : records;
-            
-            const amCount = filtered.filter(r => r.session === 'AM').length;
-            const pmCount = filtered.filter(r => r.session === 'PM').length;
-            
-            document.getElementById('stat-present').textContent = filtered.length;
-            document.getElementById('stat-am').textContent = amCount;
-            document.getElementById('stat-pm').textContent = pmCount;
-            
-            // Get student count for section
-            fetchStudentCount(section);
-        }
-
-        async function fetchStudentCount(section) {
-            try {
-                let url = '/api/students';
-                
-                if (section) {
-                    url += `/section/${encodeURIComponent(section)}`;
+                if (currentRecords.length === 0) {
+                    showEmptyState();
+                    return;
                 }
-                // When no section selected, get all students count
                 
-                const res = await fetch(url, { credentials: 'include' });
-                const data = await res.json();
+                renderTable(currentRecords);
                 
-                document.getElementById('stat-students').textContent = data.count || 0;
             } catch (e) {
-                console.error('Fetch student count error:', e);
+                console.error('[ERROR] Load attendance failed:', e);
+                showEmptyState();
             }
         }
 
-        async function loadWeeklyData() {
-            try {
-                const section = document.getElementById('section-filter').value;
-                let url = '/api/stats/daily?days=7';
-                
-                if (section) {
-                    url += `&section=${encodeURIComponent(section)}`;
-                }
-                // When no section selected, get all attendance stats
-                
-                const res = await fetch(url, { credentials: 'include' });
-                const data = await res.json();
-                
-                if (data.success) {
-                    renderWeeklyChart(data.data);
-                }
-            } catch (error) {
-                console.error('[ERROR] Load weekly data error:', error);
-            }
+        function showEmptyState() {
+            document.getElementById('attendance-table').innerHTML = '';
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('record-count').textContent = '0 records';
+            currentRecords = [];
         }
 
-        function renderWeeklyChart(data) {
-            const ctx = document.getElementById('weeklyChart').getContext('2d');
-            
-            if (weeklyChart) {
-                weeklyChart.destroy();
-            }
-            
-            weeklyChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.map(d => d.day),
-                    datasets: [{
-                        label: 'Attendance',
-                        data: data.map(d => d.count),
-                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-                        borderColor: 'rgb(59, 130, 246)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-
-        // ========================================
-        // UI UPDATES
-        // ========================================
-        function addToLiveFeed(data) {
-            const feed = document.getElementById('attendance-feed');
-            
-            if (feed.querySelector('.text-gray-400')) {
-                feed.innerHTML = '';
-            }
-            
-            const photoUrl = data.photo 
-                ? `/photos/${data.date?.split(' ')[0] || data.date?.split('T')[0]}/${data.photo}`
-                : '';
-            
-            const item = document.createElement('div');
-            item.className = 'flex items-center gap-3 p-3 rounded-lg bg-green-50 mb-2 fade-in';
-            item.innerHTML = `
-                <img src="${photoUrl}" 
-                     onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23e5e7eb%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 font-size=%2240%22 text-anchor=%22middle%22>👤</text></svg>'"
-                     class="w-10 h-10 rounded-full object-cover cursor-pointer"
-                     onclick="showPhoto('${photoUrl}', '${data.name}', '${data.time}')">
-                <div class="flex-1">
-                    <p class="font-medium text-gray-800">${data.name}</p>
-                    <p class="text-xs text-gray-500">${data.section || ''} • ${data.time} ${data.session}</p>
-                </div>
-                <span class="px-2 py-1 rounded text-xs ${getStatusClass(data.status)}">${data.status || 'present'}</span>
-            `;
-            
-            feed.insertBefore(item, feed.firstChild);
-            
-            while (feed.children.length > 20) {
-                feed.removeChild(feed.lastChild);
-            }
-        }
-
-        function addToTable(data, prepend = false) {
+        function renderTable(records) {
             const tbody = document.getElementById('attendance-table');
+            document.getElementById('empty-state').classList.add('hidden');
             
-            if (tbody.querySelector('.text-gray-400')) {
-                tbody.innerHTML = '';
-            }
-            
-            const photoUrl = data.photo 
-                ? `/photos/${data.date?.split(' ')[0] || data.date?.split('T')[0]}/${data.photo}`
-                : '';
+            tbody.innerHTML = records.map(r => `
+                <tr class="clickable-row" onclick="showStudentHistory('${r.nfc_id}', '${escapeHtml(r.name)}')">
+                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(r.name)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="status-dot ${getStatusDotClass(r.status)}" title="${r.status || 'present'}"></span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-600">${r.time || '--'}</td>
+                    <td class="px-4 py-3">
+                        <span class="px-2 py-1 rounded text-xs ${r.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
+                            ${r.session || '--'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function addRecordToTable(record, prepend = false) {
+            const tbody = document.getElementById('attendance-table');
+            document.getElementById('empty-state').classList.add('hidden');
             
             const row = document.createElement('tr');
-            row.className = 'fade-in hover:bg-gray-50';
+            row.className = 'clickable-row fade-in';
+            row.onclick = () => showStudentHistory(record.nfc_id, record.name);
             row.innerHTML = `
+                <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(record.name)}</td>
+                <td class="px-4 py-3 text-center">
+                    <span class="status-dot ${getStatusDotClass(record.status)}" title="${record.status || 'present'}"></span>
+                </td>
+                <td class="px-4 py-3 text-sm text-gray-600">${record.time || '--'}</td>
                 <td class="px-4 py-3">
-                    <img src="${photoUrl}" 
-                         onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect fill=%22%23e5e7eb%22 width=%22100%22 height=%22100%22/><text x=%2250%22 y=%2255%22 font-size=%2240%22 text-anchor=%22middle%22>👤</text></svg>'"
-                         class="w-10 h-10 rounded-full object-cover cursor-pointer"
-                         onclick="showPhoto('${photoUrl}', '${data.name}', '${data.time}')">
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-700">${data.tamtap_id || '--'}</td>
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">${data.name}</td>
-                <td class="px-4 py-3 text-sm">
-                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">${data.section || '-'}</span>
-                </td>
-                <td class="px-4 py-3 text-sm text-gray-700">${data.time}</td>
-                <td class="px-4 py-3 text-sm">
-                    <span class="px-2 py-1 rounded text-xs ${data.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
-                        ${data.session}
+                    <span class="px-2 py-1 rounded text-xs ${record.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
+                        ${record.session || '--'}
                     </span>
                 </td>
-                <td class="px-4 py-3 text-sm">
-                    <span class="px-2 py-1 rounded text-xs ${getStatusClass(data.status)}">${data.status || 'present'}</span>
+                <td class="px-4 py-3">
+                    <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${record.section || '--'}</span>
                 </td>
             `;
             
             if (prepend) {
                 tbody.insertBefore(row, tbody.firstChild);
+                currentRecords.unshift(record);
             } else {
                 tbody.appendChild(row);
+                currentRecords.push(record);
             }
-        }
-
-        function getStatusClass(status) {
-            switch (status) {
-                case 'present': return 'bg-green-100 text-green-700';
-                case 'late': return 'bg-yellow-100 text-yellow-700';
-                case 'absent': return 'bg-red-100 text-red-700';
-                case 'fail': return 'bg-gray-100 text-gray-700';
-                default: return 'bg-green-100 text-green-700';
-            }
-        }
-
-        // ========================================
-        // PHOTO MODAL
-        // ========================================
-        function showPhoto(url, name, time) {
-            if (!url) return;
             
-            document.getElementById('photo-modal-img').src = url;
-            document.getElementById('photo-modal-title').textContent = name;
-            document.getElementById('photo-modal-info').textContent = `Time: ${time}`;
-            document.getElementById('photo-modal').classList.remove('hidden');
-            document.getElementById('photo-modal').classList.add('flex');
-        }
-
-        function closePhotoModal() {
-            document.getElementById('photo-modal').classList.add('hidden');
-            document.getElementById('photo-modal').classList.remove('flex');
+            document.getElementById('record-count').textContent = `${currentRecords.length} records`;
         }
 
         // ========================================
-        // EXPORT
+        // STATUS DOT CLASS
+        // Based strictly on status field from API
+        // ========================================
+        function getStatusDotClass(status) {
+            switch (status) {
+                case 'present': return 'status-present';
+                case 'late': return 'status-late';
+                case 'absent': return 'status-absent';
+                default: return 'status-unknown'; // Unknown or missing status
+            }
+        }
+
+        // ========================================
+        // LOAD STATS
+        // Backend: GET /api/stats
+        // Graceful degradation if breakdown unavailable
+        // ========================================
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/stats', { credentials: 'include' });
+                const data = await res.json();
+                
+                if (!data.success) {
+                    showStatsUnavailable();
+                    return;
+                }
+                
+                const stats = data.stats;
+                
+                // Total students and attendance rate are always available
+                document.getElementById('total-students').textContent = stats.students || 0;
+                
+                const rate = stats.attendanceRate || 0;
+                document.getElementById('attendance-rate').textContent = `${rate}%`;
+                document.getElementById('attendance-bar').style.width = `${rate}%`;
+                
+                // Check if status breakdown is available
+                // NOTE: Current backend doesn't provide onTime/late/absent breakdown
+                // This checks if the data exists; if not, shows unavailable notice
+                if (stats.onTime !== undefined && stats.late !== undefined && stats.absent !== undefined) {
+                    breakdownAvailable = true;
+                    document.getElementById('count-ontime').textContent = stats.onTime;
+                    document.getElementById('count-late').textContent = stats.late;
+                    document.getElementById('count-absent').textContent = stats.absent;
+                    document.getElementById('summary-cards').classList.remove('card-disabled');
+                    document.getElementById('summary-unavailable').classList.add('hidden');
+                    document.getElementById('breakdown-notice').classList.add('hidden');
+                } else {
+                    // Breakdown not available - show graceful degradation
+                    breakdownAvailable = false;
+                    showBreakdownUnavailable();
+                }
+                
+            } catch (e) {
+                console.error('[ERROR] Load stats failed:', e);
+                showStatsUnavailable();
+            }
+        }
+
+        function showBreakdownUnavailable() {
+            // Disable summary cards
+            document.getElementById('count-ontime').textContent = '--';
+            document.getElementById('count-late').textContent = '--';
+            document.getElementById('count-absent').textContent = '--';
+            document.getElementById('summary-cards').classList.add('card-disabled');
+            document.getElementById('summary-unavailable').classList.remove('hidden');
+            document.getElementById('breakdown-notice').classList.remove('hidden');
+        }
+
+        function showStatsUnavailable() {
+            document.getElementById('total-students').textContent = '--';
+            document.getElementById('attendance-rate').textContent = '--%';
+            document.getElementById('attendance-bar').style.width = '0%';
+            showBreakdownUnavailable();
+        }
+
+        function updateStats() {
+            // Re-fetch stats when new attendance comes in
+            loadStats();
+        }
+
+        // ========================================
+        // STUDENT HISTORY MODAL
+        // Backend: GET /api/attendance/student/:nfc_id
+        // ========================================
+        async function showStudentHistory(nfcId, name) {
+            document.getElementById('history-student-name').textContent = name;
+            document.getElementById('history-content').innerHTML = '<p class="text-gray-400 text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</p>';
+            document.getElementById('history-modal').classList.remove('hidden');
+            document.getElementById('history-modal').classList.add('flex');
+            
+            try {
+                const res = await fetch(`/api/attendance/student/${nfcId}`, { credentials: 'include' });
+                const data = await res.json();
+                
+                if (!data.success || !data.records || data.records.length === 0) {
+                    document.getElementById('history-content').innerHTML = `
+                        <div class="text-center py-8 text-gray-400">
+                            <i class="fas fa-inbox text-4xl mb-3"></i>
+                            <p>No history available</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Render history table
+                document.getElementById('history-content').innerHTML = `
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Date</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Time</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Session</th>
+                                <th class="px-3 py-2 text-center text-xs font-medium text-gray-500">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${data.records.map(r => `
+                                <tr>
+                                    <td class="px-3 py-2 text-gray-700">${r.date?.split(' ')[0] || r.date || '--'}</td>
+                                    <td class="px-3 py-2 text-gray-600">${r.time || '--'}</td>
+                                    <td class="px-3 py-2">
+                                        <span class="px-2 py-0.5 rounded text-xs ${r.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
+                                            ${r.session || '--'}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span class="status-dot ${getStatusDotClass(r.status)}"></span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+            } catch (e) {
+                console.error('[ERROR] Load history failed:', e);
+                document.getElementById('history-content').innerHTML = `
+                    <div class="text-center py-8 text-red-400">
+                        <i class="fas fa-exclamation-circle text-4xl mb-3"></i>
+                        <p>Failed to load history</p>
+                    </div>
+                `;
+            }
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
+            document.getElementById('history-modal').classList.remove('flex');
+        }
+
+        // ========================================
+        // PERSONAL INFO MODAL
+        // Backend: GET /api/auth/me
+        // ========================================
+        function showPersonalInfo() {
+            closeSettingsMenu();
+            
+            const content = document.getElementById('personal-content');
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div class="flex items-center gap-4 pb-4 border-b">
+                        <div class="bg-feu-green text-white w-16 h-16 rounded-full flex items-center justify-center">
+                            <i class="fas fa-user text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-lg text-gray-800">${escapeHtml(currentUser.name)}</p>
+                            <p class="text-sm text-feu-green">${currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1)}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase mb-1">Username</p>
+                        <p class="text-gray-800">${escapeHtml(currentUser.username)}</p>
+                    </div>
+                    ${currentUser.email ? `
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase mb-1">Email</p>
+                        <p class="text-gray-800">${escapeHtml(currentUser.email)}</p>
+                    </div>
+                    ` : ''}
+                    <div>
+                        <p class="text-xs text-gray-500 uppercase mb-1">Sections Handled</p>
+                        <div class="flex flex-wrap gap-2">
+                            ${(currentUser.sections_handled || []).map(s => 
+                                `<span class="bg-feu-green/10 text-feu-green px-3 py-1 rounded-full text-sm">${escapeHtml(s)}</span>`
+                            ).join('') || '<span class="text-gray-400">None assigned</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('personal-modal').classList.remove('hidden');
+            document.getElementById('personal-modal').classList.add('flex');
+        }
+
+        function closePersonalModal() {
+            document.getElementById('personal-modal').classList.add('hidden');
+            document.getElementById('personal-modal').classList.remove('flex');
+        }
+
+        // ========================================
+        // HELP CENTER
+        // ========================================
+        function showHelpCenter() {
+            closeSettingsMenu();
+            Swal.fire({
+                title: 'Help Center',
+                html: `
+                    <div class="text-left text-sm space-y-3">
+                        <p><strong>TAMTAP</strong> is an NFC-based attendance tracking system.</p>
+                        <p><i class="fas fa-check-circle text-green-600 mr-2"></i>View attendance for your assigned sections</p>
+                        <p><i class="fas fa-check-circle text-green-600 mr-2"></i>Click on a student row to view their history</p>
+                        <p><i class="fas fa-check-circle text-green-600 mr-2"></i>Export attendance data to CSV</p>
+                        <p><i class="fas fa-check-circle text-green-600 mr-2"></i>Real-time updates via Socket.IO</p>
+                        <hr class="my-3">
+                        <p class="text-gray-500">For account issues, contact your administrator.</p>
+                    </div>
+                `,
+                confirmButtonColor: '#006A4E',
+                confirmButtonText: 'Got it!'
+            });
+        }
+
+        // ========================================
+        // SETTINGS MENU
+        // ========================================
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settings-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function closeSettingsMenu() {
+            document.getElementById('settings-menu').classList.add('hidden');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('settings-menu');
+            if (!e.target.closest('#settings-menu') && !e.target.closest('[onclick="toggleSettingsMenu()"]')) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // ========================================
+        // CSV EXPORT
         // ========================================
         function exportCSV() {
             if (currentRecords.length === 0) {
-                Swal.fire({ icon: 'warning', title: 'No Data', text: 'No records to export' });
+                Swal.fire({ 
+                    icon: 'warning', 
+                    title: 'No Data', 
+                    text: 'No records to export',
+                    confirmButtonColor: '#006A4E'
+                });
                 return;
             }
             
-            const section = document.getElementById('section-filter').value || 'all';
-            const date = document.getElementById('date-filter').value;
+            const section = document.getElementById('section-select').value || 'all';
+            const today = new Date().toISOString().split('T')[0];
             
-            const headers = ['ID', 'Name', 'Section', 'Grade', 'Date', 'Time', 'Session', 'Status', 'Photo'];
+            const headers = ['Name', 'Section', 'Date', 'Time', 'Session', 'Status'];
             const rows = currentRecords.map(r => [
-                r.tamtap_id || '',
                 r.name,
                 r.section || '',
-                r.grade || '',
-                r.date,
-                r.time,
-                r.session,
-                r.status || 'present',
-                r.photo || ''
+                r.date || '',
+                r.time || '',
+                r.session || '',
+                r.status || 'present'
             ]);
             
             const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -655,7 +1061,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `attendance_${section}_${date}.csv`;
+            a.download = `attendance_${section}_${today}.csv`;
             a.click();
             URL.revokeObjectURL(url);
             
@@ -668,6 +1074,33 @@
                 timer: 2000
             });
         }
+
+        // ========================================
+        // UTILITIES
+        // ========================================
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Close modals on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeHistoryModal();
+                closePersonalModal();
+                closeSettingsMenu();
+            }
+        });
+
+        // Modal backdrop clicks
+        document.getElementById('history-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'history-modal') closeHistoryModal();
+        });
+        document.getElementById('personal-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'personal-modal') closePersonalModal();
+        });
 
         // ========================================
         // INIT

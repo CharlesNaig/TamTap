@@ -3,114 +3,259 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAMTAP - Login</title>
+    <title>TAMTAP - Teacher Dashboard</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // FEU Color Palette Configuration
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'feu-green': '#006A4E',
+                        'feu-green-dark': '#00523D',
+                        'feu-green-light': '#008060',
+                        'feu-gold': '#FFD700',
+                        'feu-gold-dark': '#D4AF37'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        /* Animations */
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        /* Button Hover Effects */
+        .btn-hover-scale:hover {
+            transform: scale(1.02);
+        }
+        .btn-hover-scale:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-600 to-blue-800 min-h-screen flex items-center justify-center">
-    <div class="w-full max-w-md px-4">
-        <!-- Login Card -->
-        <div class="bg-white rounded-2xl shadow-2xl p-8 fade-in">
-            <!-- Logo/Header -->
-            <div class="text-center mb-8">
-                <div class="bg-blue-100 w-20 h-20 rounded-full mx-auto flex items-center justify-center mb-4">
-                    <svg class="w-12 h-12 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                    </svg>
-                </div>
-                <h1 class="text-3xl font-bold text-gray-800">TAMTAP</h1>
-                <p class="text-gray-500 mt-2">NFC-Based Attendance System</p>
+<body class="bg-white min-h-screen flex flex-col">
+
+    <!-- ========================================
+         NAVBAR (Simple, Left-aligned logo)
+         Backend: No API dependency
+    ======================================== -->
+    <nav class="bg-white shadow-sm border-b">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center gap-3">
+                <img src="/assets/logos/TamTap-wteachers.png" 
+                     alt="TAMTAP Logo" 
+                     class="h-10"
+                     onerror="this.style.display='none'">
+                <span class="text-feu-green font-bold text-xl hidden sm:block">TAMTAP</span>
+            </div>
+            <!-- Optional Nav Links (Visual Only - Not Functional) -->
+            <div class="hidden md:flex items-center gap-6 text-gray-600 text-sm">
+                <span class="cursor-default">About</span>
+                <span class="cursor-default">Mission</span>
+                <span class="cursor-default">Vision</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========================================
+         HERO SECTION
+         Backend: No API dependency
+    ======================================== -->
+    <main class="flex-1 flex flex-col items-center justify-center px-4 py-12">
+        <!-- Centered Logo -->
+        <div class="text-center mb-8">
+            <img src="/assets/TamTap.png" 
+                 alt="TAMTAP" 
+                 class="h-32 mx-auto mb-4"
+                 onerror="this.parentElement.innerHTML='<div class=\'bg-feu-green text-white w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-4\'><i class=\'fas fa-id-card-clip text-5xl\'></i></div><h1 class=\'text-4xl font-bold text-feu-green\'>TAMTAP</h1>'">
+            <p class="text-gray-600 text-lg mt-2">NFC-Based Attendance System</p>
+            <p class="text-gray-400 text-sm">FEU Roosevelt Marikina</p>
+        </div>
+
+        <!-- Login Button -->
+        <button onclick="showLoginModal()" 
+                class="bg-feu-green hover:bg-feu-green-dark text-white font-semibold text-lg px-12 py-4 rounded-lg shadow-lg transition-all duration-200 btn-hover-scale flex items-center gap-3">
+            <i class="fas fa-right-to-bracket"></i>
+            LOG IN
+        </button>
+    </main>
+
+    <!-- ========================================
+         LOGIN MODAL
+         Backend: POST /api/auth/login
+                  GET /api/auth/me
+    ======================================== -->
+    <div id="login-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 fade-in">
+            <!-- Modal Header -->
+            <div class="p-6 border-b text-center">
+                <h2 class="text-2xl font-bold text-feu-green">TAMTAP TEACHER DASHBOARD</h2>
+                <p class="text-gray-500 text-sm mt-1">Sign in to access the attendance system</p>
             </div>
 
             <!-- Login Form -->
-            <form id="login-form" class="space-y-6">
+            <form id="login-form" class="p-6 space-y-5">
+                <!-- Username Field -->
                 <div>
                     <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
-                        Username
+                        <i class="fas fa-user text-feu-green mr-1"></i> Username
                     </label>
                     <input type="text" 
                            id="username" 
                            name="username" 
                            required
                            autocomplete="username"
-                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-feu-green focus:border-transparent transition"
                            placeholder="Enter your username">
                 </div>
 
+                <!-- Password Field -->
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        Password
+                        <i class="fas fa-lock text-feu-green mr-1"></i> Password
                     </label>
                     <input type="password" 
                            id="password" 
                            name="password" 
                            required
                            autocomplete="current-password"
-                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                           class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-feu-green focus:border-transparent transition"
                            placeholder="Enter your password">
                 </div>
 
+                <!-- Error Message Container -->
+                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span id="login-error-text"></span>
+                </div>
+
+                <!-- Submit Button -->
                 <button type="submit" 
                         id="login-btn"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                        class="w-full bg-feu-green hover:bg-feu-green-dark text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 btn-hover-scale flex items-center justify-center">
                     <span id="btn-text">Sign In</span>
-                    <svg id="btn-spinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <i id="btn-spinner" class="fas fa-spinner fa-spin ml-2 hidden"></i>
                 </button>
             </form>
 
-            <!-- Info -->
-            <div class="mt-6 text-center">
-                <p class="text-sm text-gray-500">
-                    Admin and Teacher accounts only
+            <!-- Footer Note -->
+            <div class="px-6 pb-6 text-center">
+                <p class="text-xs text-gray-400">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Accounts are provided by the administrator
                 </p>
-                <p class="text-xs text-gray-400 mt-2">
-                    Contact your administrator for access
-                </p>
+                <button onclick="closeLoginModal()" 
+                        class="mt-4 text-gray-500 hover:text-gray-700 text-sm underline">
+                    Cancel
+                </button>
             </div>
         </div>
-
-        <!-- Footer -->
-        <p class="text-center text-blue-200 text-sm mt-6">
-            FEU Roosevelt Marikina | Grade 12 ICT Capstone
-        </p>
     </div>
 
+    <!-- ========================================
+         FOOTER
+         Backend: No API dependency
+    ======================================== -->
+    <footer class="bg-gray-100 border-t py-4">
+        <div class="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+            <img src="/assets/logos/TamTap-wteachers.png" 
+                 alt="TAMTAP" 
+                 class="h-8"
+                 onerror="this.style.display='none'">
+            <span class="text-gray-400">×</span>
+            <span class="text-gray-600 text-sm">FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</span>
+        </div>
+    </footer>
+
     <script>
-        // Check if already logged in
+        // ========================================
+        // MODAL FUNCTIONS
+        // ========================================
+        function showLoginModal() {
+            document.getElementById('login-modal').classList.remove('hidden');
+            document.getElementById('login-modal').classList.add('flex');
+            document.getElementById('username').focus();
+        }
+
+        function closeLoginModal() {
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('login-modal').classList.remove('flex');
+            document.getElementById('login-form').reset();
+            hideError();
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('login-error');
+            const errorText = document.getElementById('login-error-text');
+            errorText.textContent = message;
+            errorDiv.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        // ========================================
+        // AUTH CHECK (GET /api/auth/me)
+        // If already logged in, redirect to dashboard
+        // ========================================
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.success) {
-                        // Already logged in, redirect based on role
+                    if (data.success && data.user) {
+                        // Already logged in - redirect based on role
                         redirectByRole(data.user.role);
                     }
                 }
             } catch (e) {
-                // Not logged in, stay on login page
+                // Not logged in or API unavailable - stay on login page
+                console.log('[INFO] Not authenticated, showing login page');
             }
         }
 
+        // ========================================
+        // ROLE-BASED REDIRECT
+        // Contract: Only admin/teacher allowed
+        // ========================================
         function redirectByRole(role) {
             if (role === 'admin') {
                 window.location.href = '/admin.html';
-            } else {
+            } else if (role === 'teacher') {
                 window.location.href = '/dashboard.html';
+            } else {
+                // Deny access for unknown roles
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Access Denied',
+                    text: 'Only teachers and administrators can access this system.',
+                    confirmButtonColor: '#006A4E'
+                });
             }
         }
 
-        // Login form handler
+        // ========================================
+        // LOGIN HANDLER (POST /api/auth/login)
+        // Shows backend error message on failure
+        // ========================================
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+            hideError();
 
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
@@ -118,13 +263,9 @@
             const btnText = document.getElementById('btn-text');
             const btnSpinner = document.getElementById('btn-spinner');
 
+            // Validate inputs
             if (!username || !password) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Missing Fields',
-                    text: 'Please enter username and password',
-                    confirmButtonColor: '#2563eb'
-                });
+                showError('Please enter username and password');
                 return;
             }
 
@@ -144,40 +285,61 @@
                 const data = await res.json();
 
                 if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Welcome!',
-                        text: `Logged in as ${data.user.name}`,
-                        timer: 1500,
-                        showConfirmButton: false
-                    }).then(() => {
-                        redirectByRole(data.user.role);
-                    });
+                    // Fetch user info to verify role
+                    const meRes = await fetch('/api/auth/me', { credentials: 'include' });
+                    const meData = await meRes.json();
+
+                    if (meData.success && meData.user) {
+                        // Check role before redirect
+                        if (meData.user.role === 'teacher' || meData.user.role === 'admin') {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Welcome!',
+                                text: `Logged in as ${meData.user.name}`,
+                                timer: 1500,
+                                showConfirmButton: false,
+                                confirmButtonColor: '#006A4E'
+                            }).then(() => {
+                                redirectByRole(meData.user.role);
+                            });
+                        } else {
+                            // Role not allowed
+                            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                            showError('Access denied. Only teachers and administrators can log in.');
+                        }
+                    }
                 } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Login Failed',
-                        text: data.error || 'Invalid credentials',
-                        confirmButtonColor: '#2563eb'
-                    });
+                    // Show backend error message
+                    showError(data.error || 'Invalid username or password');
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Connection Error',
-                    text: 'Unable to connect to server',
-                    confirmButtonColor: '#2563eb'
-                });
+                console.error('[ERROR] Login error:', error);
+                showError('Unable to connect to server. Please try again.');
             } finally {
-                // Reset button
+                // Reset button state
                 btn.disabled = false;
                 btnText.textContent = 'Sign In';
                 btnSpinner.classList.add('hidden');
             }
         });
 
-        // Check auth on load
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeLoginModal();
+            }
+        });
+
+        // Close modal on backdrop click
+        document.getElementById('login-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'login-modal') {
+                closeLoginModal();
+            }
+        });
+
+        // ========================================
+        // INIT
+        // ========================================
         checkAuth();
     </script>
 </body>

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAMTAP - Teacher Dashboard</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/assets/TamTap.png">
+    <link rel="apple-touch-icon" href="/assets/TamTap.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,9 +15,9 @@
             theme: {
                 extend: {
                     colors: {
-                        'feu-green': '#006A4E',
-                        'feu-green-dark': '#00523D',
-                        'feu-green-light': '#008060',
+                        'feu-green': '#0a8249',
+                        'feu-green-dark': '#034c16',
+                        'feu-green-light': '#0eb063',
                         'feu-gold': '#FFD700',
                         'feu-gold-dark': '#D4AF37'
                     }
@@ -676,27 +679,93 @@
         }
 
         // ========================================
+        // GET DATE RANGE FOR API
+        // Returns {from, to} based on currentDateRange
+        // ========================================
+        function getDateRange() {
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+            
+            switch (currentDateRange) {
+                case 'today':
+                    return { from: todayStr, to: todayStr };
+                case 'week': {
+                    const weekStart = new Date(today);
+                    weekStart.setDate(today.getDate() - today.getDay());
+                    return { 
+                        from: weekStart.toISOString().split('T')[0], 
+                        to: todayStr 
+                    };
+                }
+                case 'month': {
+                    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                    return { 
+                        from: monthStart.toISOString().split('T')[0], 
+                        to: todayStr 
+                    };
+                }
+                case 'semester': {
+                    // Approximate semester as 4 months
+                    const semesterStart = new Date(today);
+                    semesterStart.setMonth(today.getMonth() - 4);
+                    return { 
+                        from: semesterStart.toISOString().split('T')[0], 
+                        to: todayStr 
+                    };
+                }
+                default:
+                    return { from: todayStr, to: todayStr };
+            }
+        }
+
+        // ========================================
         // LOAD ATTENDANCE
-        // Backend: GET /api/attendance?section=&date=
+        // Backend: GET /api/attendance/:date (single day)
+        //          GET /api/attendance/range/query?from=&to= (range)
         // ========================================
         async function loadAttendance() {
             try {
                 const section = document.getElementById('section-select').value;
-                const today = new Date().toISOString().split('T')[0];
+                const { from, to } = getDateRange();
                 
-                let url = `/api/attendance/${today}`;
+                let url;
+                let queryParams = [];
                 
+                // Choose endpoint based on date range
+                if (from === to) {
+                    // Single day - use /:date endpoint
+                    url = `/api/attendance/${from}`;
+                } else {
+                    // Date range - use /range/query endpoint
+                    url = '/api/attendance/range/query';
+                    queryParams.push(`from=${from}`, `to=${to}`);
+                }
+                
+                // Add section filter
                 if (section) {
-                    url += `?section=${encodeURIComponent(section)}`;
+                    queryParams.push(`section=${encodeURIComponent(section)}`);
                 } else {
                     // All sections for this teacher
                     const sections = currentUser.sections_handled || [];
                     if (sections.length > 0) {
-                        url += `?sections=${encodeURIComponent(sections.join(','))}`;
+                        queryParams.push(`sections=${encodeURIComponent(sections.join(','))}`);
                     }
                 }
                 
+                if (queryParams.length > 0) {
+                    url += (url.includes('?') ? '&' : '?') + queryParams.join('&');
+                }
+                
+                console.log('[DEBUG] Fetching attendance:', url);
+                
                 const res = await fetch(url, { credentials: 'include' });
+                
+                if (!res.ok) {
+                    console.error('[ERROR] Attendance fetch failed:', res.status);
+                    showEmptyState();
+                    return;
+                }
+                
                 const data = await res.json();
                 
                 if (!data.success) {
@@ -714,6 +783,9 @@
                 
                 renderTable(currentRecords);
                 
+                // Update local stats from current records
+                updateLocalStats();
+                
             } catch (e) {
                 console.error('[ERROR] Load attendance failed:', e);
                 showEmptyState();
@@ -725,6 +797,63 @@
             document.getElementById('empty-state').classList.remove('hidden');
             document.getElementById('record-count').textContent = '0 records';
             currentRecords = [];
+            updateLocalStats(); // Reset stats display
+        }
+
+        // ========================================
+        // LOCAL STATS CALCULATION
+        // Calculates breakdown from currentRecords
+        // since backend doesn't provide this data
+        // ========================================
+        function updateLocalStats() {
+            // Count status from currently loaded records
+            let onTime = 0;
+            let late = 0;
+            let absent = 0;
+            
+            currentRecords.forEach(r => {
+                switch (r.status) {
+                    case 'present':
+                        onTime++;
+                        break;
+                    case 'late':
+                        late++;
+                        break;
+                    case 'absent':
+                        absent++;
+                        break;
+                    default:
+                        // Unknown status - count as present
+                        onTime++;
+                }
+            });
+            
+            // Update the breakdown cards with local data
+            document.getElementById('count-ontime').textContent = onTime;
+            document.getElementById('count-late').textContent = late;
+            document.getElementById('count-absent').textContent = absent;
+            
+            // Enable the cards since we now have local data
+            document.getElementById('summary-cards').classList.remove('card-disabled');
+            document.getElementById('summary-unavailable').classList.add('hidden');
+            
+            // Update the breakdown notice
+            const notice = document.getElementById('breakdown-notice');
+            if (currentRecords.length > 0) {
+                notice.classList.add('hidden');
+            } else {
+                notice.innerHTML = '<i class="fas fa-info-circle mr-1"></i> No records to calculate breakdown';
+                notice.classList.remove('hidden');
+            }
+            
+            // Update attendance rate from local data
+            const total = currentRecords.length;
+            if (total > 0) {
+                const presentCount = onTime + late; // Present includes on-time and late
+                const rate = Math.round((presentCount / total) * 100);
+                document.getElementById('attendance-rate').textContent = `${rate}%`;
+                document.getElementById('attendance-bar').style.width = `${rate}%`;
+            }
         }
 
         function renderTable(records) {

@@ -150,6 +150,8 @@ router.get('/:date', async (req, res) => {
  * Get attendance for a date range
  * @query from - Start date (YYYY-MM-DD)
  * @query to - End date (YYYY-MM-DD)
+ * @query section - Optional: Filter by section
+ * @query sections - Optional: Filter by multiple sections (comma-separated)
  */
 router.get('/range/query', async (req, res) => {
     try {
@@ -158,7 +160,7 @@ router.get('/range/query', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const { from, to } = req.query;
+        const { from, to, section, sections } = req.query;
         
         if (!from || !to) {
             return res.status(400).json({ error: 'Missing from or to date parameter' });
@@ -169,13 +171,24 @@ router.get('/range/query', async (req, res) => {
             return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
         }
         
+        // Build query
+        const query = {
+            date: {
+                $gte: from,
+                $lte: to + ' 23:59:59'
+            }
+        };
+        
+        // Add section filter if provided
+        if (section) {
+            query.section = section;
+        } else if (sections) {
+            const sectionList = sections.split(',').map(s => s.trim());
+            query.section = { $in: sectionList };
+        }
+        
         const records = await db.collection('attendance')
-            .find({
-                date: {
-                    $gte: from,
-                    $lte: to + ' 23:59:59'
-                }
-            })
+            .find(query)
             .sort({ date: -1 })
             .toArray();
         

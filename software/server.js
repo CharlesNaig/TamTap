@@ -144,6 +144,12 @@ app.set('broadcast', broadcast);
 // Serve frontend files
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Serve assets (logos, icons, backgrounds)
+const assetsPath = path.resolve(__dirname, '../assets');
+app.use('/assets', express.static(assetsPath, {
+    maxAge: 86400000  // 1 day cache
+}));
+
 // Serve attendance photos
 const photosPath = path.resolve(__dirname, config.photos.baseDir);
 app.use('/photos', express.static(photosPath, {

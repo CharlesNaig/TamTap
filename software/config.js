@@ -14,8 +14,8 @@ const config = {
 
     // MongoDB Configuration
     mongodb: {
-        uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/',
-        database: process.env.MONGODB_NAME || 'tamtap',
+        uri: process.env.MONGODB_URI,
+        database: process.env.MONGODB_NAME,
         options: {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000,

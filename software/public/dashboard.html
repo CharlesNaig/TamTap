@@ -13,6 +13,15 @@
         // FEU Color Palette Configuration
         tailwind.config = {
             theme: {
+                screens: {
+                    'xs': '360px',
+                    'sm': '480px',
+                    'md': '768px',
+                    'lg': '1024px',
+                    'xl': '1280px',
+                    '2xl': '1536px',
+                    '3xl': '1920px'
+                },
                 extend: {
                     colors: {
                         'feu-green': '#0a8249',
@@ -60,70 +69,126 @@
             opacity: 0.5;
             pointer-events: none;
         }
+        
+        /* Dropdown Menu Animation */
+        .dropdown-enter {
+            animation: dropdownFade 0.15s ease-out;
+        }
+        @keyframes dropdownFade {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Active Nav Link */
+        .nav-active {
+            position: relative;
+        }
+        .nav-active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #0a8249;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
     <!-- ========================================
-         HEADER
+         TOP BAR (Green with Address)
+    ======================================== -->
+    <div class="bg-feu-green text-white text-xs sm:text-sm py-1.5 sm:py-2 px-3 sm:px-4 lg:px-6">
+        <div class="w-full max-w-[1920px] mx-auto flex items-center justify-between">
+            <!-- Left: Address -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <i class="fas fa-location-dot text-xs sm:text-sm"></i>
+                <span class="hidden lg:inline">504 J. P. Rizal St, Marikina, 1800 Metro Manila</span>
+                <span class="hidden sm:inline lg:hidden">FEU Roosevelt Marikina</span>
+                <span class="sm:hidden text-xs">FEU Roosevelt</span>
+            </div>
+            <!-- Right: Connection Status -->
+            <div class="flex items-center gap-3">
+                <span id="connection-status" class="px-2 py-0.5 rounded-full text-xs bg-white/20 inline-flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                    <span class="hidden sm:inline">Live</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         HEADER (White with Logo and Nav)
          Backend: GET /api/auth/me (user info)
     ======================================== -->
-    <header class="bg-feu-green text-white shadow-lg">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <!-- Logo & Title -->
-            <div class="flex items-center gap-3">
-                <img src="/assets/TamTap.png" 
-                     alt="TAMTAP" 
-                     class="h-10"
-                     onerror="this.style.display='none'">
+    <header class="bg-white py-3 sm:py-4 lg:py-5 px-3 sm:px-4 lg:px-6 xl:px-8 shadow-sm border-b">
+        <div class="w-full max-w-[1920px] mx-auto flex items-center justify-between">
+            <!-- Left: Logo -->
+            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                <img src="/assets/TamTap-3D.png" 
+                     alt="TAMTAP Mascot" 
+                     class="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 xl:h-16 xl:w-16 object-contain"
+                     onerror="this.src='/assets/TamTap.png'; this.onerror=null;">
                 <div>
-                    <p class="text-feu-gold text-xs">Teacher Dashboard</p>
+                    <span class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
+                        <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
+                    </span>
+                    <p class="text-[10px] sm:text-xs lg:text-sm text-gray-500 font-medium">Teacher Dashboard</p>
                 </div>
             </div>
-            
-            <!-- Right Section: User, Notifications, Settings -->
-            <div class="flex items-center gap-4">
-                <!-- Connection Status -->
-                <span id="connection-status" class="px-2 py-1 rounded-full text-xs bg-green-500 hidden sm:inline">
-                    <i class="fas fa-circle text-[8px] mr-1"></i> Live
-                </span>
-                
-                <!-- Notification Icon (Disabled - No backend support) -->
+
+            <!-- Center: Dashboard Title (Desktop) -->
+            <div class="hidden xl:flex items-center">
+                <span class="nav-active text-feu-green font-semibold text-lg px-4 py-2">Dashboard</span>
+            </div>
+
+            <!-- Right: User Menu -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Notification Icon -->
                 <button id="notification-btn" 
-                        class="text-white/50 cursor-not-allowed relative" 
-                        title="Notifications unavailable"
-                        disabled>
-                    <i class="fas fa-bell text-lg"></i>
+                        class="text-gray-400 hover:text-feu-green transition p-1.5 sm:p-2 rounded-lg hover:bg-gray-100" 
+                        title="Notifications">
+                    <i class="fas fa-bell text-base sm:text-lg"></i>
                 </button>
                 
-                <!-- Settings Dropdown -->
+                <!-- User Dropdown -->
                 <div class="relative">
                     <button onclick="toggleSettingsMenu()" 
-                            class="flex items-center gap-2 hover:bg-feu-green-dark px-3 py-2 rounded-lg transition">
-                        <i class="fas fa-user-circle text-2xl"></i>
-                        <span id="user-name" class="hidden sm:inline text-sm">Teacher</span>
-                        <i class="fas fa-chevron-down text-xs"></i>
+                            class="flex items-center gap-1.5 sm:gap-2 hover:bg-gray-100 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition border border-gray-200">
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 bg-feu-green rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm">
+                            <span id="user-initials">T</span>
+                        </div>
+                        <span id="user-name" class="hidden md:inline text-sm font-medium text-gray-700 max-w-[120px] truncate">Teacher</span>
+                        <i class="fas fa-chevron-down text-[10px] sm:text-xs text-gray-400"></i>
                     </button>
                     
                     <!-- Settings Dropdown Menu -->
-                    <div id="settings-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl z-50 border">
-                        <div class="p-4 border-b">
-                            <p id="menu-user-name" class="font-semibold text-gray-800">Teacher Name</p>
-                            <p id="menu-user-role" class="text-xs text-gray-500">Role</p>
+                    <div id="settings-menu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl z-50 border dropdown-enter overflow-hidden">
+                        <div class="p-4 bg-gradient-to-r from-feu-green to-feu-green-dark text-white">
+                            <p id="menu-user-name" class="font-bold">Teacher Name</p>
+                            <p id="menu-user-role" class="text-sm text-white/80 capitalize">Role</p>
                         </div>
                         <ul class="py-2">
+                            <!-- Admin Panel Link (Admin Only) -->
+                            <li id="admin-link" class="hidden">
+                                <a href="/admin.html" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
+                                    <i class="fas fa-cog text-feu-gold w-5"></i> Admin Panel
+                                </a>
+                            </li>
                             <li>
-                                <button onclick="showPersonalInfo()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <button onclick="showPersonalInfo()" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
                                     <i class="fas fa-user text-feu-green w-5"></i> Personal Information
                                 </button>
                             </li>
                             <li>
-                                <button onclick="showHelpCenter()" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+                                <button onclick="showHelpCenter()" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
                                     <i class="fas fa-circle-question text-feu-green w-5"></i> Help Center
                                 </button>
                             </li>
                             <li class="border-t mt-2 pt-2">
-                                <button onclick="logout()" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                <button onclick="logout()" class="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-3 transition">
                                     <i class="fas fa-right-from-bracket w-5"></i> Log Out
                                 </button>
                             </li>
@@ -138,73 +203,74 @@
          TOP FILTER BAR
          Backend: GET /api/auth/me (sections_handled)
     ======================================== -->
-    <div class="bg-white border-b shadow-sm">
-        <div class="container mx-auto px-4 py-3 flex flex-wrap items-center gap-4">
+    <div class="bg-gray-50 border-b">
+        <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex flex-wrap items-center gap-2 sm:gap-4">
             <!-- Section Selector -->
-            <div class="flex items-center gap-2">
-                <label for="section-select" class="text-sm font-medium text-gray-700">
-                    <i class="fas fa-users text-feu-green mr-1"></i> Section:
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <label for="section-select" class="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide hidden sm:inline">
+                    <i class="fas fa-users text-feu-green mr-1"></i> Section
                 </label>
+                <i class="fas fa-users text-feu-green sm:hidden"></i>
                 <select id="section-select" 
                         onchange="onSectionChange()"
-                        class="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-feu-green focus:border-transparent">
+                        class="border-2 border-gray-200 rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-white focus:ring-2 focus:ring-feu-green focus:border-feu-green transition min-w-[100px] sm:min-w-[140px]">
                     <option value="">Loading...</option>
                 </select>
             </div>
             
             <!-- Date Range Tabs -->
-            <div class="flex items-center gap-1 ml-auto">
+            <div class="flex items-center gap-0.5 sm:gap-1 ml-auto overflow-x-auto">
                 <button onclick="setDateRange('today')" 
                         id="tab-today"
-                        class="date-tab px-4 py-2 text-sm rounded-lg bg-feu-green text-white">
+                        class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg bg-feu-green text-white whitespace-nowrap">
                     Today
                 </button>
                 <button onclick="setDateRange('week')" 
                         id="tab-week"
-                        class="date-tab px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100">
-                    This Week
+                        class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-gray-600 hover:bg-gray-100 whitespace-nowrap">
+                    <span class="hidden sm:inline">This </span>Week
                 </button>
                 <button onclick="setDateRange('month')" 
                         id="tab-month"
-                        class="date-tab px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100">
-                    This Month
+                        class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-gray-600 hover:bg-gray-100 whitespace-nowrap">
+                    <span class="hidden sm:inline">This </span>Month
                 </button>
                 <button onclick="setDateRange('semester')" 
                         id="tab-semester"
-                        class="date-tab px-4 py-2 text-sm rounded-lg text-gray-600 hover:bg-gray-100"
+                        class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-gray-600 hover:bg-gray-100 whitespace-nowrap hidden md:block"
                         title="Feature pending backend support">
-                    This Semester
+                    Semester
                 </button>
             </div>
             
             <!-- Date Display -->
-            <div class="text-sm text-gray-500">
-                <i class="fas fa-calendar mr-1"></i>
+            <div class="text-xs sm:text-sm text-gray-500 font-medium hidden sm:flex items-center">
+                <i class="fas fa-calendar-day text-feu-green mr-1"></i>
                 <span id="date-display">--</span>
             </div>
         </div>
     </div>
 
-    <main class="container mx-auto px-4 py-6 flex-1">
+    <main class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 2xl:px-12 py-4 sm:py-6 lg:py-8 flex-1">
         <!-- ========================================
              WELCOME HEADER
              Backend: GET /api/auth/me (name)
         ======================================== -->
-        <div class="mb-6 flex items-center justify-between">
+        <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-gray-800">
-                    Welcome, <span id="welcome-name">Teacher</span>
+                <h2 class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800">
+                    Welcome back, <span id="welcome-name" class="text-feu-green">Teacher</span>!
                 </h2>
-                <p class="text-gray-500 text-sm">
+                <p class="text-gray-500 text-xs sm:text-sm mt-0.5 sm:mt-1">
                     <span id="current-section-display">All Sections</span> • 
                     <span id="current-date-display">Today</span>
                 </p>
             </div>
             <!-- Refresh Button -->
             <button onclick="refreshData()" 
-                    class="bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                    class="bg-feu-green hover:bg-feu-gold hover:text-feu-green-dark text-white px-3 sm:px-4 lg:px-5 py-2 sm:py-2.5 rounded-lg flex items-center justify-center gap-2 transition font-medium shadow-sm text-sm sm:text-base w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-feu-green focus:ring-offset-2">
                 <i class="fas fa-sync-alt" id="refresh-icon"></i>
-                Refresh
+                <span>Refresh</span>
             </button>
         </div>
 
@@ -214,29 +280,29 @@
              Shows total students and attendance rate
              If breakdown data missing: shows notice
         ======================================== -->
-        <div class="bg-feu-green rounded-xl shadow-lg p-6 mb-6 text-white">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-bold">
-                    <i class="fas fa-chart-pie mr-2"></i> Attendance Summary
+        <div class="bg-gradient-to-r from-feu-green to-feu-green-dark rounded-lg sm:rounded-xl shadow-lg p-4 sm:p-5 lg:p-6 xl:p-8 mb-4 sm:mb-6 text-white">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 class="text-base sm:text-lg lg:text-xl xl:text-2xl font-bold">
+                    <i class="fas fa-chart-pie mr-1.5 sm:mr-2"></i> Attendance Summary
                 </h3>
-                <span id="summary-date-range" class="text-feu-gold text-sm">Today</span>
+                <span id="summary-date-range" class="text-feu-gold text-xs sm:text-sm">Today</span>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
                 <!-- Total Students -->
-                <div class="bg-white/10 rounded-lg p-4">
-                    <p class="text-white/80 text-sm mb-1">Total Students</p>
-                    <p id="total-students" class="text-4xl font-bold">--</p>
+                <div class="bg-white/10 rounded-lg p-3 sm:p-4">
+                    <p class="text-white/80 text-xs sm:text-sm mb-0.5 sm:mb-1">Total Students</p>
+                    <p id="total-students" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">--</p>
                 </div>
                 
                 <!-- Attendance Percentage -->
-                <div class="bg-white/10 rounded-lg p-4">
-                    <p class="text-white/80 text-sm mb-1">Attendance Rate</p>
-                    <p id="attendance-rate" class="text-4xl font-bold">--%</p>
+                <div class="bg-white/10 rounded-lg p-3 sm:p-4">
+                    <p class="text-white/80 text-xs sm:text-sm mb-0.5 sm:mb-1">Attendance Rate</p>
+                    <p id="attendance-rate" class="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold">--%</p>
                     <!-- Progress Bar -->
-                    <div class="mt-2 bg-white/20 rounded-full h-3">
+                    <div class="mt-2 sm:mt-3 bg-white/20 rounded-full h-2 sm:h-3">
                         <div id="attendance-bar" 
-                             class="bg-feu-gold h-3 rounded-full transition-all duration-500" 
+                             class="bg-feu-gold h-2 sm:h-3 rounded-full transition-all duration-500" 
                              style="width: 0%"></div>
                     </div>
                 </div>
@@ -255,51 +321,51 @@
              NOTE: These may be disabled if backend 
                    doesn't return breakdown data
         ======================================== -->
-        <div id="summary-cards" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div id="summary-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
             <!-- Arrived On Time -->
-            <div id="card-ontime" class="bg-white rounded-xl shadow p-5 border-l-4 border-green-500">
-                <div class="flex items-center justify-between">
+            <div id="card-ontime" class="bg-white rounded-lg sm:rounded-xl shadow p-3 sm:p-4 lg:p-5 border-l-4 border-green-500 min-h-[100px] sm:min-h-[120px]">
+                <div class="flex items-center justify-between h-full">
                     <div>
-                        <p class="text-gray-500 text-sm">Arrived On Time</p>
-                        <p id="count-ontime" class="text-3xl font-bold text-green-600">--</p>
+                        <p class="text-gray-500 text-xs sm:text-sm">Arrived On Time</p>
+                        <p id="count-ontime" class="text-2xl sm:text-3xl lg:text-4xl font-bold text-green-600">--</p>
                     </div>
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
+                    <div class="bg-green-100 p-2 sm:p-3 rounded-full">
+                        <i class="fas fa-check-circle text-xl sm:text-2xl text-green-600"></i>
                     </div>
                 </div>
             </div>
             
             <!-- Arrived Late -->
-            <div id="card-late" class="bg-white rounded-xl shadow p-5 border-l-4 border-yellow-500">
-                <div class="flex items-center justify-between">
+            <div id="card-late" class="bg-white rounded-lg sm:rounded-xl shadow p-3 sm:p-4 lg:p-5 border-l-4 border-yellow-500 min-h-[100px] sm:min-h-[120px]">
+                <div class="flex items-center justify-between h-full">
                     <div>
-                        <p class="text-gray-500 text-sm">Arrived Late</p>
-                        <p id="count-late" class="text-3xl font-bold text-yellow-600">--</p>
+                        <p class="text-gray-500 text-xs sm:text-sm">Arrived Late</p>
+                        <p id="count-late" class="text-2xl sm:text-3xl lg:text-4xl font-bold text-yellow-600">--</p>
                     </div>
-                    <div class="bg-yellow-100 p-3 rounded-full">
-                        <i class="fas fa-clock text-2xl text-yellow-600"></i>
+                    <div class="bg-yellow-100 p-2 sm:p-3 rounded-full">
+                        <i class="fas fa-clock text-xl sm:text-2xl text-yellow-600"></i>
                     </div>
                 </div>
             </div>
             
             <!-- Didn't Arrive -->
-            <div id="card-absent" class="bg-white rounded-xl shadow p-5 border-l-4 border-gray-700">
-                <div class="flex items-center justify-between">
+            <div id="card-absent" class="bg-white rounded-lg sm:rounded-xl shadow p-3 sm:p-4 lg:p-5 border-l-4 border-gray-700 min-h-[100px] sm:min-h-[120px] sm:col-span-2 lg:col-span-1">
+                <div class="flex items-center justify-between h-full">
                     <div>
-                        <p class="text-gray-500 text-sm">Didn't Arrive</p>
-                        <p id="count-absent" class="text-3xl font-bold text-gray-700">--</p>
+                        <p class="text-gray-500 text-xs sm:text-sm">Didn't Arrive</p>
+                        <p id="count-absent" class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-700">--</p>
                     </div>
-                    <div class="bg-gray-200 p-3 rounded-full">
-                        <i class="fas fa-user-xmark text-2xl text-gray-700"></i>
+                    <div class="bg-gray-200 p-2 sm:p-3 rounded-full">
+                        <i class="fas fa-user-xmark text-xl sm:text-2xl text-gray-700"></i>
                     </div>
                 </div>
             </div>
         </div>
         
         <!-- Summary Cards Unavailable Notice -->
-        <div id="summary-unavailable" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-center">
-            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
-            <span class="text-yellow-700 text-sm">
+        <div id="summary-unavailable" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 mb-4 sm:mb-6 text-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mr-1 sm:mr-2"></i>
+            <span class="text-yellow-700 text-xs sm:text-sm">
                 Status breakdown pending backend support. Showing attendance records only.
             </span>
         </div>
@@ -309,46 +375,48 @@
              Backend: GET /api/attendance?section=&date=
              Rows clickable → shows history modal
         ======================================== -->
-        <div class="bg-white rounded-xl shadow overflow-hidden">
+        <div class="bg-white rounded-lg sm:rounded-xl shadow overflow-hidden">
             <!-- Table Header -->
-            <div class="p-4 border-b flex flex-wrap items-center justify-between gap-4">
-                <h3 class="text-lg font-semibold text-gray-800">
-                    <i class="fas fa-table text-feu-green mr-2"></i> Student Attendance
+            <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                <h3 class="text-base sm:text-lg font-semibold text-gray-800">
+                    <i class="fas fa-table text-feu-green mr-1.5 sm:mr-2"></i> Student Attendance
                 </h3>
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 sm:gap-4">
                     <!-- Record Count -->
-                    <span id="record-count" class="text-sm text-gray-500">0 records</span>
+                    <span id="record-count" class="text-xs sm:text-sm text-gray-500">0 records</span>
                     <!-- Export Button -->
                     <button onclick="exportCSV()" 
-                            class="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm flex items-center gap-1">
-                        <i class="fas fa-file-csv"></i> Export
+                            class="bg-green-500 hover:bg-green-600 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <i class="fas fa-file-csv"></i> <span class="hidden xs:inline">Export</span>
                     </button>
                 </div>
             </div>
             
             <!-- Legend -->
-            <div class="px-4 py-2 bg-gray-50 border-b flex flex-wrap gap-4 text-xs text-gray-600">
-                <span><span class="status-dot status-present mr-1"></span> Present (P)</span>
-                <span><span class="status-dot status-late mr-1"></span> Late (L)</span>
-                <span><span class="status-dot status-absent mr-1"></span> Absent (A)</span>
-                <span><span class="status-dot status-unknown mr-1"></span> Unknown</span>
+            <div class="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 border-b flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-600">
+                <span><span class="status-dot status-present mr-0.5 sm:mr-1"></span> Present</span>
+                <span><span class="status-dot status-late mr-0.5 sm:mr-1"></span> Late</span>
+                <span><span class="status-dot status-absent mr-0.5 sm:mr-1"></span> Absent</span>
+                <span class="hidden sm:inline"><span class="status-dot status-unknown mr-1"></span> Unknown</span>
             </div>
             
-            <!-- Table -->
-            <div class="overflow-x-auto">
+            <!-- Table (Desktop/Tablet) -->
+            <div class="overflow-x-auto hidden sm:block">
                 <table class="w-full">
+                    <caption class="sr-only">Student attendance records</caption>
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student Name</th>
-                            <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Session</th>
-                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-16 lg:w-20">Photo</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Time</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Session</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Section</th>
                         </tr>
                     </thead>
                     <tbody id="attendance-table" class="divide-y divide-gray-200">
                         <tr>
-                            <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                            <td colspan="6" class="px-4 py-6 sm:py-8 text-center text-gray-400 text-sm">
                                 <i class="fas fa-spinner fa-spin mr-2"></i> Loading...
                             </td>
                         </tr>
@@ -356,11 +424,16 @@
                 </table>
             </div>
             
+            <!-- Mobile Card View -->
+            <div id="attendance-cards" class="sm:hidden divide-y divide-gray-100">
+                <!-- Cards rendered by JS -->
+            </div>
+            
             <!-- Empty State -->
-            <div id="empty-state" class="hidden p-8 text-center text-gray-400">
-                <i class="fas fa-inbox text-4xl mb-3"></i>
-                <p>No attendance records found</p>
-                <p class="text-sm">Select a section and date to view records</p>
+            <div id="empty-state" class="hidden p-6 sm:p-8 text-center text-gray-400">
+                <i class="fas fa-inbox text-3xl sm:text-4xl mb-2 sm:mb-3"></i>
+                <p class="text-sm sm:text-base">No attendance records found</p>
+                <p class="text-xs sm:text-sm">Select a section and date to view records</p>
             </div>
         </div>
     </main>
@@ -369,28 +442,72 @@
          STUDENT HISTORY MODAL
          Backend: GET /api/attendance/student/:nfc_id
     ======================================== -->
-    <div id="history-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
-        <div class="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[80vh] flex flex-col fade-in">
+    <div id="history-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-2xl w-[94%] sm:w-full max-w-[340px] sm:max-w-md lg:max-w-lg mx-auto max-h-[85vh] sm:max-h-[80vh] flex flex-col fade-in">
             <!-- Modal Header -->
-            <div class="p-4 border-b flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-800">
-                    <i class="fas fa-history text-feu-green mr-2"></i>
-                    <span id="history-student-name">Student</span> - Attendance History
+            <div class="p-3 sm:p-4 border-b flex items-center justify-between">
+                <h3 class="text-sm sm:text-base lg:text-lg font-semibold text-gray-800">
+                    <i class="fas fa-history text-feu-green mr-1.5 sm:mr-2"></i>
+                    <span id="history-student-name">Student</span>
+                    <span class="hidden sm:inline"> - Attendance History</span>
                 </h3>
-                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                <button onclick="closeHistoryModal()" class="text-gray-400 hover:text-gray-600 text-lg sm:text-xl p-1" aria-label="Close">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             
             <!-- Modal Body -->
-            <div id="history-content" class="p-4 overflow-y-auto flex-1">
-                <p class="text-gray-400 text-center py-4">Loading...</p>
+            <div id="history-content" class="p-3 sm:p-4 overflow-y-auto flex-1">
+                <p class="text-gray-400 text-center py-3 sm:py-4 text-sm">Loading...</p>
             </div>
             
             <!-- Modal Footer -->
-            <div class="p-4 border-t text-center">
+            <div class="p-3 sm:p-4 border-t text-center">
                 <button onclick="closeHistoryModal()" 
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg">
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-gray-400">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         PHOTO VIEW MODAL
+         Displays attendance photo in larger view
+    ======================================== -->
+    <div id="photo-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-2xl w-[94%] sm:w-full max-w-[400px] sm:max-w-md lg:max-w-lg mx-auto fade-in">
+            <!-- Modal Header -->
+            <div class="p-3 sm:p-4 border-b flex items-center justify-between">
+                <h3 class="text-sm sm:text-base lg:text-lg font-semibold text-gray-800">
+                    <i class="fas fa-camera text-feu-green mr-1.5 sm:mr-2"></i>
+                    <span id="photo-student-name">Student Photo</span>
+                </h3>
+                <button onclick="closePhotoModal()" class="text-gray-400 hover:text-gray-600 text-lg sm:text-xl p-1" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="p-3 sm:p-4">
+                <div class="relative bg-gray-100 rounded-lg overflow-hidden">
+                    <img id="photo-modal-image" 
+                         src="" 
+                         alt="Attendance Photo" 
+                         class="w-full h-auto max-h-[400px] object-contain">
+                    <div id="photo-loading" class="absolute inset-0 flex items-center justify-center bg-gray-100">
+                        <i class="fas fa-spinner fa-spin text-2xl text-feu-green"></i>
+                    </div>
+                </div>
+                <div id="photo-details" class="mt-3 text-center text-sm text-gray-600">
+                    <!-- Photo details rendered by JS -->
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="p-3 sm:p-4 border-t text-center">
+                <button onclick="closePhotoModal()" 
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-gray-400">
                     Close
                 </button>
             </div>
@@ -401,22 +518,22 @@
          PERSONAL INFO MODAL
          Backend: GET /api/auth/me
     ======================================== -->
-    <div id="personal-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
-        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 fade-in">
-            <div class="p-4 border-b flex items-center justify-between">
-                <h3 class="text-lg font-semibold text-gray-800">
-                    <i class="fas fa-user text-feu-green mr-2"></i> Personal Information
+    <div id="personal-modal" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-lg sm:rounded-xl shadow-2xl w-[94%] sm:w-full max-w-[340px] sm:max-w-md mx-auto fade-in max-h-[85vh] overflow-y-auto">
+            <div class="p-3 sm:p-4 border-b flex items-center justify-between">
+                <h3 class="text-sm sm:text-base lg:text-lg font-semibold text-gray-800">
+                    <i class="fas fa-user text-feu-green mr-1.5 sm:mr-2"></i> Personal Information
                 </h3>
-                <button onclick="closePersonalModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                <button onclick="closePersonalModal()" class="text-gray-400 hover:text-gray-600 text-lg sm:text-xl p-1" aria-label="Close">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
-            <div id="personal-content" class="p-6">
-                <p class="text-gray-400 text-center">Loading...</p>
+            <div id="personal-content" class="p-4 sm:p-6">
+                <p class="text-gray-400 text-center text-sm">Loading...</p>
             </div>
-            <div class="p-4 border-t text-center">
+            <div class="p-3 sm:p-4 border-t text-center">
                 <button onclick="closePersonalModal()" 
-                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-2 rounded-lg">
+                        class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 sm:px-6 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-gray-400">
                     Close
                 </button>
             </div>
@@ -426,14 +543,30 @@
     <!-- ========================================
          FOOTER
     ======================================== -->
-    <footer class="bg-gray-100 border-t py-4 mt-auto">
-        <div class="container mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
-            <img src="/assets/logos/TamTap-wteachers.png" 
-                 alt="TAMTAP" 
-                 class="h-6"
-                 onerror="this.style.display='none'">
-            <span class="text-gray-400 text-sm">×</span>
-            <span class="text-gray-500 text-xs">FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</span>
+    <footer class="bg-feu-green py-3 sm:py-4 lg:py-5 mt-auto border-t-4 border-feu-gold">
+        <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <!-- Left: FEU Logo + TAMTAP Mascot -->
+            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                <img src="/assets/logos/feu-logo.png" 
+                     alt="FEU" 
+                     class="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 object-contain"
+                     onerror="this.style.display='none'">
+                <div class="flex items-center gap-1.5 sm:gap-2">
+                    <img src="/assets/TamTap-3D.png" 
+                         alt="TAMTAP Mascot" 
+                         class="h-7 w-7 sm:h-8 sm:w-8 lg:h-10 lg:w-10 object-contain"
+                         onerror="this.style.display='none'">
+                    <span class="text-base sm:text-lg lg:text-xl font-bold">
+                        <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Right: Capstone Info -->
+            <div class="text-center sm:text-right">
+                <p class="text-white/90 text-xs sm:text-sm font-medium italic">Grade 12 ICT Capstone S.Y. 2025-2026</p>
+                <p class="text-white/60 text-[10px] sm:text-xs mt-0.5">FEU Roosevelt Marikina</p>
+            </div>
         </div>
     </footer>
 
@@ -472,6 +605,18 @@
                 document.getElementById('menu-user-name').textContent = currentUser.name;
                 document.getElementById('menu-user-role').textContent = 
                     currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1);
+                
+                // Set user initials
+                const nameParts = currentUser.name.split(' ');
+                const initials = nameParts.length >= 2 
+                    ? nameParts[0][0] + nameParts[nameParts.length - 1][0]
+                    : currentUser.name.substring(0, 2);
+                document.getElementById('user-initials').textContent = initials.toUpperCase();
+                
+                // Show Admin Panel link if user is admin
+                if (currentUser.role === 'admin') {
+                    document.getElementById('admin-link').classList.remove('hidden');
+                }
                 
                 // Initialize dashboard
                 initDashboard();
@@ -652,11 +797,11 @@
         function updateConnectionStatus(connected) {
             const badge = document.getElementById('connection-status');
             if (connected) {
-                badge.className = 'px-2 py-1 rounded-full text-xs bg-green-500 hidden sm:inline';
-                badge.innerHTML = '<i class="fas fa-circle text-[8px] mr-1"></i> Live';
+                badge.className = 'px-2 py-0.5 rounded-full text-xs bg-white/20 inline-flex items-center gap-1';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span><span class="hidden sm:inline">Live</span>';
             } else {
-                badge.className = 'px-2 py-1 rounded-full text-xs bg-red-500 hidden sm:inline';
-                badge.innerHTML = '<i class="fas fa-circle text-[8px] mr-1"></i> Offline';
+                badge.className = 'px-2 py-0.5 rounded-full text-xs bg-red-500/80 inline-flex items-center gap-1';
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-white"></span><span class="hidden sm:inline">Offline</span>';
             }
         }
 
@@ -859,23 +1004,90 @@
             const tbody = document.getElementById('attendance-table');
             document.getElementById('empty-state').classList.add('hidden');
             
+            // Also render mobile cards
+            renderMobileCards(records);
+            
             tbody.innerHTML = records.map(r => `
                 <tr class="clickable-row" onclick="showStudentHistory('${r.nfc_id}', '${escapeHtml(r.name)}')">
-                    <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(r.name)}</td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
+                        ${getPhotoThumbnail(r)}
+                    </td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-sm font-medium text-gray-900">${escapeHtml(r.name)}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
                         <span class="status-dot ${getStatusDotClass(r.status)}" title="${r.status || 'present'}"></span>
                     </td>
-                    <td class="px-4 py-3 text-sm text-gray-600">${r.time || '--'}</td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-sm text-gray-600">${r.time || '--'}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell">
                         <span class="px-2 py-1 rounded text-xs ${r.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
                             ${r.session || '--'}
                         </span>
                     </td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell">
                         <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
                     </td>
                 </tr>
             `).join('');
+        }
+        
+        // ========================================
+        // PHOTO HELPER FUNCTIONS
+        // ========================================
+        function getPhotoUrl(record) {
+            // Photo path: /photos/{date}/{filename}
+            // Record has: date (YYYY-MM-DD HH:MM:SS), photo (filename)
+            if (!record.photo) return null;
+            const dateStr = record.date ? record.date.split(' ')[0] : new Date().toISOString().split('T')[0];
+            return `/photos/${dateStr}/${record.photo}`;
+        }
+        
+        function getPhotoThumbnail(record) {
+            const photoUrl = getPhotoUrl(record);
+            if (!photoUrl) {
+                return `<div class="w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-gray-200 flex items-center justify-center mx-auto">
+                    <i class="fas fa-user text-gray-400 text-sm lg:text-base"></i>
+                </div>`;
+            }
+            return `<img src="${photoUrl}" 
+                         alt="${escapeHtml(record.name)}" 
+                         class="w-10 h-10 lg:w-12 lg:h-12 rounded-lg object-cover mx-auto cursor-pointer hover:ring-2 hover:ring-feu-green transition shadow-sm"
+                         onclick="event.stopPropagation(); showPhotoModal('${escapeHtml(record.name)}', '${photoUrl}', '${record.date || ''}', '${record.time || ''}')"
+                         onerror="this.onerror=null; this.parentNode.innerHTML='<div class=\\'w-10 h-10 lg:w-12 lg:h-12 rounded-lg bg-gray-200 flex items-center justify-center mx-auto\\'><i class=\\'fas fa-user text-gray-400 text-sm lg:text-base\\'></i></div>'">`;
+        }
+        
+        // ========================================
+        // MOBILE CARDS RENDERING
+        // ========================================
+        function renderMobileCards(records) {
+            const container = document.getElementById('attendance-cards');
+            if (!container) return;
+            
+            container.innerHTML = records.map(r => {
+                const photoUrl = getPhotoUrl(r);
+                const photoHtml = photoUrl 
+                    ? `<img src="${photoUrl}" alt="${escapeHtml(r.name)}" class="w-12 h-12 rounded-lg object-cover shadow-sm" onerror="this.onerror=null; this.src=''; this.className='hidden'; this.nextElementSibling.classList.remove('hidden');">
+                       <div class="hidden w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`
+                    : `<div class="w-12 h-12 rounded-lg bg-gray-200 flex items-center justify-center"><i class="fas fa-user text-gray-400"></i></div>`;
+                
+                return `
+                <div class="p-3 hover:bg-gray-50 cursor-pointer" onclick="showStudentHistory('${r.nfc_id}', '${escapeHtml(r.name)}')">
+                    <div class="flex items-center gap-3">
+                        <div class="flex-shrink-0" onclick="event.stopPropagation(); ${photoUrl ? `showPhotoModal('${escapeHtml(r.name)}', '${photoUrl}', '${r.date || ''}', '${r.time || ''}')` : ''}">
+                            ${photoHtml}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(r.name)}</p>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="status-dot ${getStatusDotClass(r.status)}"></span>
+                                <span class="text-xs text-gray-500">${r.time || '--'}</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] ${r.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">${r.session || '--'}</span>
+                            </div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
         }
 
         function addRecordToTable(record, prepend = false) {
@@ -886,17 +1098,20 @@
             row.className = 'clickable-row fade-in';
             row.onclick = () => showStudentHistory(record.nfc_id, record.name);
             row.innerHTML = `
-                <td class="px-4 py-3 text-sm font-medium text-gray-900">${escapeHtml(record.name)}</td>
-                <td class="px-4 py-3 text-center">
+                <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
+                    ${getPhotoThumbnail(record)}
+                </td>
+                <td class="px-3 lg:px-4 py-2 lg:py-3 text-sm font-medium text-gray-900">${escapeHtml(record.name)}</td>
+                <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
                     <span class="status-dot ${getStatusDotClass(record.status)}" title="${record.status || 'present'}"></span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-600">${record.time || '--'}</td>
-                <td class="px-4 py-3">
+                <td class="px-3 lg:px-4 py-2 lg:py-3 text-sm text-gray-600">${record.time || '--'}</td>
+                <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell">
                     <span class="px-2 py-1 rounded text-xs ${record.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">
                         ${record.session || '--'}
                     </span>
                 </td>
-                <td class="px-4 py-3">
+                <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell">
                     <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${record.section || '--'}</span>
                 </td>
             `;
@@ -908,6 +1123,9 @@
                 tbody.appendChild(row);
                 currentRecords.push(record);
             }
+            
+            // Also update mobile cards
+            renderMobileCards(currentRecords);
             
             document.getElementById('record-count').textContent = `${currentRecords.length} records`;
         }
@@ -1138,6 +1356,61 @@
         }
 
         // ========================================
+        // PHOTO MODAL
+        // Displays attendance photo in larger view
+        // ========================================
+        function showPhotoModal(name, photoUrl, date, time) {
+            const modal = document.getElementById('photo-modal');
+            const img = document.getElementById('photo-modal-image');
+            const loading = document.getElementById('photo-loading');
+            const details = document.getElementById('photo-details');
+            
+            // Set student name
+            document.getElementById('photo-student-name').textContent = name;
+            
+            // Show loading spinner
+            loading.classList.remove('hidden');
+            img.classList.add('opacity-0');
+            
+            // Set image source
+            img.src = photoUrl;
+            
+            // Handle image load
+            img.onload = function() {
+                loading.classList.add('hidden');
+                img.classList.remove('opacity-0');
+            };
+            
+            // Handle image error
+            img.onerror = function() {
+                loading.innerHTML = '<i class="fas fa-image text-3xl text-gray-400"></i><p class="text-sm text-gray-500 mt-2">Photo not available</p>';
+            };
+            
+            // Set details
+            const dateDisplay = date ? date.split(' ')[0] : 'Unknown date';
+            const timeDisplay = time || 'Unknown time';
+            details.innerHTML = `
+                <p><i class="fas fa-calendar text-feu-green mr-1.5"></i> ${dateDisplay}</p>
+                <p class="mt-1"><i class="fas fa-clock text-feu-green mr-1.5"></i> ${timeDisplay}</p>
+            `;
+            
+            // Show modal
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        function closePhotoModal() {
+            const modal = document.getElementById('photo-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            
+            // Reset image
+            document.getElementById('photo-modal-image').src = '';
+            document.getElementById('photo-loading').classList.remove('hidden');
+            document.getElementById('photo-loading').innerHTML = '<i class="fas fa-spinner fa-spin text-2xl text-feu-green"></i>';
+        }
+
+        // ========================================
         // PERSONAL INFO MODAL
         // Backend: GET /api/auth/me
         // ========================================
@@ -1291,6 +1564,7 @@
             if (e.key === 'Escape') {
                 closeHistoryModal();
                 closePersonalModal();
+                closePhotoModal();
                 closeSettingsMenu();
             }
         });
@@ -1301,6 +1575,9 @@
         });
         document.getElementById('personal-modal').addEventListener('click', (e) => {
             if (e.target.id === 'personal-modal') closePersonalModal();
+        });
+        document.getElementById('photo-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'photo-modal') closePhotoModal();
         });
 
         // ========================================

@@ -4,56 +4,172 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAMTAP - Admin Panel</title>
+    <link rel="icon" type="image/png" href="/assets/icons/TamTapFavicon.png">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'feu-green': '#0a8249',
+                        'feu-green-dark': '#034c16',
+                        'feu-green-light': '#0eb063',
+                        'feu-gold': '#FFD700'
+                    },
+                    screens: {
+                        'xs': '360px',
+                        'sm': '480px',
+                        'md': '768px',
+                        'lg': '1024px',
+                        'xl': '1280px',
+                        '2xl': '1536px',
+                        '3xl': '1920px'
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; }
+        .tab-active { border-bottom: 3px solid #0a8249; color: #0a8249; }
+        
+        /* Dropdown Menu Animation */
+        .dropdown-enter { animation: dropdownFade 0.2s ease-out; }
+        @keyframes dropdownFade { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Active Nav Link */
+        .nav-active { position: relative; color: #0a8249; }
+        .nav-active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #0a8249, #0eb063);
+            border-radius: 3px 3px 0 0;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
-    <!-- Header -->
-    <header class="bg-blue-600 text-white shadow-lg">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <div>
-                <h1 class="text-2xl font-bold">TAMTAP Admin</h1>
-                <p class="text-blue-200 text-sm">User Management Panel</p>
+<body class="bg-gray-100 min-h-screen flex flex-col">
+    <!-- ========================================
+         TOP BAR (Green with Address)
+    ======================================== -->
+    <div class="bg-feu-green text-white text-xs sm:text-sm py-1.5 sm:py-2 px-3 sm:px-4 lg:px-6">
+        <div class="w-full max-w-[1920px] mx-auto flex items-center justify-between">
+            <!-- Left: Address -->
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <i class="fas fa-location-dot text-xs sm:text-sm"></i>
+                <span class="hidden lg:inline">504 J. P. Rizal St, Marikina, 1800 Metro Manila</span>
+                <span class="hidden sm:inline lg:hidden">FEU Roosevelt Marikina</span>
+                <span class="sm:hidden text-xs">FEU Roosevelt</span>
             </div>
-            <div class="flex items-center gap-4">
-                <span id="user-name" class="text-blue-100">Admin</span>
-                <button onclick="logout()" class="bg-blue-700 hover:bg-blue-800 px-4 py-2 rounded text-sm">
-                    Logout
-                </button>
+            <!-- Right: Admin Badge -->
+            <div class="flex items-center gap-3">
+                <span class="px-2 py-0.5 rounded-full text-xs bg-feu-gold text-feu-green-dark font-bold inline-flex items-center gap-1">
+                    <i class="fas fa-shield-halved"></i>
+                    <span class="hidden sm:inline">System Admin</span>
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================
+         HEADER (White with Logo and Nav)
+    ======================================== -->
+    <header class="bg-white py-3 sm:py-4 lg:py-5 px-3 sm:px-4 lg:px-6 xl:px-8 shadow-sm border-b">
+        <div class="w-full max-w-[1920px] mx-auto flex items-center justify-between">
+            <!-- Left: Logo -->
+            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                <img src="/assets/TamTap-3D.png" 
+                     alt="TAMTAP Mascot" 
+                     class="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 xl:h-16 xl:w-16 object-contain"
+                     onerror="this.src='/assets/TamTap.png'; this.onerror=null;">
+                <div>
+                    <span class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
+                        <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
+                    </span>
+                    <p class="text-[10px] sm:text-xs lg:text-sm text-gray-500 font-medium">Admin Panel</p>
+                </div>
+            </div>
+
+            <!-- Center: Navigation (Desktop) -->
+            <nav class="hidden lg:flex items-center gap-1">
+                <a href="/dashboard.html" class="px-4 py-2 text-gray-600 hover:text-feu-green hover:bg-gray-50 rounded-lg transition font-medium">
+                    <i class="fas fa-chart-line mr-2"></i>Dashboard
+                </a>
+                <a href="/admin.html" class="nav-active px-4 py-2 text-feu-green font-semibold rounded-lg">
+                    <i class="fas fa-cog mr-2"></i>Admin Panel
+                </a>
+            </nav>
+
+            <!-- Right: User Menu -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Mobile Nav Toggle -->
+                <div class="lg:hidden flex items-center gap-1 mr-2">
+                    <a href="/dashboard.html" class="p-2 text-gray-500 hover:text-feu-green hover:bg-gray-100 rounded-lg transition" title="Dashboard">
+                        <i class="fas fa-chart-line"></i>
+                    </a>
+                </div>
+                
+                <!-- User Dropdown -->
+                <div class="relative">
+                    <button onclick="toggleSettingsMenu()" 
+                            class="flex items-center gap-1.5 sm:gap-2 hover:bg-gray-100 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition border border-gray-200">
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 bg-feu-gold rounded-full flex items-center justify-center text-feu-green-dark font-bold text-xs sm:text-sm">
+                            <i class="fas fa-user-shield text-xs sm:text-sm"></i>
+                        </div>
+                        <span id="user-name" class="hidden md:inline text-sm font-medium text-gray-700 max-w-[120px] truncate">Admin</span>
+                        <i class="fas fa-chevron-down text-[10px] sm:text-xs text-gray-400"></i>
+                    </button>
+                    
+                    <!-- Settings Dropdown Menu -->
+                    <div id="settings-menu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl z-50 border dropdown-enter overflow-hidden">
+                        <div class="p-4 bg-gradient-to-r from-feu-green to-feu-green-dark text-white">
+                            <p id="menu-user-name" class="font-bold">System Admin</p>
+                            <p id="menu-user-role" class="text-sm text-white/80 capitalize">Administrator</p>
+                        </div>
+                        <ul class="py-2">
+                            <li>
+                                <a href="/dashboard.html" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
+                                    <i class="fas fa-chart-line text-feu-green w-5"></i> View Dashboard
+                                </a>
+                            </li>
+                            <li>
+                                <button onclick="showPersonalInfo()" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
+                                    <i class="fas fa-user text-feu-green w-5"></i> Personal Information
+                                </button>
+                            </li>
+                            <li class="border-t mt-2 pt-2">
+                                <button onclick="logout()" class="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 flex items-center gap-3 transition">
+                                    <i class="fas fa-right-from-bracket w-5"></i> Log Out
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Navigation -->
-    <nav class="bg-white shadow">
-        <div class="container mx-auto px-4">
-            <div class="flex gap-6">
-                <a href="/dashboard.html" class="py-4 text-gray-600 hover:text-blue-600">Dashboard</a>
-                <a href="/admin.html" class="py-4 tab-active font-medium">Admin Panel</a>
-            </div>
-        </div>
-    </nav>
-
-    <main class="container mx-auto px-4 py-6">
+    <main class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 sm:py-6 flex-1">
         <!-- Tab Navigation -->
-        <div class="bg-white rounded-lg shadow mb-6">
-            <div class="flex border-b">
+        <div class="bg-white rounded-lg shadow mb-4 sm:mb-6">
+            <div class="flex border-b overflow-x-auto">
                 <button onclick="showTab('teachers')" id="tab-teachers" 
-                        class="tab-btn px-6 py-4 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent tab-active">
-                    Teachers
+                        class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent tab-active whitespace-nowrap">
+                    <i class="fas fa-chalkboard-teacher mr-1 sm:mr-2"></i>Teachers
                 </button>
                 <button onclick="showTab('students')" id="tab-students"
-                        class="tab-btn px-6 py-4 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent">
-                    Students
+                        class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
+                    <i class="fas fa-user-graduate mr-1 sm:mr-2"></i>Students
                 </button>
                 <button onclick="showTab('sections')" id="tab-sections"
-                        class="tab-btn px-6 py-4 font-medium text-gray-600 hover:text-blue-600 border-b-2 border-transparent">
-                    Sections
+                        class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
+                    <i class="fas fa-users mr-1 sm:mr-2"></i>Sections
                 </button>
             </div>
         </div>
@@ -61,21 +177,22 @@
         <!-- Teachers Tab -->
         <div id="panel-teachers" class="tab-panel">
             <div class="bg-white rounded-lg shadow">
-                <div class="p-4 border-b flex justify-between items-center">
-                    <h2 class="text-lg font-semibold text-gray-700">Teacher Accounts</h2>
-                    <button onclick="showAddTeacherModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
-                        + Add Teacher
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-700"><i class="fas fa-chalkboard-teacher mr-2 text-feu-green"></i>Teacher Accounts</h2>
+                    <button onclick="showAddTeacherModal()" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors w-full sm:w-auto">
+                        <i class="fas fa-plus mr-1"></i>Add Teacher
                     </button>
                 </div>
-                <div class="overflow-x-auto">
+                <!-- Desktop Table -->
+                <div class="overflow-x-auto hidden sm:block">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sections</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Username</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Email</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sections</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="teachers-table" class="divide-y divide-gray-200">
@@ -83,38 +200,43 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Mobile Cards -->
+                <div id="teachers-cards" class="sm:hidden p-3 space-y-3">
+                    <p class="text-center text-gray-400 py-4">Loading...</p>
+                </div>
             </div>
         </div>
 
         <!-- Students Tab -->
         <div id="panel-students" class="tab-panel hidden">
             <div class="bg-white rounded-lg shadow">
-                <div class="p-4 border-b flex justify-between items-center flex-wrap gap-4">
-                    <h2 class="text-lg font-semibold text-gray-700">Student Records</h2>
-                    <div class="flex gap-2">
+                <div class="p-3 sm:p-4 border-b flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-700"><i class="fas fa-user-graduate mr-2 text-feu-green"></i>Student Records</h2>
+                    <div class="flex flex-wrap gap-2 w-full lg:w-auto">
                         <select id="student-section-filter" onchange="loadStudents()" 
                                 title="Filter by section"
-                                class="border rounded px-3 py-2 text-sm">
+                                class="border rounded px-3 py-2 text-sm flex-1 sm:flex-none">
                             <option value="">All Sections</option>
                         </select>
-                        <button onclick="showAddStudentModal()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm">
-                            + Add Student
+                        <button onclick="showAddStudentModal()" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors flex-1 sm:flex-none">
+                            <i class="fas fa-plus mr-1"></i><span class="hidden xs:inline">Add</span> Student
                         </button>
-                        <button onclick="showBulkImportModal()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
-                            Import CSV
+                        <button onclick="showBulkImportModal()" class="bg-feu-gold hover:bg-yellow-500 text-feu-green-dark px-3 sm:px-4 py-2 rounded text-sm font-medium transition-colors flex-1 sm:flex-none">
+                            <i class="fas fa-file-csv mr-1"></i><span class="hidden xs:inline">Import</span> CSV
                         </button>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
+                <!-- Desktop Table -->
+                <div class="overflow-x-auto hidden sm:block">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">NFC ID</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grade</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">NFC ID</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Grade</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="students-table" class="divide-y divide-gray-200">
@@ -122,18 +244,22 @@
                         </tbody>
                     </table>
                 </div>
+                <!-- Mobile Cards -->
+                <div id="students-cards" class="sm:hidden p-3 space-y-3">
+                    <p class="text-center text-gray-400 py-4">Loading...</p>
+                </div>
             </div>
         </div>
 
         <!-- Sections Tab -->
         <div id="panel-sections" class="tab-panel hidden">
             <div class="bg-white rounded-lg shadow">
-                <div class="p-4 border-b">
-                    <h2 class="text-lg font-semibold text-gray-700">Sections Overview</h2>
-                    <p class="text-sm text-gray-500">Sections are auto-created from student records</p>
+                <div class="p-3 sm:p-4 border-b">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-700"><i class="fas fa-users mr-2 text-feu-green"></i>Sections Overview</h2>
+                    <p class="text-xs sm:text-sm text-gray-500">Sections are auto-created from student records</p>
                 </div>
-                <div class="p-4">
-                    <div id="sections-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-3 sm:p-4">
+                    <div id="sections-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                         <p class="text-gray-400">Loading...</p>
                     </div>
                 </div>
@@ -142,119 +268,126 @@
     </main>
 
     <!-- Add Teacher Modal -->
-    <div id="add-teacher-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 fade-in">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h3 class="text-lg font-semibold">Add New Teacher</h3>
-                <button onclick="closeModal('add-teacher-modal')" class="text-gray-400 hover:text-gray-600">&times;</button>
+    <div id="add-teacher-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Add Teacher">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-plus mr-2 text-feu-green"></i>Add New Teacher</h3>
+                <button onclick="closeModal('add-teacher-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-teacher-form" class="p-4 space-y-4">
+            <form id="add-teacher-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-                    <input type="text" name="username" required class="w-full border rounded px-3 py-2" placeholder="e.g., ms.santos">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" name="username" required class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., ms.santos">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" name="name" required class="w-full border rounded px-3 py-2" placeholder="e.g., Maria Santos">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" name="name" required class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., Maria Santos">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email (optional)</label>
-                    <input type="email" name="email" class="w-full border rounded px-3 py-2" placeholder="e.g., msantos@school.edu">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email (optional)</label>
+                    <input type="email" name="email" class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., msantos@school.edu">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                    <input type="password" name="password" required minlength="6" class="w-full border rounded px-3 py-2" placeholder="Min 6 characters">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" name="password" required minlength="6" class="w-full border rounded px-3 py-2 text-sm" placeholder="Min 6 characters">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Sections</label>
-                    <div id="teacher-sections-checkboxes" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Assigned Sections</label>
+                    <div id="teacher-sections-checkboxes" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2 text-sm">
                         <!-- Populated dynamically -->
                     </div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal('add-teacher-modal')" class="flex-1 border px-4 py-2 rounded">Cancel</button>
-                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Add Teacher</button>
+                    <button type="button" onclick="closeModal('add-teacher-modal')" class="flex-1 border px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded text-sm transition-colors">Add Teacher</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Add Student Modal -->
-    <div id="add-student-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 fade-in">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h3 class="text-lg font-semibold">Add New Student</h3>
-                <button onclick="closeModal('add-student-modal')" class="text-gray-400 hover:text-gray-600">&times;</button>
+    <div id="add-student-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Add Student">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-plus mr-2 text-feu-green"></i>Add New Student</h3>
+                <button onclick="closeModal('add-student-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-student-form" class="p-4 space-y-4">
+            <form id="add-student-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">NFC Card ID</label>
-                    <input type="text" name="nfc_id" required class="w-full border rounded px-3 py-2" placeholder="Scan or enter NFC ID">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">NFC Card ID</label>
+                    <input type="text" name="nfc_id" required class="w-full border rounded px-3 py-2 text-sm" placeholder="Scan or enter NFC ID">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                        <input type="text" name="first_name" class="w-full border rounded px-3 py-2" placeholder="Juan">
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">First Name</label>
+                        <input type="text" name="first_name" class="w-full border rounded px-3 py-2 text-sm" placeholder="Juan">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                        <input type="text" name="last_name" class="w-full border rounded px-3 py-2" placeholder="Dela Cruz">
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                        <input type="text" name="last_name" class="w-full border rounded px-3 py-2 text-sm" placeholder="Dela Cruz">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 xs:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
-                        <input type="text" name="grade" class="w-full border rounded px-3 py-2" placeholder="e.g., 11">
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Grade</label>
+                        <input type="text" name="grade" class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 11">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                        <input type="text" name="section" required class="w-full border rounded px-3 py-2" placeholder="e.g., 11-A">
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
+                        <input type="text" name="section" required class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., 11-A">
                     </div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal('add-student-modal')" class="flex-1 border px-4 py-2 rounded">Cancel</button>
-                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Add Student</button>
+                    <button type="button" onclick="closeModal('add-student-modal')" class="flex-1 border px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded text-sm transition-colors">Add Student</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Edit Teacher Modal -->
-    <div id="edit-teacher-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 fade-in">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h3 class="text-lg font-semibold">Edit Teacher</h3>
-                <button onclick="closeModal('edit-teacher-modal')" class="text-gray-400 hover:text-gray-600">&times;</button>
+    <div id="edit-teacher-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Edit Teacher">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-edit mr-2 text-feu-green"></i>Edit Teacher</h3>
+                <button onclick="closeModal('edit-teacher-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="edit-teacher-form" class="p-4 space-y-4">
+            <form id="edit-teacher-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <input type="hidden" name="id">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                    <input type="text" name="name" required placeholder="Teacher name" class="w-full border rounded px-3 py-2">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" name="name" required placeholder="Teacher name" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" name="email" placeholder="Email address" class="w-full border rounded px-3 py-2">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" name="email" placeholder="Email address" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">New Password (leave blank to keep)</label>
-                    <input type="password" name="password" minlength="6" placeholder="Leave blank to keep" class="w-full border rounded px-3 py-2">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">New Password (leave blank to keep)</label>
+                    <input type="password" name="password" minlength="6" placeholder="Leave blank to keep" class="w-full border rounded px-3 py-2 text-sm">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Assigned Sections</label>
-                    <div id="edit-teacher-sections-checkboxes" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Assigned Sections</label>
+                    <div id="edit-teacher-sections-checkboxes" class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto border rounded p-2 text-sm">
                     </div>
                 </div>
                 <div class="flex gap-2 pt-2">
-                    <button type="button" onclick="closeModal('edit-teacher-modal')" class="flex-1 border px-4 py-2 rounded">Cancel</button>
-                    <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Save Changes</button>
+                    <button type="button" onclick="closeModal('edit-teacher-modal')" class="flex-1 border px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded text-sm transition-colors">Save Changes</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <footer class="bg-gray-800 text-gray-400 text-center py-4 mt-8">
-        <p>TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
+    <!-- Footer -->
+    <footer class="bg-feu-green-dark text-white/80 text-center py-3 sm:py-4 mt-auto">
+        <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <img src="/assets/logos/FEU.png" alt="FEU" class="h-6 sm:h-8 w-auto opacity-90">
+                <img src="/assets/logos/TAMTAP.png" alt="TAMTAP" class="h-6 sm:h-8 w-auto opacity-90">
+            </div>
+            <p class="text-xs sm:text-sm">TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
+        </div>
     </footer>
 
     <script>
@@ -277,14 +410,19 @@
                         icon: 'error',
                         title: 'Access Denied',
                         text: 'Admin access required',
-                        confirmButtonColor: '#2563eb'
+                        confirmButtonColor: '#0a8249'
                     }).then(() => {
                         window.location.href = '/dashboard.html';
                     });
                     return;
                 }
                 currentUser = data.user;
+                
+                // Update UI with user info
                 document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('menu-user-name').textContent = currentUser.name;
+                document.getElementById('menu-user-role').textContent = 'System Administrator';
+                
                 loadData();
             } catch (e) {
                 window.location.href = '/login.html';
@@ -294,6 +432,50 @@
         async function logout() {
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
             window.location.href = '/login.html';
+        }
+
+        // ========================================
+        // SETTINGS MENU
+        // ========================================
+        function toggleSettingsMenu() {
+            const menu = document.getElementById('settings-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('settings-menu');
+            const btn = e.target.closest('button[onclick="toggleSettingsMenu()"]');
+            if (!btn && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        function showPersonalInfo() {
+            document.getElementById('settings-menu').classList.add('hidden');
+            Swal.fire({
+                title: 'Personal Information',
+                html: `
+                    <div class="text-left space-y-3">
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <div class="w-12 h-12 bg-feu-gold rounded-full flex items-center justify-center text-feu-green-dark">
+                                <i class="fas fa-user-shield text-xl"></i>
+                            </div>
+                            <div>
+                                <p class="font-bold text-gray-800">${currentUser?.name || 'Admin'}</p>
+                                <p class="text-sm text-gray-500">System Administrator</p>
+                            </div>
+                        </div>
+                        <div class="space-y-2 text-sm">
+                            <p><strong>Username:</strong> ${currentUser?.username || 'admin'}</p>
+                            <p><strong>Email:</strong> ${currentUser?.email || 'N/A'}</p>
+                            <p><strong>Role:</strong> Administrator</p>
+                        </div>
+                    </div>
+                `,
+                confirmButtonColor: '#0a8249',
+                confirmButtonText: 'Close'
+            });
         }
 
         // ========================================
@@ -335,9 +517,12 @@
                         grid.innerHTML = '<p class="text-gray-400">No sections found. Add students to create sections.</p>';
                     } else {
                         grid.innerHTML = allSections.map(s => `
-                            <div class="bg-gray-50 rounded-lg p-4 border">
-                                <h3 class="font-semibold text-lg text-gray-800">${s.name}</h3>
-                                <p class="text-gray-500">${s.studentCount} students</p>
+                            <div class="bg-gradient-to-br from-feu-green/5 to-feu-green/10 rounded-lg p-4 border border-feu-green/20 hover:shadow-md transition-shadow">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <i class="fas fa-users text-feu-green"></i>
+                                    <h3 class="font-semibold text-base sm:text-lg text-gray-800">${s.name}</h3>
+                                </div>
+                                <p class="text-gray-500 text-sm">${s.studentCount} student${s.studentCount !== 1 ? 's' : ''}</p>
                             </div>
                         `).join('');
                     }
@@ -371,25 +556,50 @@
                 
                 if (!data.success || data.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">No teachers found</td></tr>';
+                    document.getElementById('teachers-cards').innerHTML = '<p class="text-center text-gray-400 py-4">No teachers found</p>';
                     return;
                 }
                 
+                // Desktop table
                 tbody.innerHTML = data.data.map(t => `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900">${t.username}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700">${t.name}</td>
-                        <td class="px-4 py-3 text-sm text-gray-500">${t.email || '-'}</td>
-                        <td class="px-4 py-3 text-sm">
+                        <td class="px-3 lg:px-4 py-3 text-sm font-medium text-gray-900">${t.username}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-700">${t.name}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-500 hidden md:table-cell">${t.email || '-'}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm">
                             ${t.sections_handled.length > 0 
-                                ? t.sections_handled.map(s => `<span class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs mr-1">${s}</span>`).join('')
+                                ? t.sections_handled.map(s => `<span class="inline-block bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs mr-1 mb-1">${s}</span>`).join('')
                                 : '<span class="text-gray-400">None</span>'
                             }
                         </td>
-                        <td class="px-4 py-3 text-sm">
-                            <button onclick="editTeacher('${t.id}')" class="text-blue-600 hover:text-blue-800 mr-2">Edit</button>
-                            <button onclick="deleteTeacher('${t.id}', '${t.name}')" class="text-red-600 hover:text-red-800">Delete</button>
+                        <td class="px-3 lg:px-4 py-3 text-sm">
+                            <button onclick="editTeacher('${t.id}')" class="text-feu-green hover:text-feu-green-dark mr-2"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteTeacher('${t.id}', '${t.name}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
+                `).join('');
+                
+                // Mobile cards
+                document.getElementById('teachers-cards').innerHTML = data.data.map(t => `
+                    <div class="bg-gray-50 rounded-lg p-3 border">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <p class="font-semibold text-gray-900">${t.name}</p>
+                                <p class="text-xs text-gray-500">@${t.username}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="editTeacher('${t.id}')" class="text-feu-green hover:text-feu-green-dark p-1"><i class="fas fa-edit"></i></button>
+                                <button onclick="deleteTeacher('${t.id}', '${t.name}')" class="text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        ${t.email ? `<p class="text-xs text-gray-500 mb-2"><i class="fas fa-envelope mr-1"></i>${t.email}</p>` : ''}
+                        <div class="flex flex-wrap gap-1">
+                            ${t.sections_handled.length > 0 
+                                ? t.sections_handled.map(s => `<span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s}</span>`).join('')
+                                : '<span class="text-gray-400 text-xs">No sections</span>'
+                            }
+                        </div>
+                    </div>
                 `).join('');
             } catch (e) {
                 console.error('Load teachers error:', e);
@@ -408,22 +618,41 @@
                 
                 if (!data.success || data.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No students found</td></tr>';
+                    document.getElementById('students-cards').innerHTML = '<p class="text-center text-gray-400 py-4">No students found</p>';
                     return;
                 }
                 
+                // Desktop table
                 tbody.innerHTML = data.data.map(s => `
                     <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm font-medium text-gray-900">${s.tamtap_id}</td>
-                        <td class="px-4 py-3 text-sm text-gray-500 font-mono">${s.nfc_id}</td>
-                        <td class="px-4 py-3 text-sm text-gray-700">${s.name}</td>
-                        <td class="px-4 py-3 text-sm text-gray-500">${s.grade || '-'}</td>
-                        <td class="px-4 py-3 text-sm">
-                            <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">${s.section}</span>
+                        <td class="px-3 lg:px-4 py-3 text-sm font-medium text-gray-900">${s.tamtap_id}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-500 font-mono hidden lg:table-cell">${s.nfc_id}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-700">${s.name}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-500 hidden md:table-cell">${s.grade || '-'}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm">
+                            <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s.section}</span>
                         </td>
-                        <td class="px-4 py-3 text-sm">
-                            <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800">Delete</button>
+                        <td class="px-3 lg:px-4 py-3 text-sm">
+                            <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
+                `).join('');
+                
+                // Mobile cards
+                document.getElementById('students-cards').innerHTML = data.data.map(s => `
+                    <div class="bg-gray-50 rounded-lg p-3 border">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">${s.name}</p>
+                                <p class="text-xs text-gray-500">ID: ${s.tamtap_id}</p>
+                                <p class="text-xs text-gray-400 font-mono mt-1">NFC: ${s.nfc_id}</p>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s.section}</span>
+                                <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
                 `).join('');
             } catch (e) {
                 console.error('Load students error:', e);
@@ -482,10 +711,10 @@
                     closeModal('add-teacher-modal');
                     loadTeachers();
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#0a8249' });
                 }
             } catch (e) {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add teacher' });
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add teacher', confirmButtonColor: '#0a8249' });
             }
         });
 
@@ -545,10 +774,10 @@
                     closeModal('edit-teacher-modal');
                     loadTeachers();
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#0a8249' });
                 }
             } catch (e) {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update teacher' });
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update teacher', confirmButtonColor: '#0a8249' });
             }
         });
 
@@ -559,6 +788,7 @@
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
                 confirmButtonText: 'Delete'
             });
             
@@ -574,7 +804,7 @@
                         loadTeachers();
                     }
                 } catch (e) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete' });
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete', confirmButtonColor: '#0a8249' });
                 }
             }
         }
@@ -608,10 +838,10 @@
                     loadStudents();
                     loadSections();
                 } else {
-                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#0a8249' });
                 }
             } catch (e) {
-                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add student' });
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add student', confirmButtonColor: '#0a8249' });
             }
         });
 
@@ -622,6 +852,7 @@
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
                 confirmButtonText: 'Delete'
             });
             
@@ -638,7 +869,7 @@
                         loadSections();
                     }
                 } catch (e) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete' });
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete', confirmButtonColor: '#0a8249' });
                 }
             }
         }
@@ -653,6 +884,8 @@
                 `,
                 showCancelButton: true,
                 confirmButtonText: 'Import',
+                confirmButtonColor: '#0a8249',
+                cancelButtonColor: '#6b7280',
                 preConfirm: () => {
                     const csv = document.getElementById('csv-data').value;
                     return parseCSV(csv);
@@ -672,13 +905,14 @@
                         Swal.fire({
                             icon: data.results.failed > 0 ? 'warning' : 'success',
                             title: 'Import Complete',
-                            html: `<p>Success: ${data.results.success}</p><p>Failed: ${data.results.failed}</p>`
+                            html: `<p>Success: ${data.results.success}</p><p>Failed: ${data.results.failed}</p>`,
+                            confirmButtonColor: '#0a8249'
                         });
                         
                         loadStudents();
                         loadSections();
                     } catch (e) {
-                        Swal.fire({ icon: 'error', title: 'Import Failed' });
+                        Swal.fire({ icon: 'error', title: 'Import Failed', confirmButtonColor: '#0a8249' });
                     }
                 }
             });

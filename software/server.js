@@ -87,6 +87,11 @@ async function createIndexes() {
         await db.collection('attendance').createIndex({ nfc_id: 1, date: 1 });
         await db.collection('attendance').createIndex({ date: -1 });
         
+        // Calendar indexes (for academic calendar logic)
+        await db.collection('calendar').createIndex({ type: 1, date: 1 });
+        await db.collection('calendar').createIndex({ type: 1, startDate: 1, endDate: 1 });
+        await db.collection('calendar').createIndex({ type: 1, section: 1, date: 1 });
+        
         console.log('[INFO] MongoDB indexes created');
     } catch (error) {
         console.warn('[WARN] Index creation warning:', error.message);
@@ -166,6 +171,7 @@ const adminRoutes = require('./routes/admin');
 const attendanceRoutes = require('./routes/attendance');
 const studentsRoutes = require('./routes/students');
 const statsRoutes = require('./routes/stats');
+const calendarRoutes = require('./routes/calendar');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -174,6 +180,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/teachers', studentsRoutes);  // Reuse for teachers
 app.use('/api/stats', statsRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // ========================================
 // DEBUG ENDPOINT (Remove in production)

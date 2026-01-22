@@ -1,12 +1,189 @@
 /**
  * TAMTAP Statistics Routes
  * GET /api/stats - Dashboard statistics
+ * GET /api/stats/summary - Attendance summary with present/late/absent counts
  * GET /api/stats/daily - Daily attendance summary
  * GET /api/stats/weekly - Weekly attendance summary
  */
 
 const express = require('express');
 const router = express.Router();
+
+/**
+ * LATE THRESHOLD CONFIGURATION
+ * Students arriving after this time are marked as late
+ * Format: 24-hour (HH:MM)
+ */
+const LATE_THRESHOLD = {
+    AM: '07:30',  // AM session: late if after 7:30 AM
+    PM: '13:00'   // PM session: late if after 1:00 PM
+};
+
+/**
+ * Helper: Check if a time is late based on session
+ * @param {string} time - Time string (HH:MM or HH:MM:SS)
+ * @param {string} session - 'AM' or 'PM'
+ * @returns {boolean} True if late
+ */
+function isLate(time, session) {
+    if (!time || !session) return false;
+    
+    // Normalize time to HH:MM
+    const timeParts = time.split(':');
+    if (timeParts.length < 2) return false;
+    
+    const timeMinutes = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
+    const threshold = LATE_THRESHOLD[session] || LATE_THRESHOLD.AM;
+    const thresholdParts = threshold.split(':');
+    const thresholdMinutes = parseInt(thresholdParts[0]) * 60 + parseInt(thresholdParts[1]);
+    
+    return timeMinutes > thresholdMinutes;
+}
+
+// Import calendar helper for day status checks
+let getDayStatus = null;
+let DAY_STATUS = null;
+
+// Lazy load to avoid circular dependency
+function loadCalendarHelper() {
+    if (!getDayStatus) {
+        const calendar = require('./calendar');
+        getDayStatus = calendar.getDayStatus;
+        DAY_STATUS = calendar.DAY_STATUS;
+    }
+}
+
+/**
+ * GET /api/stats/summary
+ * Get attendance summary with present/late/absent breakdown
+ * Respects academic calendar (no absences on non-instructional days)
+ * @query date - Date in YYYY-MM-DD format (default: today)
+ * @query section - Optional: Filter by single section
+ * @query sections - Optional: Filter by multiple sections (comma-separated)
+ */
+router.get('/summary', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+        
+        loadCalendarHelper();
+        
+        const dateParam = req.query.date || new Date().toISOString().split('T')[0];
+        const section = req.query.section;
+        const sections = req.query.sections;
+        
+        // Check calendar status for the date
+        const calendarStatus = await getDayStatus(db, dateParam, section);
+        
+        // If not an instructional day, return special response
+        if (!calendarStatus.isInstructional) {
+            return res.json({
+                success: true,
+                date: dateParam,
+                section: section || sections || 'all',
+                isInstructional: false,
+                calendarStatus: calendarStatus.status,
+                calendarLabel: calendarStatus.label,
+                calendarReason: calendarStatus.reason,
+                stats: {
+                    totalStudents: 0,
+                    onTime: 0,
+                    late: 0,
+                    absent: 0,  // No absences on non-instructional days
+                    present: 0,
+                    attendanceRate: null  // N/A for non-instructional days
+                },
+                thresholds: LATE_THRESHOLD
+            });
+        }
+        
+        // Build student query for total count
+        const studentQuery = {};
+        if (section) {
+            studentQuery.section = section;
+        } else if (sections) {
+            const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
+            if (sectionList.length > 0) {
+                studentQuery.section = { $in: sectionList };
+            }
+        }
+        
+        // Get total students in scope
+        const totalStudents = await db.collection('students').countDocuments(studentQuery);
+        
+        // Build attendance query
+        const attendanceQuery = {
+            date: { $regex: `^${dateParam}` }
+        };
+        
+        if (section) {
+            attendanceQuery.section = section;
+        } else if (sections) {
+            const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
+            if (sectionList.length > 0) {
+                attendanceQuery.section = { $in: sectionList };
+            }
+        }
+        
+        // Fetch attendance records for the date
+        const records = await db.collection('attendance')
+            .find(attendanceQuery)
+            .toArray();
+        
+        // Count present and late
+        let onTime = 0;
+        let late = 0;
+        
+        for (const record of records) {
+            // Check if record has explicit status
+            if (record.status === 'late') {
+                late++;
+            } else if (record.status === 'present') {
+                onTime++;
+            } else {
+                // No explicit status - compute based on time threshold
+                if (isLate(record.time, record.session)) {
+                    late++;
+                } else {
+                    onTime++;
+                }
+            }
+        }
+        
+        // Absent = total students - those who have attendance record
+        const presentCount = onTime + late;
+        const absent = Math.max(0, totalStudents - presentCount);
+        
+        // Calculate attendance rate
+        const attendanceRate = totalStudents > 0
+            ? Math.round((presentCount / totalStudents) * 100)
+            : 0;
+        
+        res.json({
+            success: true,
+            date: dateParam,
+            section: section || sections || 'all',
+            isInstructional: true,
+            calendarStatus: calendarStatus.status,
+            calendarLabel: calendarStatus.label,
+            stats: {
+                totalStudents: totalStudents,
+                onTime: onTime,
+                late: late,
+                absent: absent,
+                present: presentCount,
+                attendanceRate: attendanceRate
+            },
+            thresholds: LATE_THRESHOLD
+        });
+        
+    } catch (error) {
+        console.error('[ERROR] Get summary stats error:', error.message);
+        res.status(500).json({ error: 'Failed to fetch summary statistics' });
+    }
+});
 
 /**
  * GET /api/stats

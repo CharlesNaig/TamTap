@@ -1,0 +1,18 @@
+========================================
+  TAMTAP v2.0 - API Server with Auth
+  NFC-Based Attendance System
+========================================
+[INFO] Connecting to MongoDB: mongodb://naig:****@162.243.218.87:27017/
+[INFO] Database name: tamtap
+[INFO] MongoDB connected successfully
+[INFO] MongoDB indexes created
+[INFO] Server running on http://0.0.0.0:3000
+[INFO] Socket.IO ready for connections
+[INFO] Photos served from: C:\Users\Charles\Desktop\TamTap\assets\attendance_photos
+========================================
+[2026-01-22T00:05:50.941Z] GET /api/calendar/status?date=2026-01-22
+[2026-01-22T00:05:56.849Z] GET /api/calendar/status?date=2026-01-25
+[2026-01-22T00:06:03.465Z] GET /api/calendar/status?date=2026-01-24
+[2026-01-22T00:06:09.154Z] GET /login.html
+[2026-01-22T00:06:09.446Z] GET /api/auth/me
+[2026-01-22T00:06:10.614Z] GET /api/stats/summary?date=2026-01-25

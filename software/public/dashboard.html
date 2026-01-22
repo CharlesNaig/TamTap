@@ -72,12 +72,11 @@
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <!-- Logo & Title -->
             <div class="flex items-center gap-3">
-                <img src="/assets/logos/TamTap-wteachers.png" 
+                <img src="/assets/TamTap.png" 
                      alt="TAMTAP" 
                      class="h-10"
                      onerror="this.style.display='none'">
                 <div>
-                    <h1 class="text-xl font-bold">TAMTAP</h1>
                     <p class="text-feu-gold text-xs">Teacher Dashboard</p>
                 </div>
             </div>
@@ -928,41 +927,72 @@
 
         // ========================================
         // LOAD STATS
-        // Backend: GET /api/stats
-        // Graceful degradation if breakdown unavailable
+        // Backend: GET /api/stats (general stats)
+        //          GET /api/stats/summary (breakdown)
+        // Respects academic calendar status
         // ========================================
         async function loadStats() {
             try {
-                const res = await fetch('/api/stats', { credentials: 'include' });
-                const data = await res.json();
+                // Get current filters
+                const section = document.getElementById('section-select').value;
+                const today = new Date().toISOString().split('T')[0];
                 
-                if (!data.success) {
-                    showStatsUnavailable();
+                // Build summary URL with filters
+                let summaryUrl = `/api/stats/summary?date=${today}`;
+                if (section) {
+                    summaryUrl += `&section=${encodeURIComponent(section)}`;
+                } else {
+                    const sections = currentUser.sections_handled || [];
+                    if (sections.length > 0) {
+                        summaryUrl += `&sections=${encodeURIComponent(sections.join(','))}`;
+                    }
+                }
+                
+                // Fetch both general stats and summary in parallel
+                const [statsRes, summaryRes] = await Promise.all([
+                    fetch('/api/stats', { credentials: 'include' }),
+                    fetch(summaryUrl, { credentials: 'include' })
+                ]);
+                
+                const statsData = await statsRes.json();
+                const summaryData = await summaryRes.json();
+                
+                // General stats (total students, attendance rate from global)
+                if (statsData.success) {
+                    document.getElementById('total-students').textContent = statsData.stats.students || 0;
+                }
+                
+                // Check calendar status first
+                if (summaryData.success && summaryData.isInstructional === false) {
+                    // Non-instructional day - show special state
+                    showNonInstructionalDay(summaryData.calendarLabel, summaryData.calendarReason);
                     return;
                 }
                 
-                const stats = data.stats;
+                // Hide any calendar notice
+                hideCalendarNotice();
                 
-                // Total students and attendance rate are always available
-                document.getElementById('total-students').textContent = stats.students || 0;
-                
-                const rate = stats.attendanceRate || 0;
-                document.getElementById('attendance-rate').textContent = `${rate}%`;
-                document.getElementById('attendance-bar').style.width = `${rate}%`;
-                
-                // Check if status breakdown is available
-                // NOTE: Current backend doesn't provide onTime/late/absent breakdown
-                // This checks if the data exists; if not, shows unavailable notice
-                if (stats.onTime !== undefined && stats.late !== undefined && stats.absent !== undefined) {
+                // Summary stats (breakdown)
+                if (summaryData.success && summaryData.stats) {
+                    const summary = summaryData.stats;
+                    
+                    // Update counts
+                    document.getElementById('count-ontime').textContent = summary.onTime;
+                    document.getElementById('count-late').textContent = summary.late;
+                    document.getElementById('count-absent').textContent = summary.absent;
+                    
+                    // Update attendance rate from summary (section-specific)
+                    const rate = summary.attendanceRate || 0;
+                    document.getElementById('attendance-rate').textContent = `${rate}%`;
+                    document.getElementById('attendance-bar').style.width = `${rate}%`;
+                    
+                    // Enable summary cards
                     breakdownAvailable = true;
-                    document.getElementById('count-ontime').textContent = stats.onTime;
-                    document.getElementById('count-late').textContent = stats.late;
-                    document.getElementById('count-absent').textContent = stats.absent;
                     document.getElementById('summary-cards').classList.remove('card-disabled');
                     document.getElementById('summary-unavailable').classList.add('hidden');
                     document.getElementById('breakdown-notice').classList.add('hidden');
                 } else {
-                    // Breakdown not available - show graceful degradation
+                    // Summary endpoint failed - show graceful degradation
                     breakdownAvailable = false;
                     showBreakdownUnavailable();
                 }
@@ -973,11 +1003,53 @@
             }
         }
 
+        // ========================================
+        // CALENDAR STATUS DISPLAY
+        // Shows when day is non-instructional
+        // ========================================
+        function showNonInstructionalDay(label, reason) {
+            // Update breakdown notice with calendar info
+            const notice = document.getElementById('breakdown-notice');
+            notice.innerHTML = `
+                <i class="fas fa-calendar-xmark mr-2"></i>
+                <span class="font-semibold">${escapeHtml(label)}</span>
+                ${reason ? `<span class="ml-2 opacity-80">- ${escapeHtml(reason)}</span>` : ''}
+            `;
+            notice.classList.remove('hidden');
+            
+            // Show N/A on summary cards
+            document.getElementById('count-ontime').textContent = 'N/A';
+            document.getElementById('count-late').textContent = 'N/A';
+            document.getElementById('count-absent').textContent = 'N/A';
+            document.getElementById('attendance-rate').textContent = 'N/A';
+            document.getElementById('attendance-bar').style.width = '0%';
+            
+            // Disable cards with reduced opacity
+            document.getElementById('summary-cards').classList.add('card-disabled');
+            
+            // Show unavailable banner with calendar-specific message
+            const unavailable = document.getElementById('summary-unavailable');
+            unavailable.innerHTML = `
+                <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+                <span class="text-blue-700 text-sm">
+                    <strong>${escapeHtml(label)}</strong> - Attendance is not recorded on this day.
+                    ${reason ? `<br><span class="text-blue-500">${escapeHtml(reason)}</span>` : ''}
+                </span>
+            `;
+            unavailable.className = 'bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-center';
+            unavailable.classList.remove('hidden');
+        }
+
+        function hideCalendarNotice() {
+            const unavailable = document.getElementById('summary-unavailable');
+            unavailable.className = 'hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-center';
+        }
+
         function showBreakdownUnavailable() {
-            // Disable summary cards
-            document.getElementById('count-ontime').textContent = '--';
-            document.getElementById('count-late').textContent = '--';
-            document.getElementById('count-absent').textContent = '--';
+            // Show placeholder with clear messaging
+            document.getElementById('count-ontime').textContent = 'N/A';
+            document.getElementById('count-late').textContent = 'N/A';
+            document.getElementById('count-absent').textContent = 'N/A';
             document.getElementById('summary-cards').classList.add('card-disabled');
             document.getElementById('summary-unavailable').classList.remove('hidden');
             document.getElementById('breakdown-notice').classList.remove('hidden');

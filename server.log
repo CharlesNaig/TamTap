@@ -16,3 +16,72 @@
 [2026-01-22T00:06:09.154Z] GET /login.html
 [2026-01-22T00:06:09.446Z] GET /api/auth/me
 [2026-01-22T00:06:10.614Z] GET /api/stats/summary?date=2026-01-25
+[2026-01-22T00:09:01.401Z] POST /api/auth/login
+[WARN] Login failed: invalid password - test
+[2026-01-22T00:09:02.969Z] POST /api/auth/login
+[WARN] Login failed: invalid password - test
+[2026-01-22T00:09:08.105Z] POST /api/auth/login
+[WARN] Login failed: invalid password - test
+[2026-01-22T00:09:17.795Z] POST /api/auth/login
+[WARN] Login failed: invalid password - test
+[2026-01-22T00:09:20.266Z] POST /api/auth/login
+[INFO] Login successful: test (teacher)
+[2026-01-22T00:09:20.800Z] GET /api/auth/me
+[2026-01-22T00:09:21.773Z] GET /dashboard.html
+[2026-01-22T00:09:22.036Z] GET /api/auth/me
+[2026-01-22T00:09:22.066Z] GET /api/attendance/2026-01-22?sections=ICT%20B
+[DEBUG] Attendance query: {"date":{"$regex":"^2026-01-22"},"section":{"$in":["ICT B"]}}
+[2026-01-22T00:09:22.075Z] GET /api/stats
+[DEBUG] Found 0 attendance records
+[2026-01-22T00:09:22.307Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[INFO] Client connected (1 total)
+[2026-01-22T00:09:24.975Z] POST /api/auth/logout
+[INFO] Logout: test
+[2026-01-22T00:09:24.985Z] GET /login.html
+[INFO] Client disconnected (0 total)
+[2026-01-22T00:09:25.149Z] GET /api/auth/me
+[2026-01-22T00:09:39.973Z] POST /api/auth/login
+[INFO] Login successful: test (teacher)
+[2026-01-22T00:09:40.488Z] GET /api/auth/me
+[2026-01-22T00:09:41.948Z] GET /dashboard.html
+[2026-01-22T00:09:42.170Z] GET /api/auth/me
+[2026-01-22T00:09:42.183Z] GET /api/attendance/2026-01-22?sections=ICT%20B
+[DEBUG] Attendance query: {"date":{"$regex":"^2026-01-22"},"section":{"$in":["ICT B"]}}
+[2026-01-22T00:09:42.186Z] GET /api/stats
+[DEBUG] Found 0 attendance records
+[2026-01-22T00:09:42.413Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[INFO] Client connected (1 total)
+[2026-01-22T00:09:47.073Z] GET /api/attendance/2026-01-22?sections=ICT%20B
+[2026-01-22T00:09:47.074Z] GET /api/stats
+[2026-01-22T00:09:47.074Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[DEBUG] Attendance query: {"date":{"$regex":"^2026-01-22"},"section":{"$in":["ICT B"]}}
+[DEBUG] Found 0 attendance records
+[2026-01-22T00:09:51.639Z] GET /api/attendance/range/query?from=2026-01-18&to=2026-01-22&sections=ICT%20B
+[2026-01-22T00:09:51.641Z] GET /api/stats
+[2026-01-22T00:09:51.641Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[2026-01-22T00:09:52.677Z] GET /api/attendance/range/query?from=2025-09-22&to=2026-01-22&sections=ICT%20B
+[2026-01-22T00:09:52.678Z] GET /api/stats
+[2026-01-22T00:09:52.678Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[2026-01-22T00:09:53.595Z] GET /api/attendance/range/query?from=2025-12-31&to=2026-01-22&sections=ICT%20B
+[2026-01-22T00:09:53.597Z] GET /api/stats
+[2026-01-22T00:09:53.597Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[INFO] Client disconnected (0 total)
+[2026-01-22T00:11:09.679Z] GET /
+[2026-01-22T00:11:09.875Z] GET /api/auth/me
+[2026-01-22T00:11:09.907Z] GET /dashboard.html
+[2026-01-22T00:11:10.177Z] GET /api/auth/me
+[2026-01-22T00:11:10.224Z] GET /api/attendance/2026-01-22?sections=ICT%20B
+[DEBUG] Attendance query: {"date":{"$regex":"^2026-01-22"},"section":{"$in":["ICT B"]}}
+[2026-01-22T00:11:10.227Z] GET /api/stats
+[2026-01-22T00:11:10.227Z] GET /api/stats/summary?date=2026-01-22&sections=ICT%20B
+[DEBUG] Found 0 attendance records
+[INFO] Client connected (1 total)
+[2026-01-22T00:11:13.417Z] POST /api/auth/logout
+[INFO] Logout: test
+[2026-01-22T00:11:13.429Z] GET /login.html
+[INFO] Client disconnected (0 total)
+[2026-01-22T00:11:13.601Z] GET /api/auth/me
+[2026-01-22T00:11:20.477Z] POST /api/auth/login
+[WARN] Login failed: invalid password - admin
+[2026-01-22T00:11:22.318Z] POST /api/auth/login
+[WARN] Login failed: invalid password - admin

@@ -218,6 +218,115 @@ router.delete('/teachers/:id', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/admin/teachers/:id/reset-password
+ * Reset teacher password (Admin only)
+ * 
+ * Body options:
+ *   { useDefault: true }                    - Set to default: tamtap@{firstname}
+ *   { newPassword: "custompassword" }       - Set custom password
+ *   { forceChange: true }                   - Force password change on next login
+ * 
+ * Returns: { success, message, defaultPassword? }
+ */
+router.post('/teachers/:id/reset-password', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { ObjectId } = require('mongodb');
+        const teacherId = req.params.id;
+        const { useDefault, newPassword, forceChange } = req.body;
+
+        // Find teacher first
+        const teacher = await db.collection('teachers').findOne({
+            _id: new ObjectId(teacherId)
+        });
+
+        if (!teacher) {
+            return res.status(404).json({ success: false, error: 'Teacher not found' });
+        }
+
+        let passwordToSet;
+        let isDefaultPassword = false;
+
+        if (useDefault) {
+            // Default password: tamtap@{firstname in lowercase}
+            const firstName = teacher.name.split(' ')[0].toLowerCase();
+            passwordToSet = `tamtap@${firstName}`;
+            isDefaultPassword = true;
+        } else if (newPassword) {
+            if (newPassword.length < 6) {
+                return res.status(400).json({ 
+                    success: false, 
+                    error: 'Password must be at least 6 characters' 
+                });
+            }
+            passwordToSet = newPassword;
+        } else {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Provide useDefault:true or newPassword' 
+            });
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(passwordToSet, 10);
+
+        // Update teacher
+        const updateData = {
+            password: hashedPassword,
+            passwordResetAt: new Date().toISOString(),
+            passwordResetBy: req.user.username
+        };
+
+        // Add force change flag if requested
+        if (forceChange) {
+            updateData.forcePasswordChange = true;
+        }
+
+        await db.collection('teachers').updateOne(
+            { _id: new ObjectId(teacherId) },
+            { $set: updateData }
+        );
+
+        // Log the action
+        console.log(`[INFO] Password reset for teacher ${teacher.username} by ${req.user.username} (default: ${isDefaultPassword}, forceChange: ${!!forceChange})`);
+
+        // Log to audit collection
+        await db.collection('audit_log').insertOne({
+            action: 'password_reset',
+            targetType: 'teacher',
+            targetId: teacherId,
+            targetUsername: teacher.username,
+            performedBy: req.user.username,
+            isDefaultPassword: isDefaultPassword,
+            forceChange: !!forceChange,
+            timestamp: new Date().toISOString()
+        });
+
+        const response = {
+            success: true,
+            message: `Password reset for ${teacher.name}`,
+            forceChange: !!forceChange
+        };
+
+        // Only include the default password in response if it was used
+        // (so admin can tell the teacher)
+        if (isDefaultPassword) {
+            response.defaultPassword = passwordToSet;
+        }
+
+        res.json(response);
+
+    } catch (error) {
+        console.error('[ERROR] Reset password error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to reset password' });
+    }
+});
+
 // ========================================
 // STUDENT MANAGEMENT
 // ========================================
@@ -536,6 +645,208 @@ router.get('/sections', async (req, res) => {
     } catch (error) {
         console.error('[ERROR] Get sections error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch sections' });
+    }
+});
+
+// ========================================
+// SYSTEM SETTINGS
+// ========================================
+
+/**
+ * GET /api/admin/settings
+ * Get all system settings
+ */
+router.get('/settings', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const settings = await db.collection('settings').find({}).toArray();
+        
+        // Convert to key-value object
+        const settingsObj = {};
+        settings.forEach(s => {
+            settingsObj[s.key] = s.value;
+        });
+
+        // Ensure defaults exist
+        if (settingsObj.saturdayClassesEnabled === undefined) {
+            settingsObj.saturdayClassesEnabled = false;
+        }
+
+        res.json({
+            success: true,
+            data: settingsObj
+        });
+
+    } catch (error) {
+        console.error('[ERROR] Get settings error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to fetch settings' });
+    }
+});
+
+/**
+ * GET /api/admin/settings/:key
+ * Get a specific setting
+ */
+router.get('/settings/:key', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const setting = await db.collection('settings').findOne({ key: req.params.key });
+        
+        if (!setting) {
+            // Return default values for known settings
+            const defaults = {
+                saturdayClassesEnabled: false,
+                lateThresholdMinutes: 15,
+                attendanceStartTime: '07:00',
+                attendanceEndTime: '17:00'
+            };
+            
+            if (defaults.hasOwnProperty(req.params.key)) {
+                return res.json({
+                    success: true,
+                    data: { key: req.params.key, value: defaults[req.params.key] }
+                });
+            }
+            
+            return res.status(404).json({ success: false, error: 'Setting not found' });
+        }
+
+        res.json({
+            success: true,
+            data: setting
+        });
+
+    } catch (error) {
+        console.error('[ERROR] Get setting error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to fetch setting' });
+    }
+});
+
+/**
+ * PUT /api/admin/settings/:key
+ * Update a system setting
+ * Body: { value: any }
+ */
+router.put('/settings/:key', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { key } = req.params;
+        const { value } = req.body;
+
+        if (value === undefined) {
+            return res.status(400).json({ success: false, error: 'Value is required' });
+        }
+
+        // Whitelist of allowed settings
+        const allowedSettings = [
+            'saturdayClassesEnabled',
+            'lateThresholdMinutes',
+            'attendanceStartTime',
+            'attendanceEndTime'
+        ];
+
+        if (!allowedSettings.includes(key)) {
+            return res.status(400).json({ success: false, error: 'Invalid setting key' });
+        }
+
+        // Upsert the setting
+        await db.collection('settings').updateOne(
+            { key: key },
+            { 
+                $set: { 
+                    key: key,
+                    value: value,
+                    updatedBy: req.user.username,
+                    updatedAt: new Date().toISOString()
+                }
+            },
+            { upsert: true }
+        );
+
+        console.log(`[INFO] Setting ${key} updated to ${value} by ${req.user.username}`);
+
+        // Log to audit
+        await db.collection('audit_log').insertOne({
+            action: 'setting_change',
+            key: key,
+            value: value,
+            performedBy: req.user.username,
+            timestamp: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            message: `Setting '${key}' updated successfully`,
+            data: { key, value }
+        });
+
+    } catch (error) {
+        console.error('[ERROR] Update setting error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to update setting' });
+    }
+});
+
+/**
+ * POST /api/admin/settings/saturday-toggle
+ * Toggle Saturday classes (convenience endpoint)
+ */
+router.post('/settings/saturday-toggle', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        // Get current value
+        const setting = await db.collection('settings').findOne({ key: 'saturdayClassesEnabled' });
+        const currentValue = setting ? setting.value : false;
+        const newValue = !currentValue;
+
+        // Update
+        await db.collection('settings').updateOne(
+            { key: 'saturdayClassesEnabled' },
+            { 
+                $set: { 
+                    key: 'saturdayClassesEnabled',
+                    value: newValue,
+                    updatedBy: req.user.username,
+                    updatedAt: new Date().toISOString()
+                }
+            },
+            { upsert: true }
+        );
+
+        console.log(`[INFO] Saturday classes ${newValue ? 'ENABLED' : 'DISABLED'} by ${req.user.username}`);
+
+        // Log to audit
+        await db.collection('audit_log').insertOne({
+            action: 'saturday_toggle',
+            value: newValue,
+            performedBy: req.user.username,
+            timestamp: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            message: `Saturday classes ${newValue ? 'enabled' : 'disabled'}`,
+            saturdayClassesEnabled: newValue
+        });
+
+    } catch (error) {
+        console.error('[ERROR] Toggle Saturday error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to toggle Saturday classes' });
     }
 });
 

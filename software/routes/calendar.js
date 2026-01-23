@@ -101,7 +101,13 @@ async function getDayStatus(db, dateStr, section = null) {
     }
     
     if (weekend.isSaturday) {
-        // Check if Saturday is enabled as make-up day
+        // Check global Saturday setting first
+        const saturdaySetting = await db.collection('settings').findOne({ 
+            key: 'saturdayClassesEnabled' 
+        });
+        const saturdaysGloballyEnabled = saturdaySetting?.value === true;
+        
+        // Check if Saturday is enabled as make-up day (specific date override)
         const saturdayMakeup = await db.collection('calendar').findOne({
             type: 'saturday-makeup',
             date: dateStr
@@ -117,11 +123,22 @@ async function getDayStatus(db, dateStr, section = null) {
             };
         }
         
+        // If Saturdays are globally enabled, treat as instructional
+        if (saturdaysGloballyEnabled) {
+            return {
+                status: DAY_STATUS.INSTRUCTIONAL,
+                isInstructional: true,
+                label: 'Saturday Class',
+                reason: 'Saturday classes enabled by admin',
+                dayName: 'Saturday'
+            };
+        }
+        
         return {
             status: DAY_STATUS.WEEKEND,
             isInstructional: false,
             label: 'Saturday',
-            reason: 'Saturday - No classes (not a make-up day)'
+            reason: 'Saturday - No classes (not enabled)'
         };
     }
     
@@ -167,6 +184,33 @@ router.get('/status', async (req, res) => {
     } catch (error) {
         console.error('[ERROR] Get calendar status error:', error.message);
         res.status(500).json({ error: 'Failed to get calendar status' });
+    }
+});
+
+// ========================================
+// GET /api/calendar/saturday-status
+// Get Saturday class setting (public)
+// ========================================
+router.get('/saturday-status', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ error: 'Database not available' });
+        }
+        
+        const setting = await db.collection('settings').findOne({ 
+            key: 'saturdayClassesEnabled' 
+        });
+        
+        res.json({
+            success: true,
+            saturdayClassesEnabled: setting?.value === true,
+            updatedAt: setting?.updatedAt || null
+        });
+        
+    } catch (error) {
+        console.error('[ERROR] Get Saturday status error:', error.message);
+        res.status(500).json({ error: 'Failed to get Saturday status' });
     }
 });
 

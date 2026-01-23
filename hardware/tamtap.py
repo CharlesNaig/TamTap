@@ -113,8 +113,130 @@ GPIO.output(GPIO_GREEN_LED, GPIO.LOW)
 GPIO.output(GPIO_RED_LED, GPIO.LOW)
 GPIO.output(GPIO_BUZZER, GPIO.LOW)
 
-# Initialize RFID reader
-reader = SimpleMFRC522()
+# ========================================
+# 📡 RFID READER MANAGEMENT (Stability Fix)
+# ========================================
+# Problem: RC522 reader sometimes freezes after first read
+# Solution: Wrapper class with timeout, reset, and SPI cleanup
+
+class RFIDManager:
+    """
+    RFID Reader Manager with stability improvements.
+    Handles timeouts, resets, and SPI buffer clearing.
+    """
+    
+    def __init__(self):
+        self.reader = None
+        self.consecutive_errors = 0
+        self.max_consecutive_errors = 5
+        self.last_read_time = 0
+        self._init_reader()
+    
+    def _init_reader(self):
+        """Initialize or reinitialize the RFID reader"""
+        try:
+            logger.debug("RFID: Initializing reader...")
+            self.reader = SimpleMFRC522()
+            self.consecutive_errors = 0
+            logger.info("RFID: Reader initialized successfully")
+        except Exception as e:
+            logger.error("RFID: Failed to initialize reader: %s", e)
+            self.reader = None
+    
+    def reset_reader(self):
+        """
+        Full reset of the RFID reader.
+        Called after errors or stuck states.
+        """
+        logger.warning("RFID: Resetting reader...")
+        try:
+            # Stop any ongoing crypto operations
+            if self.reader and hasattr(self.reader, 'READER'):
+                try:
+                    self.reader.READER.MFRC522_StopCrypto1()
+                except Exception:
+                    pass
+                
+                # Soft reset the MFRC522
+                try:
+                    self.reader.READER.MFRC522_Reset()
+                except Exception:
+                    pass
+            
+            # Small delay for SPI bus to settle
+            time.sleep(0.1)
+            
+            # Reinitialize
+            self._init_reader()
+            
+        except Exception as e:
+            logger.error("RFID: Reset failed: %s", e)
+            # Force full reinitialization
+            time.sleep(0.5)
+            self._init_reader()
+    
+    def read_card(self, timeout_ms=100):
+        """
+        Non-blocking card read with timeout.
+        
+        Args:
+            timeout_ms: Maximum time to wait for card (milliseconds)
+        
+        Returns:
+            (nfc_id, text) or (None, None) if no card or error
+        """
+        if not self.reader:
+            logger.error("RFID: Reader not initialized")
+            self._init_reader()
+            return None, None
+        
+        try:
+            logger.debug("RFID: Read start")
+            start_time = time.time()
+            
+            # Perform non-blocking read
+            nfc_id, text = self.reader.read_no_block()
+            
+            elapsed_ms = (time.time() - start_time) * 1000
+            
+            if nfc_id:
+                logger.info("RFID: UID detected: %s (%.0fms)", nfc_id, elapsed_ms)
+                self.consecutive_errors = 0
+                self.last_read_time = time.time()
+                
+                # Clean up after successful read
+                self._cleanup_after_read()
+                
+                return nfc_id, text
+            else:
+                logger.debug("RFID: No card (%.0fms)", elapsed_ms)
+                return None, None
+                
+        except Exception as e:
+            self.consecutive_errors += 1
+            logger.error("RFID: Read error (%d/%d): %s", 
+                        self.consecutive_errors, self.max_consecutive_errors, e)
+            
+            # Check if we need a full reset
+            if self.consecutive_errors >= self.max_consecutive_errors:
+                logger.warning("RFID: Too many errors, forcing reset")
+                self.reset_reader()
+            else:
+                # Quick cleanup
+                self._cleanup_after_read()
+            
+            return None, None
+    
+    def _cleanup_after_read(self):
+        """Clean up reader state after read attempt"""
+        try:
+            if self.reader and hasattr(self.reader, 'READER'):
+                self.reader.READER.MFRC522_StopCrypto1()
+        except Exception:
+            pass
+
+# Initialize the RFID manager
+rfid_manager = RFIDManager()
 
 # Create base photo directory
 os.makedirs(PHOTO_BASE_DIR, exist_ok=True)
@@ -888,37 +1010,32 @@ def main():
     
     logger.info("System ready - waiting for RFID taps...")
     
-    # Main loop
+    # Main loop with improved RFID stability
     try:
         while current_state != State.SHUTDOWN:
             try:
-                # Non-blocking RFID read
-                nfc_id, text = reader.read_no_block()
+                # Non-blocking RFID read using RFIDManager (with timeout/reset handling)
+                nfc_id, text = rfid_manager.read_card(timeout_ms=100)
                 
                 if nfc_id:
                     process_card(nfc_id)
                     # Return to IDLE after processing
                     idle_state()
                     
-                    # Reset RFID reader state to allow next card read
-                    try:
-                        reader.READER.MFRC522_StopCrypto1()
-                    except Exception:
-                        pass
-                    
                     # Debounce delay - wait for card to be removed
+                    # This prevents duplicate reads of the same card
                     time.sleep(2.0)
+                    
+                    # Reset reader after successful read cycle
+                    rfid_manager._cleanup_after_read()
                 
                 time.sleep(NFC_POLL_INTERVAL)
                 
             except Exception as e:
                 if not shutdown_in_progress:
-                    logger.error("RFID read error: %s", e)
+                    logger.error("Main loop error: %s", e)
                     # Reset reader on error
-                    try:
-                        reader.READER.MFRC522_StopCrypto1()
-                    except Exception:
-                        pass
+                    rfid_manager.reset_reader()
                     time.sleep(0.5)
                 
     except (KeyboardInterrupt, SystemExit):

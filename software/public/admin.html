@@ -4,26 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAMTAP - Admin Panel</title>
-    <link rel="icon" type="image/png" href="/assets/icons/TamTapFavicon.png">
+    <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             theme: {
+                screens: {
+                    'xs': '360px',
+                    'sm': '480px',
+                    'md': '768px',
+                    'lg': '1024px',
+                    'xl': '1280px',
+                    '2xl': '1536px',
+                    '3xl': '1920px'
+                },
                 extend: {
                     colors: {
                         'feu-green': '#0a8249',
                         'feu-green-dark': '#034c16',
                         'feu-green-light': '#0eb063',
                         'feu-gold': '#FFD700'
-                    },
-                    screens: {
-                        'xs': '360px',
-                        'sm': '480px',
-                        'md': '768px',
-                        'lg': '1024px',
-                        'xl': '1280px',
-                        '2xl': '1536px',
-                        '3xl': '1920px'
                     }
                 }
             }

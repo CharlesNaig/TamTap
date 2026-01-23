@@ -67,16 +67,21 @@ router.post('/login', async (req, res) => {
             });
         }
 
+        // Check if password change is required
+        const forcePasswordChange = user.forcePasswordChange === true;
+
         // Create session
         req.session.user = {
             id: user._id.toString(),
             username: user.username,
             name: user.name || user.username,
+            email: user.email || '',
             role: role,
-            sections_handled: user.sections_handled || []  // For teachers
+            sections_handled: user.sections_handled || [],  // For teachers
+            forcePasswordChange: forcePasswordChange
         };
 
-        console.log(`[INFO] Login successful: ${username} (${role})`);
+        console.log(`[INFO] Login successful: ${username} (${role})${forcePasswordChange ? ' [password change required]' : ''}`);
 
         res.json({
             success: true,
@@ -84,7 +89,8 @@ router.post('/login', async (req, res) => {
                 username: user.username,
                 name: user.name || user.username,
                 role: role,
-                sections_handled: user.sections_handled || []
+                sections_handled: user.sections_handled || [],
+                forcePasswordChange: forcePasswordChange
             }
         });
 
@@ -128,10 +134,90 @@ router.get('/me', requireAuth, (req, res) => {
         user: {
             username: req.user.username,
             name: req.user.name,
+            email: req.user.email || '',
             role: req.user.role,
-            sections_handled: req.user.sections_handled || []
+            sections_handled: req.user.sections_handled || [],
+            forcePasswordChange: req.user.forcePasswordChange || false
         }
     });
+});
+
+/**
+ * POST /api/auth/change-password
+ * Change own password (for forced password change or voluntary)
+ * Body: { currentPassword, newPassword }
+ */
+router.post('/change-password', requireAuth, async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { ObjectId } = require('mongodb');
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Current password and new password are required' 
+            });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'New password must be at least 6 characters' 
+            });
+        }
+
+        // Determine collection based on role
+        const collection = req.user.role === 'admin' ? 'admins' : 'teachers';
+        
+        // Get current user from database
+        const user = await db.collection(collection).findOne({
+            _id: new ObjectId(req.user.id)
+        });
+
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'User not found' });
+        }
+
+        // Verify current password
+        const isValid = await bcrypt.compare(currentPassword, user.password);
+        if (!isValid) {
+            return res.status(401).json({ 
+                success: false, 
+                error: 'Current password is incorrect' 
+            });
+        }
+
+        // Hash new password
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Update password and clear force change flag
+        await db.collection(collection).updateOne(
+            { _id: new ObjectId(req.user.id) },
+            { 
+                $set: { 
+                    password: hashedPassword,
+                    passwordChangedAt: new Date().toISOString()
+                },
+                $unset: { forcePasswordChange: "" }
+            }
+        );
+
+        // Update session
+        req.session.user.forcePasswordChange = false;
+
+        console.log(`[INFO] Password changed: ${req.user.username}`);
+
+        res.json({ success: true, message: 'Password changed successfully' });
+
+    } catch (error) {
+        console.error('[ERROR] Change password error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to change password' });
+    }
 });
 
 module.exports = router;

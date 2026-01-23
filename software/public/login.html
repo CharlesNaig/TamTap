@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAMTAP - Login</title>
-    <link rel="icon" type="image/png" href="/assets/TamTap.png">
+    <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -123,18 +123,34 @@
                 </span>
             </div>
 
-            <!-- Center: Nav Links -->
+            <!-- Center: Nav Links (Desktop) -->
             <nav class="hidden md:flex items-center gap-6 lg:gap-10 xl:gap-14">
                 <span class="nav-link text-feu-green font-medium text-base lg:text-lg xl:text-xl cursor-default">About</span>
                 <span class="nav-link text-feu-green font-medium text-base lg:text-lg xl:text-xl cursor-default">Mission</span>
                 <span class="nav-link text-feu-green font-medium text-base lg:text-lg xl:text-xl cursor-default">Vision</span>
             </nav>
 
-            <!-- Right: Search Icon -->
-            <button class="text-feu-green hover:text-feu-green-dark transition p-2">
-                <i class="fas fa-magnifying-glass text-lg sm:text-xl lg:text-2xl"></i>
-            </button>
+            <!-- Right: Mobile Menu + Search -->
+            <div class="flex items-center gap-2">
+                <!-- Hamburger Menu (Mobile) -->
+                <button onclick="toggleMobileMenu()" class="md:hidden text-feu-green hover:text-feu-green-dark transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Toggle menu">
+                    <i id="menu-icon" class="fas fa-bars text-xl"></i>
+                </button>
+                <!-- Search Icon -->
+                <button class="text-feu-green hover:text-feu-green-dark transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
+                    <i class="fas fa-magnifying-glass text-lg sm:text-xl lg:text-2xl"></i>
+                </button>
+            </div>
         </div>
+        
+        <!-- Mobile Navigation Menu -->
+        <nav id="mobile-menu" class="hidden md:hidden mt-4 pb-2 border-t border-gray-100 pt-4">
+            <div class="flex flex-col gap-3">
+                <span class="text-feu-green font-medium text-base py-2 px-2 hover:bg-gray-50 rounded cursor-default">About</span>
+                <span class="text-feu-green font-medium text-base py-2 px-2 hover:bg-gray-50 rounded cursor-default">Mission</span>
+                <span class="text-feu-green font-medium text-base py-2 px-2 hover:bg-gray-50 rounded cursor-default">Vision</span>
+            </div>
+        </nav>
     </header>
 
     <!-- ================================================
@@ -158,7 +174,7 @@
     ================================================ -->
     <div class="bg-feu-green py-3 sm:py-4 lg:py-5 flex items-center justify-center">
         <button onclick="openModal()"
-                class="btn-login bg-feu-green border-2 border-feu-gold text-white font-bold text-base sm:text-lg lg:text-xl px-10 sm:px-16 lg:px-20 xl:px-28 py-2.5 sm:py-3 lg:py-4 rounded-full inline-flex items-center justify-center gap-2 hover:bg-feu-gold hover:text-feu-green-dark focus:outline-none focus:ring-2 focus:ring-feu-gold focus:ring-offset-2">
+                class="btn-login bg-feu-green border-2 border-feu-gold text-white font-bold text-base sm:text-lg lg:text-xl px-10 sm:px-16 lg:px-20 xl:px-28 py-3 sm:py-3 lg:py-4 rounded-full inline-flex items-center justify-center gap-2 hover:bg-feu-gold hover:text-feu-green-dark focus:outline-none focus:ring-2 focus:ring-feu-gold focus:ring-offset-2 min-h-[48px]">
             <span class="underline underline-offset-2">Log In</span>
         </button>
     </div>
@@ -182,11 +198,11 @@
             <form id="login-form" class="px-8 py-6 space-y-5">
                 <!-- Email Address -->
                 <!-- Email Address -->
-                <div class="flex items-center gap-4">
-                    <label class="text-sm font-semibold text-gray-700 w-36 uppercase tracking-wide">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
+                    <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
                        <i class="fas fa-envelope" aria-hidden="true"></i> Email Address
                     </label>
-                    <div class="relative flex-1">
+                    <div class="relative flex-1 w-full">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base">
                             
                         </span>
@@ -195,17 +211,17 @@
                                name="username" 
                                required
                                autocomplete="username"
-                               class="pl-10 pr-3 py-2 border-2 border-gray-800 rounded text-sm input-focus transition w-full"
+                               class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
                                aria-label="Email Address">
                     </div>
                 </div>
 
                 <!-- Password -->
-                <div class="flex items-center gap-4">
-                    <label class="text-sm font-semibold text-gray-700 w-36 uppercase tracking-wide">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
+                    <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
                         <i class="fas fa-lock" aria-hidden="true"></i> Password
                     </label>
-                    <div class="relative flex-1">
+                    <div class="relative flex-1 w-full">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base">
                             
                         </span>
@@ -214,7 +230,7 @@
                                name="password" 
                                required
                                autocomplete="current-password"
-                               class="pl-10 pr-3 py-2 border-2 border-gray-800 rounded text-sm input-focus transition w-full"
+                               class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
                                aria-label="Password">
                     </div>
                 </div>
@@ -229,7 +245,7 @@
                 <div class="pt-2 text-center">
                     <button type="submit" 
                             id="login-btn"
-                            class="bg-feu-green hover:bg-feu-gold hover:text-feu-green-dark border-2 border-feu-green hover:border-feu-gold text-white font-bold text-base px-10 py-2.5 rounded-full transition inline-flex items-center justify-center gap-2">
+                            class="bg-feu-green hover:bg-feu-gold hover:text-feu-green-dark border-2 border-feu-green hover:border-feu-gold text-white font-bold text-base px-10 py-3 rounded-full transition inline-flex items-center justify-center gap-2 min-h-[48px]">
                         <span id="btn-text" class="underline underline-offset-2">Log In</span>
                         <i id="btn-spinner" class="fas fa-spinner fa-spin hidden"></i>
                     </button>
@@ -242,7 +258,7 @@
                     <i class="fas fa-info-circle mr-1"></i>
                     Accounts are provided by the administrator
                 </p>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-sm">
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-sm py-2 px-4 min-h-[44px] min-w-[44px]">
                     <i class="fas fa-xmark mr-1"></i> Close
                 </button>
             </div>
@@ -253,6 +269,15 @@
          JAVASCRIPT
     ================================================ -->
     <script>
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const icon = document.getElementById('menu-icon');
+            menu.classList.toggle('hidden');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        }
+
         // Modal Open/Close
         function openModal() {
             const modal = document.getElementById('login-modal');

@@ -75,13 +75,26 @@ async function connectMongoDB() {
 
 async function createIndexes() {
     try {
-        // Student indexes
+        // Student indexes - NFC ID is REQUIRED for students
         await db.collection('students').createIndex({ nfc_id: 1 }, { unique: true });
         await db.collection('students').createIndex({ tamtap_id: 1 });
         
-        // Teacher indexes
-        await db.collection('teachers').createIndex({ nfc_id: 1 }, { unique: true });
+        // Teacher indexes - NFC ID is OPTIONAL for teachers
+        // Drop old non-sparse index if it exists (migration)
+        try {
+            await db.collection('teachers').dropIndex('nfc_id_1');
+            console.log('[INFO] Dropped old teachers.nfc_id index');
+        } catch (e) {
+            // Index may not exist, ignore
+        }
+        
+        // Use sparse index to allow multiple null values (teachers without NFC cards)
+        await db.collection('teachers').createIndex(
+            { nfc_id: 1 }, 
+            { unique: true, sparse: true }  // sparse: ignores documents where nfc_id is null/missing
+        );
         await db.collection('teachers').createIndex({ tamtap_id: 1 });
+        await db.collection('teachers').createIndex({ username: 1 }, { unique: true });
         
         // Attendance indexes
         await db.collection('attendance').createIndex({ nfc_id: 1, date: 1 });
@@ -91,6 +104,15 @@ async function createIndexes() {
         await db.collection('calendar').createIndex({ type: 1, date: 1 });
         await db.collection('calendar').createIndex({ type: 1, startDate: 1, endDate: 1 });
         await db.collection('calendar').createIndex({ type: 1, section: 1, date: 1 });
+        
+        // Settings index (for admin settings like Saturday classes)
+        await db.collection('settings').createIndex({ key: 1 }, { unique: true });
+        
+        // Clean up: Remove nfc_id field from teachers where it's null (prevents sparse index issues)
+        await db.collection('teachers').updateMany(
+            { nfc_id: null },
+            { $unset: { nfc_id: "" } }
+        );
         
         console.log('[INFO] MongoDB indexes created');
     } catch (error) {
@@ -172,10 +194,12 @@ const attendanceRoutes = require('./routes/attendance');
 const studentsRoutes = require('./routes/students');
 const statsRoutes = require('./routes/stats');
 const calendarRoutes = require('./routes/calendar');
+const exportRoutes = require('./routes/export');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/export', exportRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/teachers', studentsRoutes);  // Reuse for teachers

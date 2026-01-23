@@ -235,12 +235,18 @@
                         class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-gray-600 hover:bg-gray-100 whitespace-nowrap">
                     <span class="hidden sm:inline">This </span>Month
                 </button>
-                <button onclick="setDateRange('semester')" 
-                        id="tab-semester"
-                        class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-gray-600 hover:bg-gray-100 whitespace-nowrap hidden md:block"
-                        title="Feature pending backend support">
-                    Semester
+                <button onclick="setDateRange('custom')" 
+                        id="tab-custom"
+                        class="date-tab px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 text-xs sm:text-sm rounded-lg text-gray-600 hover:bg-gray-100 whitespace-nowrap">
+                    <i class="fas fa-calendar-alt mr-1"></i><span class="hidden sm:inline">Custom</span>
                 </button>
+            </div>
+            
+            <!-- Custom Date Picker (hidden by default) -->
+            <div id="custom-date-picker" class="hidden items-center gap-2">
+                <input type="date" id="custom-date" 
+                       onchange="onCustomDateChange()"
+                       class="border-2 border-gray-200 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-feu-green focus:border-feu-green">
             </div>
             
             <!-- Date Display -->
@@ -384,11 +390,28 @@
                 <div class="flex items-center gap-2 sm:gap-4">
                     <!-- Record Count -->
                     <span id="record-count" class="text-xs sm:text-sm text-gray-500">0 records</span>
-                    <!-- Export Button -->
-                    <button onclick="exportCSV()" 
-                            class="bg-green-500 hover:bg-green-600 text-white px-2.5 sm:px-3 py-1 sm:py-1.5 rounded text-xs sm:text-sm flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-green-400">
-                        <i class="fas fa-file-csv"></i> <span class="hidden xs:inline">Export</span>
-                    </button>
+                    <!-- Export Dropdown -->
+                    <div class="relative">
+                        <button onclick="toggleExportMenu()" 
+                                class="bg-feu-green hover:bg-feu-green-dark text-white px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-feu-green min-h-[36px]">
+                            <i class="fas fa-download"></i> 
+                            <span class="hidden xs:inline">Export</span>
+                            <i class="fas fa-chevron-down text-[10px] ml-1"></i>
+                        </button>
+                        <!-- Export Menu -->
+                        <div id="export-menu" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl z-50 border dropdown-enter overflow-hidden">
+                            <button onclick="exportXLSX()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <i class="fas fa-file-excel text-green-600 w-5"></i> Excel (.xlsx)
+                            </button>
+                            <button onclick="exportPDF()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <i class="fas fa-file-pdf text-red-600 w-5"></i> PDF Report
+                            </button>
+                            <div class="border-t"></div>
+                            <button onclick="exportCSV()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                <i class="fas fa-file-csv text-blue-600 w-5"></i> CSV (Basic)
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -689,6 +712,8 @@
         // ========================================
         // DATE RANGE TABS
         // ========================================
+        let customDate = null; // For custom date picker
+        
         function setDateRange(range) {
             currentDateRange = range;
             
@@ -698,11 +723,84 @@
                 tab.classList.add('text-gray-600', 'hover:bg-gray-100');
             });
             const activeTab = document.getElementById(`tab-${range}`);
-            activeTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
-            activeTab.classList.add('bg-feu-green', 'text-white');
+            if (activeTab) {
+                activeTab.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                activeTab.classList.add('bg-feu-green', 'text-white');
+            }
+            
+            // Show/hide custom date picker
+            const datePicker = document.getElementById('custom-date-picker');
+            if (range === 'custom') {
+                datePicker.classList.remove('hidden');
+                datePicker.classList.add('flex');
+                // Set default to today if not set
+                if (!document.getElementById('custom-date').value) {
+                    document.getElementById('custom-date').value = new Date().toISOString().split('T')[0];
+                }
+                // Set max date to today (no future dates)
+                document.getElementById('custom-date').max = new Date().toISOString().split('T')[0];
+            } else {
+                datePicker.classList.add('hidden');
+                datePicker.classList.remove('flex');
+                customDate = null;
+            }
             
             updateDateDisplay();
             refreshData();
+        }
+        
+        function onCustomDateChange() {
+            const dateInput = document.getElementById('custom-date');
+            const selectedDate = new Date(dateInput.value);
+            const day = selectedDate.getDay();
+            
+            // Check if Sunday (disabled)
+            if (day === 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Sunday Selected',
+                    text: 'Sundays are non-instructional days. No classes.',
+                    confirmButtonColor: '#0a8249'
+                });
+                return;
+            }
+            
+            // Check if Saturday (need to verify if enabled)
+            if (day === 6) {
+                // Check Saturday setting from backend
+                checkSaturdayEnabled(dateInput.value);
+                return;
+            }
+            
+            customDate = dateInput.value;
+            updateDateDisplay();
+            refreshData();
+        }
+        
+        async function checkSaturdayEnabled(dateValue) {
+            try {
+                const res = await fetch('/api/calendar/saturday-status', { credentials: 'include' });
+                const data = await res.json();
+                
+                if (!data.saturdayClassesEnabled) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Saturday Classes Disabled',
+                        text: 'Saturday classes are currently disabled by admin.',
+                        confirmButtonColor: '#0a8249'
+                    });
+                    return;
+                }
+                
+                customDate = dateValue;
+                updateDateDisplay();
+                refreshData();
+            } catch (e) {
+                console.error('[ERROR] Failed to check Saturday status:', e);
+                customDate = dateValue;
+                updateDateDisplay();
+                refreshData();
+            }
         }
 
         function updateDateDisplay() {
@@ -724,6 +822,16 @@
                 case 'month':
                     display = today.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
                     summaryDisplay = 'This Month';
+                    break;
+                case 'custom':
+                    if (customDate) {
+                        const d = new Date(customDate);
+                        display = d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                        summaryDisplay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    } else {
+                        display = 'Select a date';
+                        summaryDisplay = 'Custom Date';
+                    }
                     break;
                 case 'semester':
                     display = 'Current Semester';
@@ -848,14 +956,12 @@
                         to: todayStr 
                     };
                 }
-                case 'semester': {
-                    // Approximate semester as 4 months
-                    const semesterStart = new Date(today);
-                    semesterStart.setMonth(today.getMonth() - 4);
-                    return { 
-                        from: semesterStart.toISOString().split('T')[0], 
-                        to: todayStr 
-                    };
+                case 'custom': {
+                    // Single day from custom date picker
+                    if (customDate) {
+                        return { from: customDate, to: customDate };
+                    }
+                    return { from: todayStr, to: todayStr };
                 }
                 default:
                     return { from: todayStr, to: todayStr };
@@ -1500,6 +1606,11 @@
             if (!e.target.closest('#settings-menu') && !e.target.closest('[onclick="toggleSettingsMenu()"]')) {
                 menu.classList.add('hidden');
             }
+            // Close export menu
+            const exportMenu = document.getElementById('export-menu');
+            if (!e.target.closest('#export-menu') && !e.target.closest('[onclick="toggleExportMenu()"]')) {
+                exportMenu.classList.add('hidden');
+            }
         });
 
         // ========================================
@@ -1547,6 +1658,127 @@
                 showConfirmButton: false,
                 timer: 2000
             });
+            closeExportMenu();
+        }
+        
+        // ========================================
+        // EXPORT MENU
+        // ========================================
+        function toggleExportMenu() {
+            const menu = document.getElementById('export-menu');
+            menu.classList.toggle('hidden');
+        }
+        
+        function closeExportMenu() {
+            document.getElementById('export-menu').classList.add('hidden');
+        }
+        
+        // ========================================
+        // XLSX EXPORT (Backend)
+        // ========================================
+        async function exportXLSX() {
+            closeExportMenu();
+            
+            const section = document.getElementById('section-select').value;
+            const { from, to } = getDateRange();
+            
+            Swal.fire({
+                title: 'Generating Excel...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            
+            try {
+                const params = new URLSearchParams({ from, to });
+                if (section) params.append('section', section);
+                
+                const res = await fetch(`/api/export/xlsx?${params}`, { credentials: 'include' });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || 'Export failed');
+                }
+                
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `attendance_${section || 'all'}_${from}_to_${to}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'Excel exported!',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            } catch (e) {
+                console.error('[ERROR] XLSX export:', e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Export Failed',
+                    text: e.message || 'Failed to generate Excel file',
+                    confirmButtonColor: '#0a8249'
+                });
+            }
+        }
+        
+        // ========================================
+        // PDF EXPORT (Backend)
+        // ========================================
+        async function exportPDF() {
+            closeExportMenu();
+            
+            const section = document.getElementById('section-select').value;
+            const { from, to } = getDateRange();
+            
+            Swal.fire({
+                title: 'Generating PDF...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+            
+            try {
+                const params = new URLSearchParams({ from, to });
+                if (section) params.append('section', section);
+                
+                const res = await fetch(`/api/export/pdf?${params}`, { credentials: 'include' });
+                
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.message || 'Export failed');
+                }
+                
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `attendance_report_${section || 'all'}_${from}_to_${to}.pdf`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: 'PDF exported!',
+                    showConfirmButton: false,
+                    timer: 2000
+                });
+            } catch (e) {
+                console.error('[ERROR] PDF export:', e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Export Failed',
+                    text: e.message || 'Failed to generate PDF file',
+                    confirmButtonColor: '#0a8249'
+                });
+            }
         }
 
         // ========================================

@@ -6,7 +6,7 @@
  * GET /api/export/pdf  - Export attendance as PDF
  * 
  * Query params:
- *   section  - Filter by section
+ *   section  - Filter by section (optional)
  *   from     - Start date (YYYY-MM-DD)
  *   to       - End date (YYYY-MM-DD)
  *   date     - Single date (YYYY-MM-DD)
@@ -14,9 +14,16 @@
 
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const router = express.Router();
 
 const { requireAuth } = require('../middleware/auth');
+
+// FEU Brand Colors
+const FEU_GREEN = { argb: 'FF0A8249' };
+const FEU_GREEN_HEX = '#0A8249';
+const FEU_GOLD = { argb: 'FFFFD700' };
+const FEU_GOLD_HEX = '#FFD700';
 
 // All export routes require authentication
 router.use(requireAuth);
@@ -47,11 +54,14 @@ async function getAttendanceForExport(db, options = {}) {
         query.section = { $in: sections };
     }
     
+    console.log('[DEBUG] Export query:', JSON.stringify(query));
+    
     const records = await db.collection('attendance')
         .find(query)
-        .sort({ date: -1, time: 1 })
+        .sort({ section: 1, date: -1, name: 1 }) // Sort by section first for grouping
         .toArray();
     
+    console.log(`[DEBUG] Found ${records.length} records`);
     return records;
 }
 
@@ -59,12 +69,27 @@ async function getAttendanceForExport(db, options = {}) {
 // HELPER: Get student info
 // ========================================
 async function getStudentInfo(db, nfcId) {
+    if (!nfcId) return null;
     return await db.collection('students').findOne({ nfc_id: nfcId });
+}
+
+// ========================================
+// HELPER: Group records by section
+// ========================================
+function groupBySection(records) {
+    const grouped = {};
+    for (const record of records) {
+        const sec = record.section || 'Unknown';
+        if (!grouped[sec]) grouped[sec] = [];
+        grouped[sec].push(record);
+    }
+    return grouped;
 }
 
 // ========================================
 // GET /api/export/xlsx
 // Export attendance as XLSX file
+// Format: FeuXTamTap logo, smart section grouping
 // ========================================
 router.get('/xlsx', async (req, res) => {
     try {
@@ -73,118 +98,305 @@ router.get('/xlsx', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        // Check if ExcelJS is available
         let ExcelJS;
         try {
             ExcelJS = require('exceljs');
         } catch (e) {
-            return res.status(500).json({ 
-                error: 'ExcelJS not installed. Run: npm install exceljs' 
-            });
+            return res.status(500).json({ error: 'ExcelJS not installed' });
         }
         
         const { section, from, to, date } = req.query;
+        console.log(`[INFO] XLSX export: section=${section || 'All'}, from=${from}, to=${to}`);
         
         // Get user's sections if teacher
         let sections = null;
         if (req.user.role === 'teacher') {
             sections = req.user.sections_handled || [];
             if (section && !sections.includes(section)) {
-                return res.status(403).json({ error: 'Access denied to this section' });
+                return res.status(403).json({ error: 'Access denied' });
             }
         }
         
         // Get attendance data
         const records = await getAttendanceForExport(db, {
-            section: section,
+            section,
             sections: req.user.role === 'teacher' ? sections : null,
             from, to, date
         });
-        
-        if (records.length === 0) {
-            return res.status(404).json({ error: 'No attendance records found' });
-        }
         
         // Create workbook
         const workbook = new ExcelJS.Workbook();
         workbook.creator = 'TAMTAP Attendance System';
         workbook.created = new Date();
         
-        const worksheet = workbook.addWorksheet('Attendance Report');
+        // Logo path
+        const logoPath = path.resolve(__dirname, '../../assets/FeuXTamTap.png');
+        let logoId = null;
         
-        // Define columns based on the format requested
-        worksheet.columns = [
-            { header: 'Student Name', key: 'name', width: 25 },
-            { header: 'Student Email', key: 'email', width: 30 },
-            { header: 'Section', key: 'section', width: 12 },
-            { header: 'Date', key: 'date', width: 12 },
-            { header: 'Status', key: 'status', width: 10 },
-            { header: 'Time', key: 'time', width: 10 },
-            { header: 'TAMTAP ID', key: 'tamtap_id', width: 12 },
-            { header: 'NFC ID', key: 'nfc_id', width: 15 },
-            { header: 'Photo', key: 'photo', width: 40 }
-        ];
-        
-        // Style header row
-        worksheet.getRow(1).font = { bold: true };
-        worksheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FF0A8249' } // FEU Green
-        };
-        worksheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        
-        // Add data rows
-        for (const record of records) {
-            // Get student info for email
-            const student = await getStudentInfo(db, record.nfc_id);
-            
-            const dateOnly = record.date ? record.date.split(' ')[0] : '';
-            const photoPath = record.photo ? `/photos/${dateOnly}/${record.photo}` : '';
-            
-            worksheet.addRow({
-                name: record.name || '',
-                email: student?.email || record.email || '',
-                section: record.section || '',
-                date: dateOnly,
-                status: record.status || 'present',
-                time: record.time || '',
-                tamtap_id: record.tamtap_id || '',
-                nfc_id: record.nfc_id || '',
-                photo: photoPath
+        if (fs.existsSync(logoPath)) {
+            logoId = workbook.addImage({
+                filename: logoPath,
+                extension: 'png'
             });
         }
         
-        // Auto-filter
-        worksheet.autoFilter = {
-            from: 'A1',
-            to: `I${records.length + 1}`
-        };
+        // Smart export: Group by section if "All Sections"
+        const isAllSections = !section;
+        const groupedRecords = isAllSections ? groupBySection(records) : { [section || 'All']: records };
+        const sectionKeys = Object.keys(groupedRecords).sort();
+        
+        // Create worksheet for each section OR one combined sheet
+        if (isAllSections && sectionKeys.length > 1) {
+            // Multiple sheets - one per section
+            for (const sec of sectionKeys) {
+                const sectionRecords = groupedRecords[sec];
+                await createAttendanceSheet(workbook, sec, sectionRecords, {
+                    logoId, db, from, to, date, ExcelJS
+                });
+            }
+            
+            // Also create a summary sheet
+            createSummarySheet(workbook, groupedRecords, { from, to, date });
+        } else {
+            // Single sheet
+            const sheetName = section || 'All Sections';
+            await createAttendanceSheet(workbook, sheetName, records, {
+                logoId, db, from, to, date, ExcelJS
+            });
+        }
         
         // Generate filename
         const dateStr = date || `${from || 'all'}_to_${to || 'now'}`;
         const sectionStr = section || 'all-sections';
         const filename = `TAMTAP_Attendance_${sectionStr}_${dateStr}.xlsx`;
         
-        // Set response headers
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         
-        // Write to response
         await workbook.xlsx.write(res);
         res.end();
         
-        console.log(`[INFO] XLSX export: ${records.length} records by ${req.user.username}`);
+        console.log(`[INFO] XLSX export complete: ${records.length} records by ${req.user.username}`);
         
     } catch (error) {
-        console.error('[ERROR] XLSX export error:', error.message);
-        res.status(500).json({ error: 'Failed to generate XLSX export' });
+        console.error('[ERROR] XLSX export:', error.message, error.stack);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Export failed', details: error.message });
+        }
     }
 });
 
 // ========================================
+// HELPER: Create attendance worksheet
+// ========================================
+async function createAttendanceSheet(workbook, sheetName, records, options) {
+    const { logoId, db, from, to, date, ExcelJS } = options;
+    
+    // Sanitize sheet name (Excel limits)
+    const safeName = sheetName.substring(0, 31).replace(/[*?:/\\[\]]/g, '-');
+    const worksheet = workbook.addWorksheet(safeName, {
+        pageSetup: { orientation: 'landscape', fitToPage: true }
+    });
+    
+    // Set column widths
+    worksheet.columns = [
+        { width: 25 },  // A - Student Name
+        { width: 30 },  // B - Student Email
+        { width: 12 },  // C - Section
+        { width: 12 },  // D - Date
+        { width: 12 },  // E - Status
+        { width: 10 },  // F - Time In
+        { width: 15 },  // G - NFC ID
+        { width: 40 }   // H - Photo Path
+    ];
+    
+    // Row 1: Logo
+    worksheet.addRow([]); // Empty row 1
+    if (logoId !== null) {
+        worksheet.addImage(logoId, {
+            tl: { col: 0, row: 0 },
+            ext: { width: 200, height: 60 }
+        });
+    }
+    worksheet.getRow(1).height = 50;
+    
+    // Row 2-3: Merged Title
+    worksheet.addRow(['STUDENT ATTENDANCE RECORD']);
+    worksheet.addRow(['STUDENT ATTENDANCE RECORD']);
+    worksheet.mergeCells('A2:H3');
+    
+    const titleCell = worksheet.getCell('A2');
+    titleCell.value = 'STUDENT ATTENDANCE RECORD';
+    titleCell.font = { bold: true, size: 20, color: FEU_GREEN };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    titleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF8F9FA' }
+    };
+    
+    // Row 4: Info line
+    const dateRange = date || `${from || 'All Dates'} to ${to || 'Present'}`;
+    const infoText = `School Year: S.Y. 2025-2026  |  Section: ${sheetName}  |  Date: ${dateRange}  |  Records: ${records.length}`;
+    worksheet.addRow([infoText]);
+    worksheet.mergeCells('A4:H4');
+    worksheet.getCell('A4').font = { italic: true, size: 10, color: { argb: 'FF666666' } };
+    worksheet.getCell('A4').alignment = { horizontal: 'center' };
+    
+    // Row 5: Column Headers
+    const headers = ['Student Name', 'Student Email', 'Section', 'Date', 'Status', 'Time In', 'NFC ID', 'Photo Path'];
+    const headerRow = worksheet.addRow(headers);
+    
+    headerRow.eachCell((cell, colNumber) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: FEU_GREEN
+        };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+        cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+        };
+    });
+    headerRow.height = 22;
+    
+    // Row 6+: Data rows
+    for (const record of records) {
+        const student = await getStudentInfo(db, record.nfc_id);
+        const dateOnly = record.date ? record.date.split(' ')[0] : '';
+        const photoPath = record.photo ? `/photos/${dateOnly}/${record.photo}` : '';
+        
+        const statusText = (record.status || 'present').charAt(0).toUpperCase() + 
+                          (record.status || 'present').slice(1);
+        
+        const dataRow = worksheet.addRow([
+            record.name || '',
+            student?.email || record.email || '',
+            record.section || '',
+            dateOnly,
+            statusText,
+            record.time || '',
+            record.nfc_id || '',
+            photoPath
+        ]);
+        
+        // Style data row
+        dataRow.eachCell((cell, colNumber) => {
+            cell.border = {
+                top: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                left: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                bottom: { style: 'thin', color: { argb: 'FFE0E0E0' } },
+                right: { style: 'thin', color: { argb: 'FFE0E0E0' } }
+            };
+            cell.alignment = { vertical: 'middle' };
+        });
+        
+        // Color code status (column 5)
+        const statusCell = dataRow.getCell(5);
+        switch ((record.status || '').toLowerCase()) {
+            case 'present':
+                statusCell.font = { bold: true, color: { argb: 'FF22C55E' } };
+                break;
+            case 'late':
+                statusCell.font = { bold: true, color: { argb: 'FFEAB308' } };
+                break;
+            case 'absent':
+                statusCell.font = { bold: true, color: { argb: 'FFEF4444' } };
+                break;
+        }
+    }
+    
+    // Empty state
+    if (records.length === 0) {
+        worksheet.addRow(['No attendance records found']);
+        worksheet.mergeCells(`A6:H6`);
+        worksheet.getCell('A6').alignment = { horizontal: 'center' };
+        worksheet.getCell('A6').font = { italic: true, color: { argb: 'FF999999' } };
+    }
+    
+    // Auto-filter
+    if (records.length > 0) {
+        worksheet.autoFilter = {
+            from: 'A5',
+            to: `H${5 + records.length}`
+        };
+    }
+    
+    // Freeze header rows
+    worksheet.views = [{ state: 'frozen', ySplit: 5 }];
+}
+
+// ========================================
+// HELPER: Create summary sheet
+// ========================================
+function createSummarySheet(workbook, groupedRecords, options) {
+    const { from, to, date } = options;
+    const worksheet = workbook.addWorksheet('Summary', {
+        pageSetup: { orientation: 'portrait' }
+    });
+    
+    worksheet.columns = [
+        { width: 20 },  // Section
+        { width: 12 },  // Total
+        { width: 12 },  // Present
+        { width: 12 },  // Late
+        { width: 12 }   // Absent
+    ];
+    
+    // Title
+    worksheet.addRow(['ATTENDANCE SUMMARY']);
+    worksheet.mergeCells('A1:E1');
+    worksheet.getCell('A1').font = { bold: true, size: 16, color: FEU_GREEN };
+    worksheet.getCell('A1').alignment = { horizontal: 'center' };
+    
+    // Date info
+    const dateRange = date || `${from || 'All'} to ${to || 'Present'}`;
+    worksheet.addRow([`Date Range: ${dateRange}`]);
+    worksheet.mergeCells('A2:E2');
+    worksheet.getCell('A2').alignment = { horizontal: 'center' };
+    
+    worksheet.addRow([]); // Spacer
+    
+    // Headers
+    const headerRow = worksheet.addRow(['Section', 'Total', 'Present', 'Late', 'Absent']);
+    headerRow.eachCell(cell => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: FEU_GREEN };
+        cell.alignment = { horizontal: 'center' };
+    });
+    
+    // Data
+    let grandTotal = 0, grandPresent = 0, grandLate = 0, grandAbsent = 0;
+    
+    for (const [sec, records] of Object.entries(groupedRecords)) {
+        const present = records.filter(r => (r.status || 'present').toLowerCase() === 'present').length;
+        const late = records.filter(r => (r.status || '').toLowerCase() === 'late').length;
+        const absent = records.filter(r => (r.status || '').toLowerCase() === 'absent').length;
+        
+        worksheet.addRow([sec, records.length, present, late, absent]);
+        
+        grandTotal += records.length;
+        grandPresent += present;
+        grandLate += late;
+        grandAbsent += absent;
+    }
+    
+    // Grand total row
+    const totalRow = worksheet.addRow(['TOTAL', grandTotal, grandPresent, grandLate, grandAbsent]);
+    totalRow.eachCell(cell => {
+        cell.font = { bold: true };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: FEU_GOLD };
+    });
+}
+
+// ========================================
 // GET /api/export/pdf
 // Export attendance as PDF file
+// Styled with FEU Green/Gold, TamTap-3D logo
 // ========================================
 router.get('/pdf', async (req, res) => {
     try {
@@ -193,42 +405,37 @@ router.get('/pdf', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        // Check if PDFKit is available
         let PDFDocument;
         try {
             PDFDocument = require('pdfkit');
         } catch (e) {
-            return res.status(500).json({ 
-                error: 'PDFKit not installed. Run: npm install pdfkit' 
-            });
+            return res.status(500).json({ error: 'PDFKit not installed' });
         }
         
         const { section, from, to, date } = req.query;
+        console.log(`[INFO] PDF export: section=${section || 'All'}, from=${from}, to=${to}`);
         
         // Get user's sections if teacher
         let sections = null;
         if (req.user.role === 'teacher') {
             sections = req.user.sections_handled || [];
             if (section && !sections.includes(section)) {
-                return res.status(403).json({ error: 'Access denied to this section' });
+                return res.status(403).json({ error: 'Access denied' });
             }
         }
         
         // Get attendance data
         const records = await getAttendanceForExport(db, {
-            section: section,
+            section,
             sections: req.user.role === 'teacher' ? sections : null,
             from, to, date
         });
         
-        if (records.length === 0) {
-            return res.status(404).json({ error: 'No attendance records found' });
-        }
-        
-        // Create PDF document
+        // Create PDF
         const doc = new PDFDocument({ 
             size: 'A4', 
             margin: 40,
+            bufferPages: true,
             info: {
                 Title: 'TAMTAP Attendance Report',
                 Author: 'TAMTAP Attendance System',
@@ -236,159 +443,230 @@ router.get('/pdf', async (req, res) => {
             }
         });
         
-        // Generate filename
         const dateStr = date || `${from || 'all'}_to_${to || 'now'}`;
         const sectionStr = section || 'all-sections';
         const filename = `TAMTAP_Attendance_${sectionStr}_${dateStr}.pdf`;
         
-        // Set response headers
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         
-        // Pipe PDF to response
         doc.pipe(res);
         
-        // ========================================
-        // PDF HEADER
-        // ========================================
-        const pageWidth = doc.page.width - 80; // margins
+        const pageWidth = doc.page.width - 80;
         
-        // Try to add logo
-        const logoPath = path.resolve(__dirname, '../../assets/logos/TamTap-3D.png');
-        try {
-            const fs = require('fs');
-            if (fs.existsSync(logoPath)) {
-                doc.image(logoPath, 40, 30, { width: 50 });
-            }
-        } catch (e) {
-            // Logo not available, continue without it
+        // ========================================
+        // HEADER with FEU Colors
+        // ========================================
+        
+        // Green header bar
+        doc.rect(0, 0, doc.page.width, 60).fill(FEU_GREEN_HEX);
+        
+        // Address
+        doc.fontSize(10).fillColor('#FFFFFF')
+           .text('FEU Roosevelt Marikina', 40, 15)
+           .fontSize(8)
+           .text('504 J. P. Rizal St, Marikina, 1800 Metro Manila', 40, 30);
+        
+        // Date on right
+        const genDate = new Date().toLocaleDateString('en-PH', {
+            year: 'numeric', month: 'short', day: 'numeric'
+        });
+        doc.fontSize(9)
+           .text(`Generated: ${genDate}`, doc.page.width - 150, 20, { width: 110, align: 'right' });
+        
+        // White section with logo
+        doc.rect(0, 60, doc.page.width, 80).fill('#FFFFFF');
+        
+        // Logo
+        const logoPath = path.resolve(__dirname, '../../assets/TamTap-3D.png');
+        if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 40, 68, { width: 55 });
         }
         
-        // Title
-        doc.fontSize(20)
-           .fillColor('#0A8249') // FEU Green
-           .text('TAMTAP', 100, 35, { continued: true })
-           .fillColor('#333333')
-           .text(' Attendance Report');
+        // Title with FEU colors
+        doc.fontSize(28)
+           .fillColor(FEU_GREEN_HEX)
+           .text('TAM', 105, 72, { continued: true })
+           .fillColor(FEU_GOLD_HEX)
+           .text('TAP');
         
-        doc.fontSize(10)
+        doc.fontSize(12)
            .fillColor('#666666')
-           .text('FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026', 100, 60);
+           .text('Attendance Report', 105, 108);
         
-        // Report info
-        doc.moveDown(2);
-        doc.fontSize(11)
-           .fillColor('#333333');
-        
-        const reportDate = new Date().toLocaleDateString('en-PH', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-        
-        doc.text(`Section: ${section || 'All Sections'}`, 40);
-        doc.text(`Date Range: ${date || `${from || 'Start'} to ${to || 'Present'}`}`);
-        doc.text(`Generated: ${reportDate}`);
-        doc.text(`Total Records: ${records.length}`);
+        // Gold accent line
+        doc.rect(0, 140, doc.page.width, 5).fill(FEU_GOLD_HEX);
         
         // ========================================
-        // PDF TABLE
+        // INFO CARDS
         // ========================================
-        doc.moveDown(1);
+        const cardY = 160;
+        const cardHeight = 50;
         
-        // Table header
-        const tableTop = doc.y;
-        const colWidths = [150, 70, 60, 60, 60, 80]; // Name, Section, Date, Status, Time, TamTap ID
-        const colHeaders = ['Student Name', 'Section', 'Date', 'Status', 'Time', 'TAMTAP ID'];
+        // Section card
+        doc.roundedRect(40, cardY, 150, cardHeight, 5)
+           .fillAndStroke('#F8F9FA', '#E0E0E0');
+        doc.fontSize(9).fillColor('#666666').text('SECTION', 50, cardY + 10);
+        doc.fontSize(14).fillColor(FEU_GREEN_HEX).text(section || 'All Sections', 50, cardY + 26);
         
-        // Header background
-        doc.fillColor('#0A8249')
-           .rect(40, tableTop, pageWidth, 20)
-           .fill();
+        // Date card
+        doc.roundedRect(200, cardY, 170, cardHeight, 5)
+           .fillAndStroke('#F8F9FA', '#E0E0E0');
+        doc.fontSize(9).fillColor('#666666').text('DATE RANGE', 210, cardY + 10);
+        doc.fontSize(11).fillColor('#333333')
+           .text(date || `${from || 'Start'} to ${to || 'Today'}`, 210, cardY + 26);
         
-        // Header text
-        doc.fillColor('#FFFFFF')
-           .fontSize(9);
+        // Records card
+        doc.roundedRect(380, cardY, 140, cardHeight, 5)
+           .fillAndStroke('#F8F9FA', '#E0E0E0');
+        doc.fontSize(9).fillColor('#666666').text('TOTAL RECORDS', 390, cardY + 10);
+        doc.fontSize(20).fillColor(FEU_GREEN_HEX).text(records.length.toString(), 390, cardY + 24);
+        
+        // ========================================
+        // TABLE
+        // ========================================
+        const tableTop = 230;
+        const colWidths = [120, 80, 70, 70, 80, 90];
+        const colHeaders = ['Student Name', 'Section', 'Date', 'Status', 'Time', 'NFC ID'];
+        const rowHeight = 20;
+        
+        // Header
+        doc.rect(40, tableTop, pageWidth, 25).fill(FEU_GREEN_HEX);
+        doc.fontSize(9).fillColor('#FFFFFF');
         
         let xPos = 45;
         colHeaders.forEach((header, i) => {
-            doc.text(header, xPos, tableTop + 5, { width: colWidths[i] - 5 });
+            doc.text(header, xPos, tableTop + 8, { width: colWidths[i] - 5 });
             xPos += colWidths[i];
         });
         
-        // Table rows
-        let rowTop = tableTop + 25;
-        doc.fillColor('#333333')
-           .fontSize(8);
+        // Rows
+        let rowTop = tableTop + 30;
+        doc.fontSize(9);
         
-        for (let i = 0; i < Math.min(records.length, 30); i++) { // Limit to 30 per page for now
+        // Smart grouping: add section headers if all sections
+        const isAllSections = !section;
+        let currentSection = null;
+        
+        for (let i = 0; i < records.length; i++) {
             const record = records[i];
-            const dateOnly = record.date ? record.date.split(' ')[0] : '';
             
-            // Alternate row background
-            if (i % 2 === 0) {
-                doc.fillColor('#F5F5F5')
-                   .rect(40, rowTop - 3, pageWidth, 18)
-                   .fill();
+            // Section header for grouped view
+            if (isAllSections && record.section !== currentSection) {
+                currentSection = record.section;
+                
+                // Check page break
+                if (rowTop > doc.page.height - 100) {
+                    doc.addPage();
+                    rowTop = 50;
+                    // Redraw table header
+                    doc.rect(40, 30, pageWidth, 25).fill(FEU_GREEN_HEX);
+                    doc.fontSize(9).fillColor('#FFFFFF');
+                    xPos = 45;
+                    colHeaders.forEach((h, j) => {
+                        doc.text(h, xPos, 38, { width: colWidths[j] - 5 });
+                        xPos += colWidths[j];
+                    });
+                    rowTop = 60;
+                }
+                
+                // Section header row
+                doc.rect(40, rowTop - 2, pageWidth, rowHeight + 2).fill(FEU_GOLD_HEX);
+                doc.fontSize(10).fillColor(FEU_GREEN_HEX)
+                   .text(`Section: ${currentSection || 'Unknown'}`, 45, rowTop + 2);
+                rowTop += rowHeight + 5;
             }
             
-            // Row data
-            doc.fillColor('#333333');
-            xPos = 45;
-            
-            const rowData = [
-                record.name || 'Unknown',
-                record.section || '-',
-                dateOnly,
-                record.status || 'present',
-                record.time || '-',
-                record.tamtap_id || '-'
-            ];
-            
-            rowData.forEach((cell, j) => {
-                // Truncate if too long
-                const maxChars = Math.floor(colWidths[j] / 5);
-                const text = cell.length > maxChars ? cell.substring(0, maxChars) + '...' : cell;
-                doc.text(text, xPos, rowTop, { width: colWidths[j] - 5 });
-                xPos += colWidths[j];
-            });
-            
-            rowTop += 18;
-            
-            // Check if we need a new page
+            // Check page break
             if (rowTop > doc.page.height - 80) {
                 doc.addPage();
                 rowTop = 50;
+                doc.rect(40, 30, pageWidth, 25).fill(FEU_GREEN_HEX);
+                doc.fontSize(9).fillColor('#FFFFFF');
+                xPos = 45;
+                colHeaders.forEach((h, j) => {
+                    doc.text(h, xPos, 38, { width: colWidths[j] - 5 });
+                    xPos += colWidths[j];
+                });
+                rowTop = 60;
             }
+            
+            // Alternate rows
+            if (i % 2 === 0) {
+                doc.rect(40, rowTop - 2, pageWidth, rowHeight).fill('#F8F9FA');
+            }
+            
+            const dateOnly = record.date ? record.date.split(' ')[0] : '';
+            const status = (record.status || 'present').charAt(0).toUpperCase() + 
+                          (record.status || 'present').slice(1);
+            
+            xPos = 45;
+            const rowData = [
+                (record.name || 'Unknown').substring(0, 20),
+                record.section || '-',
+                dateOnly,
+                status,
+                record.time || '-',
+                (record.nfc_id || '-').substring(0, 12)
+            ];
+            
+            rowData.forEach((cell, j) => {
+                // Status color
+                if (j === 3) {
+                    switch (cell.toLowerCase()) {
+                        case 'present': doc.fillColor('#22C55E'); break;
+                        case 'late': doc.fillColor('#EAB308'); break;
+                        case 'absent': doc.fillColor('#EF4444'); break;
+                        default: doc.fillColor('#333333');
+                    }
+                } else {
+                    doc.fillColor('#333333');
+                }
+                doc.text(cell, xPos, rowTop + 3, { width: colWidths[j] - 5 });
+                xPos += colWidths[j];
+            });
+            
+            rowTop += rowHeight;
         }
         
-        // More records indicator
-        if (records.length > 30) {
-            doc.moveDown(1);
-            doc.fontSize(9)
-               .fillColor('#666666')
-               .text(`... and ${records.length - 30} more records. Use XLSX export for complete data.`, 40);
+        // Empty state
+        if (records.length === 0) {
+            doc.fillColor('#999999').fontSize(11)
+               .text('No attendance records found.', 40, rowTop + 20, { 
+                   align: 'center', width: pageWidth 
+               });
         }
         
         // ========================================
-        // PDF FOOTER
+        // FOOTER on all pages
         // ========================================
-        const bottomY = doc.page.height - 50;
+        const totalPages = doc.bufferedPageRange().count;
+        for (let i = 0; i < totalPages; i++) {
+            doc.switchToPage(i);
+            
+            doc.rect(40, doc.page.height - 50, pageWidth, 1).fill('#E0E0E0');
+            
+            doc.fontSize(8).fillColor('#999999')
+               .text(
+                   'TAMTAP Attendance System | NFC-Based Attendance | FEU Roosevelt Marikina',
+                   40, doc.page.height - 40,
+                   { align: 'center', width: pageWidth }
+               )
+               .text(
+                   `Page ${i + 1} of ${totalPages} | Grade 12 ICT Capstone S.Y. 2025-2026`,
+                   40, doc.page.height - 28,
+                   { align: 'center', width: pageWidth }
+               );
+        }
         
-        doc.fontSize(8)
-           .fillColor('#999999')
-           .text('Generated by TAMTAP Attendance System', 40, bottomY, { align: 'center', width: pageWidth })
-           .text('NFC-Based Attendance System | FEU Roosevelt Marikina', { align: 'center', width: pageWidth });
-        
-        // Finalize PDF
         doc.end();
-        
-        console.log(`[INFO] PDF export: ${records.length} records by ${req.user.username}`);
+        console.log(`[INFO] PDF export complete: ${records.length} records by ${req.user.username}`);
         
     } catch (error) {
-        console.error('[ERROR] PDF export error:', error.message);
-        res.status(500).json({ error: 'Failed to generate PDF export' });
+        console.error('[ERROR] PDF export:', error.message, error.stack);
+        if (!res.headersSent) {
+            res.status(500).json({ error: 'Export failed', details: error.message });
+        }
     }
 });
 

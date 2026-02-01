@@ -444,7 +444,7 @@
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
                 if (!res.ok) {
-                    window.location.href = '/login.html';
+                    window.location.replace('/login.html');
                     return;
                 }
                 const data = await res.json();
@@ -455,7 +455,7 @@
                         text: 'Admin access required',
                         confirmButtonColor: '#0a8249'
                     }).then(() => {
-                        window.location.href = '/dashboard.html';
+                        window.location.replace('/dashboard.html');
                     });
                     return;
                 }
@@ -471,7 +471,7 @@
                 
                 loadData();
             } catch (e) {
-                window.location.href = '/login.html';
+                window.location.replace('/login.html');
             }
         }
 

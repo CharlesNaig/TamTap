@@ -221,6 +221,10 @@ router.get('/range/query', async (req, res) => {
 /**
  * GET /api/attendance/student/:nfc_id
  * Get attendance history for a specific student
+ * SECURITY: Validates section ownership - teacher must be assigned to student's section
+ * @param nfc_id - Student's NFC card ID
+ * @query from - Optional start date (YYYY-MM-DD) for date range filter
+ * @query to - Optional end date (YYYY-MM-DD) for date range filter
  */
 router.get('/student/:nfc_id', async (req, res) => {
     try {
@@ -230,23 +234,90 @@ router.get('/student/:nfc_id', async (req, res) => {
         }
         
         const nfcId = req.params.nfc_id;
+        const user = req.user;
+        const { from, to } = req.query;
         
+        // Get student info first
+        const student = await db.collection('students').findOne({ nfc_id: nfcId });
+        if (!student) {
+            return res.status(404).json({ success: false, error: 'Student not found' });
+        }
+        
+        // SECURITY: Section ownership validation (skip for admin)
+        if (user && user.role !== 'admin') {
+            const teacherSections = user.sections_handled || [];
+            if (!teacherSections.includes(student.section)) {
+                console.warn(`[WARN] Unauthorized access attempt: ${user.username} tried to access student in section ${student.section}`);
+                return res.status(403).json({ 
+                    success: false, 
+                    error: 'Access denied: You are not assigned to this student\'s section' 
+                });
+            }
+        }
+        
+        // Build date query
+        const query = { nfc_id: nfcId };
+        if (from && to) {
+            query.date = { $gte: from, $lte: to + ' 23:59:59' };
+        }
+        
+        // Get attendance records
         const records = await db.collection('attendance')
-            .find({ nfc_id: nfcId })
+            .find(query)
             .sort({ date: -1 })
-            .limit(30)  // Last 30 records
             .toArray();
+        
+        // Calculate summary stats
+        let totalPresent = 0;
+        let totalLate = 0;
+        let totalAbsent = 0;
+        let totalExcused = 0;
+        
+        records.forEach(r => {
+            switch (r.status) {
+                case 'present': totalPresent++; break;
+                case 'late': totalLate++; break;
+                case 'absent': totalAbsent++; break;
+                case 'excused': totalExcused++; break;
+                default: totalPresent++; // Default to present if no status
+            }
+        });
+        
+        const totalDays = records.length;
+        const attendanceRate = totalDays > 0 
+            ? Math.round(((totalPresent + totalLate) / totalDays) * 100) 
+            : 0;
         
         res.json({
             success: true,
-            nfc_id: nfcId,
-            count: records.length,
-            records: records
+            student: {
+                nfc_id: student.nfc_id,
+                tamtap_id: student.tamtap_id || '',
+                name: student.name,
+                grade: student.grade || '',
+                section: student.section
+            },
+            summary: {
+                totalDays,
+                present: totalPresent,
+                late: totalLate,
+                absent: totalAbsent,
+                excused: totalExcused,
+                attendanceRate
+            },
+            records: records.map(r => ({
+                date: r.date,
+                time: r.time,
+                session: r.session,
+                status: r.status || 'present',
+                photo: r.photo,
+                notes: r.notes || ''
+            }))
         });
         
     } catch (error) {
         console.error('[ERROR] Get student attendance error:', error.message);
-        res.status(500).json({ error: 'Failed to fetch attendance' });
+        res.status(500).json({ success: false, error: 'Failed to fetch attendance' });
     }
 });
 

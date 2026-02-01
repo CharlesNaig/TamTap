@@ -5,11 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TAMTAP - Redirecting...</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'feu-green': '#0a8249',
+                        'feu-gold': '#FFD700'
+                    }
+                }
+            }
+        }
+    </script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<body class="bg-gradient-to-br from-feu-green/10 to-feu-gold/10 min-h-screen flex items-center justify-center">
     <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p class="text-gray-600">Loading TAMTAP...</p>
+        <img src="/assets/animations/tamtap-walking.gif" alt="Loading..." class="w-24 h-24 mx-auto mb-4">
+        <p class="text-feu-green font-semibold text-lg">Loading <span class="text-feu-gold">TAMTAP</span>...</p>
     </div>
     
     <script>

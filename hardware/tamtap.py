@@ -68,21 +68,36 @@ LCD_LINE_2 = 0xC0  # Line 2 address
 LCD_BACKLIGHT = 0x08
 ENABLE = 0b00000100
 
-# Timing Constants (in seconds)
-CAMERA_CAPTURE_TIME = 2000  # 2 seconds for camera capture (ms)
-CAMERA_TIMEOUT = 3.0        # subprocess timeout
+# Timing Constants (in seconds) - Optimized for ≤5s total cycle
+CAMERA_CAPTURE_TIME = 1200  # 1.2 seconds for camera capture (ms)
+CAMERA_TIMEOUT = 2.5        # subprocess timeout
 NFC_POLL_INTERVAL = 0.1
-FACE_DETECTION_TIMEOUT = 1.2  # Haar cascade timeout
+FACE_DETECTION_TIMEOUT = 1.0  # Haar cascade timeout
 
 # Face Detection Constants
 HAAR_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+HAAR_EYE_CASCADE_PATH = cv2.data.haarcascades + 'haarcascade_eye.xml'
 MIN_FACE_SIZE = (80, 80)  # Minimum face size to detect
+MIN_EYE_SIZE = (20, 20)   # Minimum eye size to detect
+
+# Face Detection Failure Reasons
+class FaceValidationError:
+    NO_FACE_DETECTED = "NO_FACE_DETECTED"
+    EYES_NOT_VISIBLE = "EYES_NOT_VISIBLE"
+    FACE_PARTIALLY_VISIBLE = "FACE_PARTIALLY_VISIBLE"
+    MULTIPLE_FACES_DETECTED = "MULTIPLE_FACES_DETECTED"
+    DETECTION_TIMEOUT = "DETECTION_TIMEOUT"
 
 # File Paths
 DB_FILE = "tamtap_users.json"
 # Photo directory: ../assets/attendance_photos/{date}/
 PHOTO_BASE_DIR = os.path.join(_PROJECT_ROOT, "assets", "attendance_photos")
+# External SD card storage (preferred for larger capacity)
+EXTERNAL_PHOTO_DIR = "/mnt/tamtap_photos"
 TEMP_DETECTION_IMG = "/tmp/tamtap_detect.jpg"
+
+# Storage mode flag (set during initialization)
+_use_external_storage = False
 
 # API Server Configuration (from .env)
 API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
@@ -242,7 +257,58 @@ rfid_manager = RFIDManager()
 os.makedirs(PHOTO_BASE_DIR, exist_ok=True)
 
 # ========================================
-# 📸 PHOTO HELPER FUNCTIONS
+# � EXTERNAL STORAGE INITIALIZATION
+# ========================================
+def init_photo_storage():
+    """
+    Initialize photo storage with external SD card fallback.
+    Returns: (storage_path, is_external)
+    
+    Priority:
+    1. External SD: /mnt/tamtap_photos/ (if mounted and writable)
+    2. Internal: ../assets/attendance_photos/ (fallback)
+    """
+    global _use_external_storage
+    
+    # Check if external storage is available and writable
+    if os.path.isdir(EXTERNAL_PHOTO_DIR):
+        try:
+            # Test write permissions
+            test_file = os.path.join(EXTERNAL_PHOTO_DIR, ".tamtap_write_test")
+            with open(test_file, 'w') as f:
+                f.write("test")
+            os.remove(test_file)
+            
+            _use_external_storage = True
+            logging.info(f"[STORAGE] Using external SD card: {EXTERNAL_PHOTO_DIR}")
+            return EXTERNAL_PHOTO_DIR, True
+            
+        except (IOError, OSError, PermissionError) as e:
+            logging.warning(f"[STORAGE] External SD not writable: {e}")
+    else:
+        logging.info(f"[STORAGE] External SD not mounted at {EXTERNAL_PHOTO_DIR}")
+    
+    # Fallback to internal storage
+    _use_external_storage = False
+    logging.info(f"[STORAGE] Using internal storage: {PHOTO_BASE_DIR}")
+    return PHOTO_BASE_DIR, False
+
+def get_active_photo_dir():
+    """
+    Get the currently active photo base directory.
+    Returns external if available, internal otherwise.
+    """
+    global _use_external_storage
+    
+    if _use_external_storage and os.path.isdir(EXTERNAL_PHOTO_DIR):
+        return EXTERNAL_PHOTO_DIR
+    return PHOTO_BASE_DIR
+
+# Initialize storage on module load
+_active_storage_dir, _is_external = init_photo_storage()
+
+# ========================================
+# �📸 PHOTO HELPER FUNCTIONS
 # ========================================
 def sanitize_filename(text):
     """Sanitize text for use in filenames - remove special chars, replace spaces"""
@@ -259,14 +325,25 @@ def get_photo_dir_for_date(date_str=None):
     """
     Get photo directory for a specific date.
     Creates the directory if it doesn't exist.
-    Returns: /path/to/assets/attendance_photos/2026-01-17/
+    Uses external SD if available, falls back to internal.
+    Returns: /path/to/active_storage/2026-01-17/
     """
     if date_str is None:
         date_str = datetime.now().strftime("%Y-%m-%d")
     
-    date_dir = os.path.join(PHOTO_BASE_DIR, date_str)
-    os.makedirs(date_dir, exist_ok=True)
-    return date_dir
+    # Use active storage directory (external or internal)
+    base_dir = get_active_photo_dir()
+    date_dir = os.path.join(base_dir, date_str)
+    
+    try:
+        os.makedirs(date_dir, exist_ok=True)
+        return date_dir
+    except (IOError, OSError, PermissionError) as e:
+        # If external fails, fallback to internal
+        logging.warning(f"[STORAGE] Failed to create dir in {base_dir}: {e}")
+        fallback_dir = os.path.join(PHOTO_BASE_DIR, date_str)
+        os.makedirs(fallback_dir, exist_ok=True)
+        return fallback_dir
 
 def generate_photo_filename(user_data, suffix=""):
     """
@@ -570,20 +647,31 @@ def notify_attendance_fail(nfc_id, name, reason):
 # CAMERA & FACE DETECTION (OpenCV + Haar Cascade)
 # ========================================
 
-# Initialize Haar Cascade for face detection
+# Initialize Haar Cascades for face and eye detection
 try:
     face_cascade = cv2.CascadeClassifier(HAAR_CASCADE_PATH)
     if face_cascade.empty():
-        logger.error("Failed to load Haar cascade classifier")
+        logger.error("Failed to load Haar face cascade classifier")
         face_cascade = None
     else:
-        logger.info("Haar cascade loaded successfully")
+        logger.info("Haar face cascade loaded successfully")
 except Exception as e:
-    logger.error("Haar cascade init error: %s", e)
+    logger.error("Haar face cascade init error: %s", e)
     face_cascade = None
 
-def capture_photo_for_detection(filename, timeout_ms=1500):
-    """Capture photo for face detection - longer exposure for better quality"""
+try:
+    eye_cascade = cv2.CascadeClassifier(HAAR_EYE_CASCADE_PATH)
+    if eye_cascade.empty():
+        logger.error("Failed to load Haar eye cascade classifier")
+        eye_cascade = None
+    else:
+        logger.info("Haar eye cascade loaded successfully")
+except Exception as e:
+    logger.error("Haar eye cascade init error: %s", e)
+    eye_cascade = None
+
+def capture_photo_for_detection(filename, timeout_ms=1000):
+    """Capture photo for face detection - optimized for speed"""
     try:
         result = subprocess.run(
             [
@@ -608,68 +696,147 @@ def capture_photo_for_detection(filename, timeout_ms=1500):
 
 def detect_face_in_image(image_path):
     """
-    Detect face in image using OpenCV Haar Cascade
-    Returns: (bool, num_faces) - whether face detected and count
+    Detect face AND eyes in image using OpenCV Haar Cascades.
+    Enhanced validation:
+    - Detects frontal face presence
+    - Validates eyes are visible within face region
+    - Rejects if face partially visible or eyes not detected
+    
+    Returns: (success, num_faces, failure_reason)
+    - success: True if exactly one face with visible eyes detected
+    - num_faces: Number of faces found
+    - failure_reason: FaceValidationError code if failed, None if success
+    
+    Must complete within 1200ms budget.
     """
+    import time as _time
+    start_time = _time.time()
+    
     if face_cascade is None:
         logger.error("Face cascade not initialized")
-        return False, 0
+        return False, 0, FaceValidationError.NO_FACE_DETECTED
     
     try:
         # Read image
         img = cv2.imread(image_path)
         if img is None:
             logger.warning("Could not read image: %s", image_path)
-            return False, 0
+            return False, 0, FaceValidationError.NO_FACE_DETECTED
         
         # Convert to grayscale for Haar detection
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
+        # Equalize histogram for better detection in varying light
+        gray = cv2.equalizeHist(gray)
+        
         # Detect faces with Haar cascade
-        # Parameters tuned for speed (<1.2s) on Raspberry Pi
+        # Parameters tuned for speed (<800ms) on Raspberry Pi 4B
         faces = face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.1,
+            scaleFactor=1.15,   # Slightly larger for speed
             minNeighbors=4,
             minSize=MIN_FACE_SIZE,
             flags=cv2.CASCADE_SCALE_IMAGE
         )
         
         num_faces = len(faces)
-        logger.info("Face detection: found %d face(s)", num_faces)
+        elapsed_ms = (_time.time() - start_time) * 1000
+        logger.info("Face detection: found %d face(s) in %.0fms", num_faces, elapsed_ms)
         
-        return num_faces > 0, num_faces
+        # Check timeout
+        if elapsed_ms > FACE_DETECTION_TIMEOUT * 1000:
+            logger.warning("Face detection timeout exceeded")
+            return False, num_faces, FaceValidationError.DETECTION_TIMEOUT
+        
+        # Validate face count
+        if num_faces == 0:
+            logger.info("No face detected")
+            return False, 0, FaceValidationError.NO_FACE_DETECTED
+        
+        if num_faces > 1:
+            logger.warning("Multiple faces detected (%d), rejecting", num_faces)
+            return False, num_faces, FaceValidationError.MULTIPLE_FACES_DETECTED
+        
+        # Exactly one face found - validate eyes
+        if eye_cascade is None:
+            # Skip eye detection if cascade not loaded, accept face only
+            logger.warning("Eye cascade not loaded, skipping eye validation")
+            return True, 1, None
+        
+        # Get the single face region
+        (x, y, w, h) = faces[0]
+        
+        # Check if face is reasonably centered and sized (not partial)
+        img_h, img_w = gray.shape
+        face_center_x = x + w // 2
+        face_center_y = y + h // 2
+        
+        # Face should be roughly centered (within 35% of edges)
+        margin_x = img_w * 0.35
+        margin_y = img_h * 0.35
+        if face_center_x < margin_x or face_center_x > (img_w - margin_x):
+            logger.info("Face not centered horizontally, may be partially visible")
+            return False, 1, FaceValidationError.FACE_PARTIALLY_VISIBLE
+        
+        # Extract face ROI for eye detection
+        roi_gray = gray[y:y+h, x:x+w]
+        
+        # Detect eyes within face region
+        # Focus on upper half of face where eyes should be
+        upper_face_height = int(h * 0.6)  # Upper 60% of face
+        roi_upper = roi_gray[0:upper_face_height, :]
+        
+        eyes = eye_cascade.detectMultiScale(
+            roi_upper,
+            scaleFactor=1.1,
+            minNeighbors=3,
+            minSize=MIN_EYE_SIZE
+        )
+        
+        elapsed_ms = (_time.time() - start_time) * 1000
+        logger.info("Eye detection: found %d eye(s) in %.0fms total", len(eyes), elapsed_ms)
+        
+        # Need at least one eye visible (one eye may be occluded in angled view)
+        if len(eyes) < 1:
+            logger.info("No eyes detected - face may be covered or eyes closed")
+            return False, 1, FaceValidationError.EYES_NOT_VISIBLE
+        
+        # Success: One face with visible eye(s)
+        logger.info("Face validation passed: 1 face, %d eye(s) detected", len(eyes))
+        return True, 1, None
         
     except Exception as e:
         logger.error("Face detection error: %s", e)
-        return False, 0
+        return False, 0, FaceValidationError.NO_FACE_DETECTED
 
 def detect_person(user_data=None, save_detection=True):
     """
-    Face detection using OpenCV Haar Cascade:
+    Face detection using OpenCV Haar Cascade with eye validation:
     1. Capture photo with camera preview (2 seconds)
     2. Run Haar cascade face detection
-    3. Optionally save detection photo with user info
-    4. Return (success, saved_path)
+    3. Validate eyes are visible
+    4. Optionally save detection photo with user info
+    5. Return (success, saved_path, failure_reason)
     
     Total time budget: ≤3.5 seconds
     """
     saved_path = None
+    failure_reason = None
     
     try:
         # Capture photo for face detection (shows preview on screen)
         logger.info("Capturing image for face detection...")
         
-        if not capture_photo_for_detection(TEMP_DETECTION_IMG, timeout_ms=2000):
+        if not capture_photo_for_detection(TEMP_DETECTION_IMG, timeout_ms=1200):
             logger.warning("Failed to capture detection image")
-            return False, None
+            return False, None, FaceValidationError.NO_FACE_DETECTED
         
-        # Run face detection with Haar cascade
-        logger.info("Running Haar cascade face detection...")
-        face_found, num_faces = detect_face_in_image(TEMP_DETECTION_IMG)
+        # Run face detection with Haar cascade + eye validation
+        logger.info("Running Haar cascade face + eye detection...")
+        face_found, num_faces, failure_reason = detect_face_in_image(TEMP_DETECTION_IMG)
         
         if face_found:
-            logger.info("Person verified: %d face(s) detected", num_faces)
+            logger.info("Person verified: 1 face with eyes detected")
             
             # Save detection photo if requested
             if save_detection and user_data:
@@ -684,14 +851,14 @@ def detect_person(user_data=None, save_detection=True):
                 except Exception as e:
                     logger.warning("Failed to save detection photo: %s", e)
             
-            return True, saved_path
+            return True, saved_path, None
         else:
-            logger.info("No face detected in image")
-            return False, None
+            logger.info("Face validation failed: %s", failure_reason)
+            return False, None, failure_reason
         
     except Exception as e:
         logger.error("Person detection error: %s", e)
-        return False, None
+        return False, None, FaceValidationError.NO_FACE_DETECTED
         
     finally:
         # Cleanup temp file
@@ -767,11 +934,28 @@ def card_detected_state():
     time.sleep(0.2)
     led_off(GPIO_GREEN_LED)
 
-def no_face_state():
-    """NO_FACE/FAIL state: Display error, red LED on, 5 beeps"""
-    lcd.show("NO FACE DETECT", "TRY AGAIN!")
+def no_face_state(failure_reason=None):
+    """NO_FACE/FAIL state: Display error based on reason, red LED on, 5 beeps"""
+    # Map failure reason to user-friendly message (max 16 chars per line)
+    if failure_reason == FaceValidationError.EYES_NOT_VISIBLE:
+        line1 = "EYES NOT VISIBLE"
+        line2 = "OPEN YOUR EYES"
+    elif failure_reason == FaceValidationError.FACE_PARTIALLY_VISIBLE:
+        line1 = "FACE PARTIAL"
+        line2 = "CENTER YOURSELF"
+    elif failure_reason == FaceValidationError.MULTIPLE_FACES_DETECTED:
+        line1 = "MULTIPLE FACES"
+        line2 = "ONE PERSON ONLY"
+    elif failure_reason == FaceValidationError.DETECTION_TIMEOUT:
+        line1 = "DETECTION SLOW"
+        line2 = "TRY AGAIN"
+    else:
+        line1 = "NO FACE DETECT"
+        line2 = "TRY AGAIN!"
+    
+    lcd.show(line1, line2)
     led_on(GPIO_RED_LED)
-    beep(count=5, duration=0.1, pause=0.1)
+    beep(count=3, duration=0.1, pause=0.1)
     time.sleep(1.0)
     led_off(GPIO_RED_LED)
 
@@ -781,8 +965,8 @@ def success_state(name):
     display_name = name[:LCD_WIDTH] if name else "STUDENT"
     lcd.show("WELCOME", display_name)
     led_on(GPIO_GREEN_LED)
-    beep(count=3, duration=0.15, pause=0.1)
-    time.sleep(1.5)
+    beep(count=2, duration=0.1, pause=0.1)
+    time.sleep(1.0)
     led_off(GPIO_GREEN_LED)
 
 def shutdown_state():
@@ -841,21 +1025,22 @@ def process_card(nfc_id):
     logger.info("User found: %s (%s)", name, role)
     lcd.show("HELLO " + name[:10], "FACE CAMERA")
     led_off(GPIO_GREEN_LED)
-    time.sleep(0.5)
+    time.sleep(0.2)
     
     # === STATE: CAMERA_ACTIVE ===
     current_state = State.CAMERA_ACTIVE
     card_detected_state()
     
     # Person detection (face verification) - pass user_data for photo naming
-    face_detected, detection_photo = detect_person(user_data=user_data, save_detection=True)
+    face_detected, detection_photo, failure_reason = detect_person(user_data=user_data, save_detection=True)
     if not face_detected:
         # === STATE: FAIL ===
         current_state = State.FAIL
-        no_face_state()
+        no_face_state(failure_reason)
         
-        # Notify API server of failure
-        notify_attendance_fail(nfc_id, name, "No face detected")
+        # Notify API server of failure with reason code
+        reason_msg = failure_reason if failure_reason else "No face detected"
+        notify_attendance_fail(nfc_id, name, reason_msg)
         
         current_state = State.IDLE
         return False

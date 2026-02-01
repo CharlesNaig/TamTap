@@ -19,6 +19,7 @@ const path = require('path');
 const cors = require('cors');
 const { MongoClient } = require('mongodb');
 const config = require('./config');
+const logger = require('./utils/Logger');
 
 // ========================================
 // EXPRESS APP SETUP
@@ -37,10 +38,9 @@ app.use(express.urlencoded({ extended: true }));
 // Session middleware (before routes)
 app.use(session(config.session));
 
-// Request logging (INFO level)
+// Request logging
 app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.url}`);
+    logger.api(`${req.method} ${req.url}`);
     next();
 });
 
@@ -52,8 +52,8 @@ let mongoClient = null;
 
 async function connectMongoDB() {
     try {
-        console.log('[INFO] Connecting to MongoDB:', config.mongodb.uri.replace(/:[^:@]+@/, ':****@'));
-        console.log('[INFO] Database name:', config.mongodb.database);
+        logger.database('Connecting to MongoDB:', config.mongodb.uri.replace(/:[^:@]+@/, ':****@'));
+        logger.database('Database name:', config.mongodb.database);
         
         mongoClient = new MongoClient(config.mongodb.uri, config.mongodb.options);
         await mongoClient.connect();
@@ -61,14 +61,14 @@ async function connectMongoDB() {
         
         // Test connection
         await db.command({ ping: 1 });
-        console.log('[INFO] MongoDB connected successfully');
+        logger.success('MongoDB connected successfully');
         
         // Create indexes
         await createIndexes();
         
         return true;
     } catch (error) {
-        console.error('[ERROR] MongoDB connection failed:', error.message);
+        logger.error('MongoDB connection failed:', error.message);
         return false;
     }
 }
@@ -83,7 +83,7 @@ async function createIndexes() {
         // Drop old non-sparse index if it exists (migration)
         try {
             await db.collection('teachers').dropIndex('nfc_id_1');
-            console.log('[INFO] Dropped old teachers.nfc_id index');
+            logger.database('Dropped old teachers.nfc_id index');
         } catch (e) {
             // Index may not exist, ignore
         }
@@ -114,9 +114,9 @@ async function createIndexes() {
             { $unset: { nfc_id: "" } }
         );
         
-        console.log('[INFO] MongoDB indexes created');
+        logger.success('MongoDB indexes created');
     } catch (error) {
-        console.warn('[WARN] Index creation warning:', error.message);
+        logger.warn('Index creation warning:', error.message);
     }
 }
 
@@ -137,7 +137,7 @@ let connectedClients = 0;
 
 io.on('connection', (socket) => {
     connectedClients++;
-    console.log(`[INFO] Client connected (${connectedClients} total)`);
+    logger.socket(`Client connected (${connectedClients} total)`);
     
     // Send current system status on connect
     socket.emit('system:status', {
@@ -149,7 +149,7 @@ io.on('connection', (socket) => {
     
     socket.on('disconnect', () => {
         connectedClients--;
-        console.log(`[INFO] Client disconnected (${connectedClients} total)`);
+        logger.socket(`Client disconnected (${connectedClients} total)`);
     });
 });
 
@@ -177,11 +177,35 @@ app.use('/assets', express.static(assetsPath, {
     maxAge: 86400000  // 1 day cache
 }));
 
-// Serve attendance photos
-const photosPath = path.resolve(__dirname, config.photos.baseDir);
-app.use('/photos', express.static(photosPath, {
-    maxAge: config.photos.maxAge
-}));
+// Serve attendance photos with fallback
+// Priority: External SD (/mnt/tamtap_photos) → Internal (assets/attendance_photos)
+const externalPhotosPath = '/mnt/tamtap_photos';
+const internalPhotosPath = path.resolve(__dirname, config.photos.baseDir);
+
+// Custom middleware for photo fallback
+app.use('/photos', (req, res, next) => {
+    const fs = require('fs');
+    const requestedPath = req.path;
+    
+    // Try external storage first
+    const externalFile = path.join(externalPhotosPath, requestedPath);
+    if (fs.existsSync(externalFile)) {
+        return res.sendFile(externalFile, {
+            maxAge: config.photos.maxAge
+        });
+    }
+    
+    // Fallback to internal storage
+    const internalFile = path.join(internalPhotosPath, requestedPath);
+    if (fs.existsSync(internalFile)) {
+        return res.sendFile(internalFile, {
+            maxAge: config.photos.maxAge
+        });
+    }
+    
+    // Not found
+    res.status(404).json({ error: 'Photo not found' });
+});
 
 // ========================================
 // API ROUTES
@@ -233,6 +257,48 @@ app.get('/api/debug/attendance', async (req, res) => {
 });
 
 // ========================================
+// PUBLIC GALLERY ENDPOINT (for Login Page)
+// ========================================
+
+/**
+ * GET /api/gallery/recent
+ * Returns recent attendance photos for login page display
+ * Public endpoint - no authentication required
+ */
+app.get('/api/gallery/recent', async (req, res) => {
+    try {
+        if (!db) {
+            return res.json({ success: true, photos: [] });
+        }
+        
+        const limit = Math.min(parseInt(req.query.limit) || 20, 50);
+        
+        // Get recent attendance records with photos
+        const records = await db.collection('attendance')
+            .find({ photo: { $exists: true, $ne: null, $ne: '' } })
+            .sort({ date: -1, time: -1 })
+            .limit(limit)
+            .toArray();
+        
+        const photos = records.map(r => {
+            const dateOnly = r.date ? r.date.split(' ')[0] : '';
+            return {
+                url: `/photos/${dateOnly}/${r.photo}`,
+                name: r.name?.split(' ')[0] || 'Student',
+                time: r.time || '',
+                section: r.section || ''
+            };
+        });
+        
+        res.json({ success: true, photos });
+        
+    } catch (error) {
+        logger.error('Gallery fetch error:', error.message);
+        res.json({ success: true, photos: [] });
+    }
+});
+
+// ========================================
 // HARDWARE BRIDGE ENDPOINT
 // ========================================
 
@@ -249,7 +315,7 @@ app.post('/api/hardware/attendance', (req, res) => {
             return res.status(400).json({ error: 'Invalid attendance record' });
         }
         
-        console.log('[INFO] Hardware attendance received:', record.name);
+        logger.hardware('Attendance received:', record.name);
         
         // Broadcast to all connected clients
         broadcast('attendance:new', {
@@ -268,7 +334,7 @@ app.post('/api/hardware/attendance', (req, res) => {
         res.json({ success: true, message: 'Attendance broadcasted' });
         
     } catch (error) {
-        console.error('[ERROR] Hardware attendance error:', error.message);
+        logger.error('Hardware attendance error:', error.message);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -281,7 +347,7 @@ app.post('/api/hardware/fail', (req, res) => {
     try {
         const data = req.body;
         
-        console.log('[INFO] Hardware attendance failed:', data.reason || 'unknown');
+        logger.hardware('Attendance failed:', data.reason || 'unknown');
         
         // Broadcast failure to clients
         broadcast('attendance:fail', {
@@ -293,7 +359,7 @@ app.post('/api/hardware/fail', (req, res) => {
         res.json({ success: true, message: 'Failure broadcasted' });
         
     } catch (error) {
-        console.error('[ERROR] Hardware fail error:', error.message);
+        logger.error('Hardware fail error:', error.message);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -317,7 +383,7 @@ app.post('/api/hardware/status', (req, res) => {
         res.json({ success: true });
         
     } catch (error) {
-        console.error('[ERROR] Hardware status error:', error.message);
+        logger.error('Hardware status error:', error.message);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
@@ -339,7 +405,7 @@ app.get('/api/health', (req, res) => {
 // ERROR HANDLING
 // ========================================
 app.use((err, req, res, next) => {
-    console.error('[ERROR]', err.message);
+    logger.error(err.message);
     res.status(500).json({ error: 'Internal server error' });
 });
 
@@ -352,37 +418,33 @@ app.use((req, res) => {
 // SERVER STARTUP
 // ========================================
 async function startServer() {
-    console.log('========================================');
-    console.log('  TAMTAP v2.0 - API Server with Auth');
-    console.log('  NFC-Based Attendance System');
-    console.log('========================================');
+    logger.banner();
     
     // Connect to MongoDB
     const mongoConnected = await connectMongoDB();
     if (!mongoConnected) {
-        console.warn('[WARN] Running without MongoDB - some features disabled');
+        logger.warn('Running without MongoDB - some features disabled');
     }
     
     // Start HTTP server
     server.listen(config.server.port, config.server.host, () => {
-        console.log(`[INFO] Server running on http://${config.server.host}:${config.server.port}`);
-        console.log(`[INFO] Socket.IO ready for connections`);
-        console.log(`[INFO] Photos served from: ${photosPath}`);
-        console.log('========================================');
+        logger.server(`Server running on http://${config.server.host}:${config.server.port} or http://localhost:${config.server.port}`);
+        logger.socket('Socket.IO ready for connections');
+        logger.info(`Photos served from: ${internalPhotosPath}`);
     });
 }
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-    console.log('\n[INFO] Shutting down...');
+    logger.info('Shutting down...');
     
     if (mongoClient) {
         await mongoClient.close();
-        console.log('[INFO] MongoDB connection closed');
+        logger.database('MongoDB connection closed');
     }
     
     server.close(() => {
-        console.log('[INFO] Server closed');
+        logger.success('Server closed');
         process.exit(0);
     });
 });

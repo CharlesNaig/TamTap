@@ -31,6 +31,9 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Preloader -->
+    <link rel="stylesheet" href="/css/preloader.css">
+    <script src="/js/preloader.js"></script>
     <style>
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -52,6 +55,20 @@
             background: linear-gradient(90deg, #0a8249, #0eb063);
             border-radius: 3px 3px 0 0;
         }
+        
+        /* Skeleton Loading */
+        .skeleton {
+            background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+            background-size: 200% 100%;
+            animation: skeleton-shimmer 1.5s ease-in-out infinite;
+        }
+        @keyframes skeleton-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .skeleton-text { border-radius: 4px; height: 1rem; }
+        .skeleton-text-sm { border-radius: 3px; height: 0.75rem; }
+        .skeleton-circle { border-radius: 50%; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col">
@@ -195,14 +212,21 @@
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="teachers-table" class="divide-y divide-gray-200">
-                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                        <tbody id="teachers-table-skeleton" class="divide-y divide-gray-200">
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-20"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-32"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text w-36"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-16"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text w-32"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-18"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-36"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-12"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                        </tbody>
+                        <tbody id="teachers-table" class="hidden divide-y divide-gray-200">
                         </tbody>
                     </table>
                 </div>
                 <!-- Mobile Cards -->
-                <div id="teachers-cards" class="sm:hidden p-3 space-y-3">
-                    <p class="text-center text-gray-400 py-4">Loading...</p>
+                <div id="teachers-cards-skeleton" class="sm:hidden p-3 space-y-3">
+                    <div class="border rounded-lg p-3"><div class="flex justify-between items-center"><div><div class="skeleton skeleton-text w-24 mb-2"></div><div class="skeleton skeleton-text-sm w-32"></div></div><div class="skeleton skeleton-text-sm w-16"></div></div></div>
+                    <div class="border rounded-lg p-3"><div class="flex justify-between items-center"><div><div class="skeleton skeleton-text w-28 mb-2"></div><div class="skeleton skeleton-text-sm w-28"></div></div><div class="skeleton skeleton-text-sm w-16"></div></div></div>
+                </div>
+                <div id="teachers-cards" class="hidden sm:hidden p-3 space-y-3">
                 </div>
             </div>
         </div>
@@ -239,14 +263,23 @@
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="students-table" class="divide-y divide-gray-200">
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                        <tbody id="students-table-skeleton" class="divide-y divide-gray-200">
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-32"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-20"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-36"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                        </tbody>
+                        <tbody id="students-table" class="hidden divide-y divide-gray-200">
                         </tbody>
                     </table>
                 </div>
                 <!-- Mobile Cards -->
-                <div id="students-cards" class="sm:hidden p-3 space-y-3">
-                    <p class="text-center text-gray-400 py-4">Loading...</p>
+                <div id="students-cards-skeleton" class="sm:hidden p-3 space-y-3">
+                    <div class="border rounded-lg p-3"><div class="flex justify-between items-center"><div><div class="skeleton skeleton-text w-28 mb-2"></div><div class="skeleton skeleton-text-sm w-20"></div></div><div class="skeleton skeleton-text-sm w-14"></div></div></div>
+                    <div class="border rounded-lg p-3"><div class="flex justify-between items-center"><div><div class="skeleton skeleton-text w-32 mb-2"></div><div class="skeleton skeleton-text-sm w-24"></div></div><div class="skeleton skeleton-text-sm w-14"></div></div></div>
+                    <div class="border rounded-lg p-3"><div class="flex justify-between items-center"><div><div class="skeleton skeleton-text w-24 mb-2"></div><div class="skeleton skeleton-text-sm w-20"></div></div><div class="skeleton skeleton-text-sm w-14"></div></div></div>
+                </div>
+                <div id="students-cards" class="hidden sm:hidden p-3 space-y-3">
                 </div>
             </div>
         </div>
@@ -259,8 +292,13 @@
                     <p class="text-xs sm:text-sm text-gray-500">Sections are auto-created from student records</p>
                 </div>
                 <div class="p-3 sm:p-4">
-                    <div id="sections-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                        <p class="text-gray-400">Loading...</p>
+                    <div id="sections-grid-skeleton" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+                        <div class="border rounded-lg p-4"><div class="skeleton skeleton-text w-20 mb-3"></div><div class="skeleton skeleton-text-sm w-24"></div></div>
+                        <div class="border rounded-lg p-4"><div class="skeleton skeleton-text w-16 mb-3"></div><div class="skeleton skeleton-text-sm w-28"></div></div>
+                        <div class="border rounded-lg p-4"><div class="skeleton skeleton-text w-20 mb-3"></div><div class="skeleton skeleton-text-sm w-20"></div></div>
+                        <div class="border rounded-lg p-4"><div class="skeleton skeleton-text w-18 mb-3"></div><div class="skeleton skeleton-text-sm w-24"></div></div>
+                    </div>
+                    <div id="sections-grid" class="hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                     </div>
                 </div>
             </div>
@@ -430,8 +468,9 @@
         }
 
         async function logout() {
+            showPreloader('Logging out...');
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-            window.location.href = '/login.html';
+            navigateTo('/login.html', 'Redirecting to login...');
         }
 
         // ========================================
@@ -503,6 +542,10 @@
                 const res = await fetch('/api/admin/sections', { credentials: 'include' });
                 const data = await res.json();
                 
+                // Hide skeleton, show grid
+                document.getElementById('sections-grid-skeleton').classList.add('hidden');
+                document.getElementById('sections-grid').classList.remove('hidden');
+                
                 if (data.success) {
                     allSections = data.data;
                     
@@ -551,6 +594,12 @@
             try {
                 const res = await fetch('/api/admin/teachers', { credentials: 'include' });
                 const data = await res.json();
+                
+                // Hide skeleton, show table
+                document.getElementById('teachers-table-skeleton').classList.add('hidden');
+                document.getElementById('teachers-table').classList.remove('hidden');
+                document.getElementById('teachers-cards-skeleton').classList.add('hidden');
+                document.getElementById('teachers-cards').classList.remove('hidden');
                 
                 const tbody = document.getElementById('teachers-table');
                 
@@ -613,6 +662,12 @@
                 
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json();
+                
+                // Hide skeleton, show table
+                document.getElementById('students-table-skeleton').classList.add('hidden');
+                document.getElementById('students-table').classList.remove('hidden');
+                document.getElementById('students-cards-skeleton').classList.add('hidden');
+                document.getElementById('students-cards').classList.remove('hidden');
                 
                 const tbody = document.getElementById('students-table');
                 

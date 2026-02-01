@@ -39,6 +39,7 @@ const config = {
     // Photo Configuration
     photos: {
         baseDir: '../assets/attendance_photos',
+        externalDir: '/mnt/tamtap_photos',  // External SD card (preferred)
         maxAge: 86400000  // 1 day cache
     },
 

@@ -113,9 +113,14 @@
         .skeleton-text-xl { border-radius: 6px; height: 2.5rem; }
         .skeleton-circle { border-radius: 50%; }
         .skeleton-card { border-radius: 0.5rem; }
+        
+        /* Auth Protection - Hide until verified */
+        .auth-loading {
+            visibility: hidden;
+        }
     </style>
 </head>
-<body style="padding-right: 0%;" class="bg-gray-50 min-h-screen flex flex-col">
+<body style="padding-right: 0%;" class="bg-gray-50 min-h-screen flex flex-col auth-loading">
 
     <!-- ========================================
          TOP BAR (Green with Address)
@@ -284,9 +289,9 @@
         ======================================== -->
         <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-                <p class="text-sm sm:text-base lg:text-lg text-gray-600 font-medium">Welcome back,</p>
+                <p class="text-sm sm:text-base lg:text-lg text-gray-600 font-medium">Welcome,</p>
                 <h2 class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mt-0.5">
-                    <span id="welcome-name" class="text-feu-green">Teacher</span>!
+                    Teacher <span id="welcome-name" class="text-feu-green"></span>!
                 </h2>
                 <p class="text-gray-500 text-xs sm:text-sm mt-1 sm:mt-2">
                     <span id="current-section-display">All Sections</span> • 
@@ -750,6 +755,25 @@
         let breakdownAvailable = false; // Track if backend provides status breakdown
 
         // ========================================
+        // TIMEZONE HELPER - Asia/Manila (UTC+8)
+        // ========================================
+        function getPhilippineDate() {
+            // Get current date in Philippines timezone
+            const now = new Date();
+            const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+            const year = phTime.getFullYear();
+            const month = String(phTime.getMonth() + 1).padStart(2, '0');
+            const day = String(phTime.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        function getPhilippineDateObj() {
+            // Get Date object representing current time in Philippines
+            const now = new Date();
+            return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
+        }
+
+        // ========================================
         // AUTH CHECK (GET /api/auth/me)
         // Redirect to login if not authenticated
         // ========================================
@@ -767,6 +791,9 @@
                 }
                 
                 currentUser = data.user;
+                
+                // Auth verified - show page content
+                document.body.classList.remove('auth-loading');
                 
                 // Update UI with user info
                 document.getElementById('user-name').textContent = currentUser.name;
@@ -891,10 +918,10 @@
                 datePicker.classList.add('flex');
                 // Set default to today if not set
                 if (!document.getElementById('custom-date').value) {
-                    document.getElementById('custom-date').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('custom-date').value = getPhilippineDate();
                 }
                 // Set max date to today (no future dates)
-                document.getElementById('custom-date').max = new Date().toISOString().split('T')[0];
+                document.getElementById('custom-date').max = getPhilippineDate();
             } else {
                 datePicker.classList.add('hidden');
                 datePicker.classList.remove('flex');
@@ -1167,8 +1194,8 @@
         // Returns {from, to} based on currentDateRange
         // ========================================
         function getDateRange() {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
+            const today = getPhilippineDateObj();
+            const todayStr = getPhilippineDate();
             
             switch (currentDateRange) {
                 case 'today':
@@ -1176,15 +1203,20 @@
                 case 'week': {
                     const weekStart = new Date(today);
                     weekStart.setDate(today.getDate() - today.getDay());
+                    const year = weekStart.getFullYear();
+                    const month = String(weekStart.getMonth() + 1).padStart(2, '0');
+                    const day = String(weekStart.getDate()).padStart(2, '0');
                     return { 
-                        from: weekStart.toISOString().split('T')[0], 
+                        from: `${year}-${month}-${day}`, 
                         to: todayStr 
                     };
                 }
                 case 'month': {
                     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+                    const year = monthStart.getFullYear();
+                    const month = String(monthStart.getMonth() + 1).padStart(2, '0');
                     return { 
-                        from: monthStart.toISOString().split('T')[0], 
+                        from: `${year}-${month}-01`, 
                         to: todayStr 
                     };
                 }
@@ -1376,7 +1408,7 @@
             // Photo path: /photos/{date}/{filename}
             // Record has: date (YYYY-MM-DD HH:MM:SS), photo (filename)
             if (!record.photo) return null;
-            const dateStr = record.date ? record.date.split(' ')[0] : new Date().toISOString().split('T')[0];
+            const dateStr = record.date ? record.date.split(' ')[0] : getPhilippineDate();
             return `/photos/${dateStr}/${record.photo}`;
         }
         
@@ -1495,7 +1527,7 @@
                 // Get current filters
                 const sectionSelect = document.getElementById('section-select');
                 const section = sectionSelect ? sectionSelect.value : '';
-                const today = new Date().toISOString().split('T')[0];
+                const today = getPhilippineDate();
                 
                 // Build summary URL with filters
                 let summaryUrl = `/api/stats/summary?date=${today}`;
@@ -1910,7 +1942,7 @@
             }
             
             const section = document.getElementById('section-select').value || 'all';
-            const today = new Date().toISOString().split('T')[0];
+            const today = getPhilippineDate();
             
             const headers = ['Name', 'Section', 'Date', 'Time', 'Session', 'Status'];
             const rows = currentRecords.map(r => [

@@ -69,9 +69,14 @@
         .skeleton-text { border-radius: 4px; height: 1rem; }
         .skeleton-text-sm { border-radius: 3px; height: 0.75rem; }
         .skeleton-circle { border-radius: 50%; }
+        
+        /* Auth Protection - Hide until verified */
+        .auth-loading {
+            visibility: hidden;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
+<body class="bg-gray-100 min-h-screen flex flex-col auth-loading">
     <!-- ========================================
          TOP BAR (Green with Address)
     ======================================== -->
@@ -455,6 +460,9 @@
                     return;
                 }
                 currentUser = data.user;
+                
+                // Auth verified - show page content
+                document.body.classList.remove('auth-loading');
                 
                 // Update UI with user info
                 document.getElementById('user-name').textContent = currentUser.name;

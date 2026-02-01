@@ -1766,8 +1766,11 @@
         }
 
         function closeStudentDetailModal() {
-            document.getElementById('student-detail-modal').classList.add('hidden');
-            document.getElementById('student-detail-modal').classList.remove('flex');
+            const modal = document.getElementById('student-detail-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
         }
         
         // Legacy alias for backward compatibility
@@ -2115,16 +2118,25 @@
             }
         });
 
-        // Modal backdrop clicks
-        document.getElementById('history-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'history-modal') closeHistoryModal();
-        });
-        document.getElementById('personal-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'personal-modal') closePersonalModal();
-        });
-        document.getElementById('photo-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'photo-modal') closePhotoModal();
-        });
+        // Modal backdrop clicks (null-safe)
+        const historyModal = document.getElementById('history-modal');
+        if (historyModal) {
+            historyModal.addEventListener('click', (e) => {
+                if (e.target.id === 'history-modal') closeHistoryModal();
+            });
+        }
+        const personalModal = document.getElementById('personal-modal');
+        if (personalModal) {
+            personalModal.addEventListener('click', (e) => {
+                if (e.target.id === 'personal-modal') closePersonalModal();
+            });
+        }
+        const photoModal = document.getElementById('photo-modal');
+        if (photoModal) {
+            photoModal.addEventListener('click', (e) => {
+                if (e.target.id === 'photo-modal') closePhotoModal();
+            });
+        }
 
         // ========================================
         // INIT

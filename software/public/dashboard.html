@@ -1074,33 +1074,59 @@
         // ========================================
         function showSkeletons() {
             // Show skeletons
-            document.getElementById('summary-cards-skeleton').classList.remove('hidden');
-            document.getElementById('attendance-table-skeleton').classList.remove('hidden');
-            document.getElementById('attendance-cards-skeleton').classList.remove('hidden');
+            const skelCards = document.getElementById('summary-cards-skeleton');
+            const skelTable = document.getElementById('attendance-table-skeleton');
+            const skelMobile = document.getElementById('attendance-cards-skeleton');
+            
+            if (skelCards) skelCards.classList.remove('hidden');
+            if (skelTable) skelTable.classList.remove('hidden');
+            if (skelMobile) skelMobile.classList.remove('hidden');
+            
             // Hide content
-            document.getElementById('summary-cards').classList.add('hidden');
-            document.getElementById('attendance-table').classList.add('hidden');
-            document.getElementById('attendance-cards').classList.add('hidden');
-            document.getElementById('empty-state').classList.add('hidden');
+            const summaryCards = document.getElementById('summary-cards');
+            const table = document.getElementById('attendance-table');
+            const cards = document.getElementById('attendance-cards');
+            const empty = document.getElementById('empty-state');
+            
+            if (summaryCards) summaryCards.classList.add('hidden');
+            if (table) table.classList.add('hidden');
+            if (cards) cards.classList.add('hidden');
+            if (empty) empty.classList.add('hidden');
         }
         
         function hideSkeletons() {
             // Hide skeletons
-            document.getElementById('summary-cards-skeleton').classList.add('hidden');
-            document.getElementById('attendance-table-skeleton').classList.add('hidden');
-            document.getElementById('attendance-cards-skeleton').classList.add('hidden');
-            // Show summary cards (always show these)
-            document.getElementById('summary-cards').classList.remove('hidden');
-            document.getElementById('summary-cards').classList.add('grid');
-            // Show attendance content only if we have records (empty-state handles the empty case)
-            if (currentRecords && currentRecords.length > 0) {
-                document.getElementById('attendance-table').classList.remove('hidden');
-                document.getElementById('attendance-cards').classList.remove('hidden');
-                document.getElementById('empty-state').classList.add('hidden');
-            } else {
-                // No records - show empty state (showEmptyState may have already done this)
-                document.getElementById('empty-state').classList.remove('hidden');
+            const skelCards = document.getElementById('summary-cards-skeleton');
+            const skelTable = document.getElementById('attendance-table-skeleton');
+            const skelMobile = document.getElementById('attendance-cards-skeleton');
+            
+            if (skelCards) skelCards.classList.add('hidden');
+            if (skelTable) skelTable.classList.add('hidden');
+            if (skelMobile) skelMobile.classList.add('hidden');
+            
+            // Show summary cards (always visible)
+            const summaryCards = document.getElementById('summary-cards');
+            if (summaryCards) {
+                summaryCards.classList.remove('hidden');
+                summaryCards.classList.add('grid');
             }
+            
+            // Show attendance content based on records
+            const table = document.getElementById('attendance-table');
+            const cards = document.getElementById('attendance-cards');
+            const empty = document.getElementById('empty-state');
+            
+            if (currentRecords && currentRecords.length > 0) {
+                if (table) table.classList.remove('hidden');
+                if (cards) cards.classList.remove('hidden');
+                if (empty) empty.classList.add('hidden');
+            } else {
+                if (table) table.classList.add('hidden');
+                if (cards) cards.classList.add('hidden');
+                if (empty) empty.classList.remove('hidden');
+            }
+            
+            console.log('[DEBUG] hideSkeletons complete, records:', currentRecords?.length || 0);
         }
 
         // ========================================
@@ -1108,34 +1134,32 @@
         // ========================================
         async function refreshData() {
             const icon = document.getElementById('refresh-icon');
-            icon.classList.add('fa-spin');
+            if (icon) icon.classList.add('fa-spin');
             
             // Show skeleton loading
             showSkeletons();
             
-            // Create timeout promise (10 second max)
-            const timeout = new Promise((_, reject) => 
-                setTimeout(() => reject(new Error('Request timeout')), 10000)
-            );
-            
             try {
-                // Race between data loading and timeout
+                // Load data with 15-second timeout
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Request timeout')), 15000)
+                );
+                
                 await Promise.race([
                     Promise.all([
-                        loadAttendance(),
-                        loadStats()
+                        loadAttendance().catch(e => console.error('[ERROR] loadAttendance:', e)),
+                        loadStats().catch(e => console.error('[ERROR] loadStats:', e))
                     ]),
-                    timeout
+                    timeoutPromise
                 ]);
+                
             } catch (err) {
-                console.error('[ERROR] Data loading failed or timed out:', err.message);
-                // Show empty state on timeout/error
-                showEmptyState();
-            } finally {
-                icon.classList.remove('fa-spin');
-                // Hide skeletons after load
-                hideSkeletons();
+                console.error('[ERROR] Data loading failed:', err.message);
             }
+            
+            // Always hide skeletons and show content
+            if (icon) icon.classList.remove('fa-spin');
+            hideSkeletons();
         }
 
         // ========================================
@@ -1182,9 +1206,13 @@
         //          GET /api/attendance/range/query?from=&to= (range)
         // ========================================
         async function loadAttendance() {
+            console.log('[DEBUG] loadAttendance started');
             try {
-                const section = document.getElementById('section-select').value;
+                const sectionSelect = document.getElementById('section-select');
+                const section = sectionSelect ? sectionSelect.value : '';
                 const { from, to } = getDateRange();
+                
+                console.log('[DEBUG] Date range:', from, 'to', to, 'Section:', section || 'all');
                 
                 let url;
                 let queryParams = [];
@@ -1204,7 +1232,7 @@
                     queryParams.push(`section=${encodeURIComponent(section)}`);
                 } else {
                     // All sections for this teacher
-                    const sections = currentUser.sections_handled || [];
+                    const sections = currentUser?.sections_handled || [];
                     if (sections.length > 0) {
                         queryParams.push(`sections=${encodeURIComponent(sections.join(','))}`);
                     }
@@ -1217,36 +1245,34 @@
                 console.log('[DEBUG] Fetching attendance:', url);
                 
                 const res = await fetch(url, { credentials: 'include' });
+                console.log('[DEBUG] Attendance response status:', res.status);
                 
                 if (!res.ok) {
                     console.error('[ERROR] Attendance fetch failed:', res.status);
-                    showEmptyState();
                     return;
                 }
                 
                 const data = await res.json();
+                console.log('[DEBUG] Attendance data:', data.success, 'records:', data.records?.length || 0);
                 
                 if (!data.success) {
-                    showEmptyState();
                     return;
                 }
                 
                 currentRecords = data.records || [];
-                document.getElementById('record-count').textContent = `${currentRecords.length} records`;
+                const recordCount = document.getElementById('record-count');
+                if (recordCount) recordCount.textContent = `${currentRecords.length} records`;
                 
                 if (currentRecords.length === 0) {
-                    showEmptyState();
                     return;
                 }
                 
                 renderTable(currentRecords);
-                
-                // Update local stats from current records
                 updateLocalStats();
+                console.log('[DEBUG] loadAttendance complete');
                 
             } catch (e) {
                 console.error('[ERROR] Load attendance failed:', e);
-                showEmptyState();
             }
         }
 
@@ -1464,9 +1490,11 @@
         // Respects academic calendar status
         // ========================================
         async function loadStats() {
+            console.log('[DEBUG] loadStats started');
             try {
                 // Get current filters
-                const section = document.getElementById('section-select').value;
+                const sectionSelect = document.getElementById('section-select');
+                const section = sectionSelect ? sectionSelect.value : '';
                 const today = new Date().toISOString().split('T')[0];
                 
                 // Build summary URL with filters
@@ -1474,11 +1502,13 @@
                 if (section) {
                     summaryUrl += `&section=${encodeURIComponent(section)}`;
                 } else {
-                    const sections = currentUser.sections_handled || [];
+                    const sections = currentUser?.sections_handled || [];
                     if (sections.length > 0) {
                         summaryUrl += `&sections=${encodeURIComponent(sections.join(','))}`;
                     }
                 }
+                
+                console.log('[DEBUG] Fetching stats from:', summaryUrl);
                 
                 // Fetch both general stats and summary in parallel
                 const [statsRes, summaryRes] = await Promise.all([
@@ -1486,12 +1516,17 @@
                     fetch(summaryUrl, { credentials: 'include' })
                 ]);
                 
+                console.log('[DEBUG] Stats responses:', statsRes.status, summaryRes.status);
+                
                 const statsData = await statsRes.json();
                 const summaryData = await summaryRes.json();
                 
+                console.log('[DEBUG] Stats data:', statsData.success, 'Summary:', summaryData.success);
+                
                 // General stats (total students, attendance rate from global)
                 if (statsData.success) {
-                    document.getElementById('total-students').textContent = statsData.stats.students || 0;
+                    const totalStudents = document.getElementById('total-students');
+                    if (totalStudents) totalStudents.textContent = statsData.stats?.students || 0;
                 }
                 
                 // Check calendar status first

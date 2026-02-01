@@ -284,10 +284,11 @@
         ======================================== -->
         <div class="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-                <h2 class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800">
-                    Welcome back, <span id="welcome-name" class="text-feu-green">Teacher</span>!
+                <p class="text-sm sm:text-base lg:text-lg text-gray-600 font-medium">Welcome back,</p>
+                <h2 class="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mt-0.5">
+                    <span id="welcome-name" class="text-feu-green">Teacher</span>!
                 </h2>
-                <p class="text-gray-500 text-xs sm:text-sm mt-0.5 sm:mt-1">
+                <p class="text-gray-500 text-xs sm:text-sm mt-1 sm:mt-2">
                     <span id="current-section-display">All Sections</span> • 
                     <span id="current-date-display">Today</span>
                 </p>
@@ -831,12 +832,19 @@
         // ========================================
         function populateSectionDropdown() {
             const select = document.getElementById('section-select');
-            const sections = currentUser.sections_handled || [];
+            if (!select) {
+                console.error('[ERROR] Section select element not found');
+                return;
+            }
+            
+            const sections = currentUser?.sections_handled || [];
+            console.log('[DEBUG] Sections handled:', sections);
             
             if (sections.length === 0) {
                 // No sections assigned - show empty state
                 select.innerHTML = '<option value="">No sections assigned</option>';
-                document.getElementById('current-section-display').textContent = 'No sections';
+                const display = document.getElementById('current-section-display');
+                if (display) display.textContent = 'No sections';
                 return;
             }
             
@@ -846,7 +854,9 @@
                 html += `<option value="${s}">${s}</option>`;
             });
             select.innerHTML = html;
-            document.getElementById('current-section-display').textContent = 'All Sections';
+            
+            const display = document.getElementById('current-section-display');
+            if (display) display.textContent = 'All Sections';
         }
 
         function onSectionChange() {

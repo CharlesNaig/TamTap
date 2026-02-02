@@ -16,9 +16,11 @@
     "express": "^4.18.2",
     "express-session": "^1.18.0",
     "mongodb": "^6.3.0",
+    "multer": "^2.0.2",
     "pdfkit": "^0.15.2",
     "signale": "^1.4.0",
-    "socket.io": "^4.7.4"
+    "socket.io": "^4.7.4",
+    "xlsx": "^0.18.5"
   },
   "engines": {
     "node": ">=20.0.0"

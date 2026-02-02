@@ -193,6 +193,10 @@
                         class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
                     <i class="fas fa-users mr-1 sm:mr-2"></i>Sections
                 </button>
+                <button onclick="showTab('schedules')" id="tab-schedules"
+                        class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
+                    <i class="fas fa-calendar-alt mr-1 sm:mr-2"></i>Schedules
+                </button>
             </div>
         </div>
 
@@ -308,6 +312,57 @@
                 </div>
             </div>
         </div>
+
+        <!-- Schedules Tab -->
+        <div id="panel-schedules" class="tab-panel hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-700"><i class="fas fa-calendar-alt mr-2 text-feu-green"></i>Section Schedules</h2>
+                        <p class="text-xs sm:text-sm text-gray-500">Configure arrival time and grace periods per section</p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <label class="flex-1 sm:flex-none bg-yellow-500 hover:bg-yellow-600 text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors cursor-pointer text-center">
+                            <i class="fas fa-file-upload mr-1"></i>Import XLSX
+                            <input type="file" id="schedule-xlsx-input" accept=".xlsx,.xls" onchange="importScheduleXLSX()" class="hidden">
+                        </label>
+                        <button onclick="showAddScheduleModal()" class="flex-1 sm:flex-none bg-feu-green hover:bg-feu-green-dark text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors">
+                            <i class="fas fa-plus mr-1"></i>Add Schedule
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Desktop Table -->
+                <div class="overflow-x-auto hidden sm:block">
+                    <table class="w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adviser</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time In</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Late After</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Absent After</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedules-table-skeleton" class="divide-y divide-gray-200">
+                            <tr><td class="px-4 py-3"><div class="skeleton skeleton-text w-16"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-24"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-16"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-14"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-14"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-16"></div></td></tr>
+                            <tr><td class="px-4 py-3"><div class="skeleton skeleton-text w-14"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-20"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-16"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-14"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-14"></div></td><td class="px-4 py-3"><div class="skeleton skeleton-text w-16"></div></td></tr>
+                        </tbody>
+                        <tbody id="schedules-table" class="divide-y divide-gray-200 hidden">
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mobile Cards -->
+                <div id="schedules-mobile-skeleton" class="sm:hidden p-3 space-y-3">
+                    <div class="border rounded-lg p-3"><div class="skeleton skeleton-text w-20 mb-2"></div><div class="skeleton skeleton-text-sm w-32"></div></div>
+                    <div class="border rounded-lg p-3"><div class="skeleton skeleton-text w-16 mb-2"></div><div class="skeleton skeleton-text-sm w-28"></div></div>
+                </div>
+                <div id="schedules-mobile" class="sm:hidden p-3 space-y-3 hidden">
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Add Teacher Modal -->
@@ -416,6 +471,89 @@
                 </div>
                 <div class="flex gap-2 pt-2">
                     <button type="button" onclick="closeModal('edit-teacher-modal')" class="flex-1 border px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded text-sm transition-colors">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add Schedule Modal -->
+    <div id="add-schedule-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Add Schedule">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-plus mr-2 text-feu-green"></i>Add Section Schedule</h3>
+                <button onclick="closeModal('add-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
+            </div>
+            <form id="add-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
+                    <select name="section" required class="w-full border rounded px-3 py-2 text-sm" id="add-schedule-section">
+                        <option value="">Select Section</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adviser (optional)</label>
+                    <select name="adviser_id" class="w-full border rounded px-3 py-2 text-sm" id="add-schedule-adviser">
+                        <option value="">No Adviser</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Time In (24h format)</label>
+                    <input type="time" name="time_in" value="07:30" required class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Late After (min)</label>
+                        <input type="number" name="grace_period" value="20" min="0" max="120" required class="w-full border rounded px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Absent After (min)</label>
+                        <input type="number" name="absent_threshold" value="60" min="1" max="300" required class="w-full border rounded px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('add-schedule-modal')" class="flex-1 border px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">Cancel</button>
+                    <button type="submit" class="flex-1 bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded text-sm transition-colors">Add Schedule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Schedule Modal -->
+    <div id="edit-schedule-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Edit Schedule">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+            <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-check mr-2 text-feu-green"></i>Edit Schedule</h3>
+                <button onclick="closeModal('edit-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
+            </div>
+            <form id="edit-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+                <input type="hidden" name="section">
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
+                    <input type="text" id="edit-schedule-section-display" disabled class="w-full border rounded px-3 py-2 text-sm bg-gray-100">
+                </div>
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adviser</label>
+                    <select name="adviser_id" class="w-full border rounded px-3 py-2 text-sm" id="edit-schedule-adviser">
+                        <option value="">No Adviser</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Time In (24h format)</label>
+                    <input type="time" name="time_in" required class="w-full border rounded px-3 py-2 text-sm">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Late After (min)</label>
+                        <input type="number" name="grace_period" min="0" max="120" required class="w-full border rounded px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Absent After (min)</label>
+                        <input type="number" name="absent_threshold" min="1" max="300" required class="w-full border rounded px-3 py-2 text-sm">
+                    </div>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal('edit-schedule-modal')" class="flex-1 border px-4 py-2 rounded text-sm hover:bg-gray-50 transition-colors">Cancel</button>
                     <button type="submit" class="flex-1 bg-feu-green hover:bg-feu-green-dark text-white px-4 py-2 rounded text-sm transition-colors">Save Changes</button>
                 </div>
             </form>
@@ -543,6 +681,7 @@
             await loadSections();
             loadTeachers();
             loadStudents();
+            loadSchedules();
         }
 
         async function loadSections() {
@@ -721,6 +860,273 @@
                 console.error('Load students error:', e);
             }
         }
+
+        // ========================================
+        // SCHEDULES
+        // ========================================
+        let allSchedules = [];
+        let allTeachers = [];
+
+        async function loadSchedules() {
+            try {
+                // Load schedules
+                const res = await fetch('/api/schedules', { credentials: 'include' });
+                const data = await res.json();
+                
+                // Load teachers for adviser dropdown
+                const teachersRes = await fetch('/api/admin/teachers', { credentials: 'include' });
+                const teachersData = await teachersRes.json();
+                if (teachersData.success) {
+                    allTeachers = teachersData.data;
+                }
+                
+                // Hide skeleton, show table
+                document.getElementById('schedules-table-skeleton').classList.add('hidden');
+                document.getElementById('schedules-table').classList.remove('hidden');
+                document.getElementById('schedules-mobile-skeleton').classList.add('hidden');
+                document.getElementById('schedules-mobile').classList.remove('hidden');
+                
+                if (data.success) {
+                    allSchedules = data.data;
+                    renderSchedules();
+                }
+            } catch (e) {
+                console.error('Load schedules error:', e);
+            }
+        }
+
+        function renderSchedules() {
+            const tbody = document.getElementById('schedules-table');
+            const mobile = document.getElementById('schedules-mobile');
+            
+            if (allSchedules.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No schedules configured. Click "Add Schedule" to create one.</td></tr>';
+                mobile.innerHTML = '<div class="text-center text-gray-400 py-6">No schedules configured</div>';
+                return;
+            }
+            
+            // Desktop table
+            tbody.innerHTML = allSchedules.map(s => {
+                const adviser = allTeachers.find(t => t._id === s.adviser_id);
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-3 lg:px-4 py-3">
+                            <span class="inline-flex items-center gap-1.5">
+                                <i class="fas fa-users text-feu-green text-xs"></i>
+                                <span class="font-medium">${s.section}</span>
+                            </span>
+                        </td>
+                        <td class="px-3 lg:px-4 py-3 text-gray-600">${adviser ? adviser.name : '<span class="text-gray-400">—</span>'}</td>
+                        <td class="px-3 lg:px-4 py-3 font-mono">${s.time_in || '07:30'}</td>
+                        <td class="px-3 lg:px-4 py-3">${s.grace_period || 20} min</td>
+                        <td class="px-3 lg:px-4 py-3">${s.absent_threshold || 60} min</td>
+                        <td class="px-3 lg:px-4 py-3">
+                            <div class="flex items-center gap-1">
+                                <button onclick="editSchedule('${s.section}')" class="text-blue-600 hover:text-blue-800 p-1.5" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="deleteSchedule('${s.section}')" class="text-red-600 hover:text-red-800 p-1.5" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Mobile cards
+            mobile.innerHTML = allSchedules.map(s => {
+                const adviser = allTeachers.find(t => t._id === s.adviser_id);
+                return `
+                    <div class="border rounded-lg p-3">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h4 class="font-semibold text-gray-800">${s.section}</h4>
+                                <p class="text-xs text-gray-500">${adviser ? adviser.name : 'No adviser'}</p>
+                            </div>
+                            <div class="flex gap-1">
+                                <button onclick="editSchedule('${s.section}')" class="text-blue-600 p-1"><i class="fas fa-edit"></i></button>
+                                <button onclick="deleteSchedule('${s.section}')" class="text-red-600 p-1"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                            <div><span class="text-gray-400">Time:</span> ${s.time_in || '07:30'}</div>
+                            <div><span class="text-gray-400">Late:</span> ${s.grace_period || 20}m</div>
+                            <div><span class="text-gray-400">Absent:</span> ${s.absent_threshold || 60}m</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function showAddScheduleModal() {
+            document.getElementById('add-schedule-form').reset();
+            
+            // Populate section dropdown (exclude already configured)
+            const configuredSections = allSchedules.map(s => s.section);
+            const availableSections = allSections.filter(s => !configuredSections.includes(s.name));
+            const sectionSelect = document.getElementById('add-schedule-section');
+            sectionSelect.innerHTML = '<option value="">Select Section</option>' + 
+                availableSections.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+            
+            // Populate adviser dropdown
+            populateAdviserDropdown('add-schedule-adviser');
+            
+            showModal('add-schedule-modal');
+        }
+
+        function populateAdviserDropdown(elementId, selectedId = '') {
+            const select = document.getElementById(elementId);
+            select.innerHTML = '<option value="">No Adviser</option>' + 
+                allTeachers.map(t => `<option value="${t._id}" ${t._id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('');
+        }
+
+        function editSchedule(section) {
+            const schedule = allSchedules.find(s => s.section === section);
+            if (!schedule) return;
+            
+            const form = document.getElementById('edit-schedule-form');
+            form.querySelector('input[name="section"]').value = schedule.section;
+            document.getElementById('edit-schedule-section-display').value = schedule.section;
+            form.querySelector('input[name="time_in"]').value = schedule.time_in || '07:30';
+            form.querySelector('input[name="grace_period"]').value = schedule.grace_period || 20;
+            form.querySelector('input[name="absent_threshold"]').value = schedule.absent_threshold || 60;
+            
+            populateAdviserDropdown('edit-schedule-adviser', schedule.adviser_id || '');
+            
+            showModal('edit-schedule-modal');
+        }
+
+        async function deleteSchedule(section) {
+            const result = await Swal.fire({
+                title: 'Delete Schedule?',
+                text: `This will remove the schedule for ${section}`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Delete',
+                confirmButtonColor: '#dc2626'
+            });
+            
+            if (!result.isConfirmed) return;
+            
+            try {
+                const res = await fetch(`/api/schedules/${encodeURIComponent(section)}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Deleted', text: 'Schedule removed', timer: 1500, showConfirmButton: false });
+                    loadSchedules();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: e.message, confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        async function importScheduleXLSX() {
+            const input = document.getElementById('schedule-xlsx-input');
+            if (!input.files.length) return;
+            
+            const formData = new FormData();
+            formData.append('file', input.files[0]);
+            
+            try {
+                Swal.fire({ title: 'Importing...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                
+                const res = await fetch('/api/schedules/import', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Import Complete',
+                        text: `${data.imported} schedules imported, ${data.skipped} skipped`,
+                        confirmButtonColor: '#0a8249'
+                    });
+                    loadSchedules();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Import Failed', text: e.message, confirmButtonColor: '#0a8249' });
+            }
+            
+            input.value = '';
+        }
+
+        // Add Schedule Form
+        document.getElementById('add-schedule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const payload = {
+                section: form.section.value,
+                adviser_id: form.adviser_id.value || null,
+                time_in: form.time_in.value,
+                grace_period: parseInt(form.grace_period.value),
+                absent_threshold: parseInt(form.absent_threshold.value)
+            };
+            
+            try {
+                const res = await fetch('/api/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Added', text: 'Schedule created', timer: 1500, showConfirmButton: false });
+                    closeModal('add-schedule-modal');
+                    loadSchedules();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: e.message, confirmButtonColor: '#0a8249' });
+            }
+        });
+
+        // Edit Schedule Form
+        document.getElementById('edit-schedule-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const section = form.section.value;
+            const payload = {
+                adviser_id: form.adviser_id.value || null,
+                time_in: form.time_in.value,
+                grace_period: parseInt(form.grace_period.value),
+                absent_threshold: parseInt(form.absent_threshold.value)
+            };
+            
+            try {
+                const res = await fetch(`/api/schedules/${encodeURIComponent(section)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Updated', text: 'Schedule updated', timer: 1500, showConfirmButton: false });
+                    closeModal('edit-schedule-modal');
+                    loadSchedules();
+                } else {
+                    throw new Error(data.error);
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: e.message, confirmButtonColor: '#0a8249' });
+            }
+        });
 
         // ========================================
         // MODALS

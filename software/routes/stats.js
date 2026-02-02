@@ -10,34 +10,93 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * LATE THRESHOLD CONFIGURATION
+ * DEFAULT LATE THRESHOLD CONFIGURATION (fallback if no section schedule)
  * Students arriving after this time are marked as late
  * Format: 24-hour (HH:MM)
  */
-const LATE_THRESHOLD = {
+const DEFAULT_LATE_THRESHOLD = {
     AM: '07:30',  // AM session: late if after 7:30 AM
     PM: '13:00'   // PM session: late if after 1:00 PM
 };
 
+const DEFAULT_GRACE_PERIOD = 20;      // Minutes after scheduled start = Late
+const DEFAULT_ABSENT_THRESHOLD = 60;  // Minutes after scheduled start = Absent
+
 /**
- * Helper: Check if a time is late based on session
- * @param {string} time - Time string (HH:MM or HH:MM:SS)
+ * Get day name from date string
+ */
+function getDayName(dateStr) {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const date = new Date(dateStr + 'T00:00:00');
+    return days[date.getDay()];
+}
+
+/**
+ * Convert time string (HH:MM or HH:MM:SS) to minutes since midnight
+ */
+function timeToMinutes(time) {
+    if (!time) return null;
+    const parts = time.split(':');
+    if (parts.length < 2) return null;
+    return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+}
+
+/**
+ * Helper: Determine attendance status based on arrival time and section schedule
+ * @param {string} arrivalTime - Time string (HH:MM or HH:MM:SS)
  * @param {string} session - 'AM' or 'PM'
- * @returns {boolean} True if late
+ * @param {Object} sectionSchedule - Section schedule object (or null for default)
+ * @param {string} dayName - Day of week (monday, tuesday, etc.)
+ * @returns {string} 'present', 'late', or 'absent'
+ */
+function getAttendanceStatus(arrivalTime, session, sectionSchedule, dayName) {
+    if (!arrivalTime) return 'absent';
+    
+    const arrivalMinutes = timeToMinutes(arrivalTime);
+    if (arrivalMinutes === null) return 'present';  // Fallback if can't parse
+    
+    // Get scheduled start time
+    let scheduledStart = null;
+    let gracePeriod = DEFAULT_GRACE_PERIOD;
+    let absentThreshold = DEFAULT_ABSENT_THRESHOLD;
+    
+    if (sectionSchedule && sectionSchedule.weekly_schedule && sectionSchedule.weekly_schedule[dayName]) {
+        const daySchedule = sectionSchedule.weekly_schedule[dayName];
+        scheduledStart = timeToMinutes(daySchedule.start);
+        gracePeriod = sectionSchedule.grace_period_minutes || DEFAULT_GRACE_PERIOD;
+        absentThreshold = sectionSchedule.absent_threshold_minutes || DEFAULT_ABSENT_THRESHOLD;
+    } else {
+        // Fallback to default thresholds
+        const threshold = DEFAULT_LATE_THRESHOLD[session] || DEFAULT_LATE_THRESHOLD.AM;
+        scheduledStart = timeToMinutes(threshold);
+    }
+    
+    if (scheduledStart === null) {
+        // Can't determine schedule, use session-based fallback
+        const threshold = DEFAULT_LATE_THRESHOLD[session] || DEFAULT_LATE_THRESHOLD.AM;
+        scheduledStart = timeToMinutes(threshold);
+    }
+    
+    // Calculate lateness
+    const lateBy = arrivalMinutes - scheduledStart;
+    
+    if (lateBy <= 0) {
+        return 'present';  // On time or early
+    } else if (lateBy <= gracePeriod) {
+        return 'late';     // Within grace period = Late
+    } else if (lateBy > absentThreshold) {
+        return 'absent';   // Beyond absent threshold
+    } else {
+        return 'late';     // Between grace and absent threshold = still Late
+    }
+}
+
+/**
+ * Legacy helper for backward compatibility
  */
 function isLate(time, session) {
-    if (!time || !session) return false;
-    
-    // Normalize time to HH:MM
-    const timeParts = time.split(':');
-    if (timeParts.length < 2) return false;
-    
-    const timeMinutes = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
-    const threshold = LATE_THRESHOLD[session] || LATE_THRESHOLD.AM;
-    const thresholdParts = threshold.split(':');
-    const thresholdMinutes = parseInt(thresholdParts[0]) * 60 + parseInt(thresholdParts[1]);
-    
-    return timeMinutes > thresholdMinutes;
+    const status = getAttendanceStatus(time, session, null, null);
+    return status === 'late';
 }
 
 // Import calendar helper for day status checks
@@ -91,11 +150,12 @@ router.get('/summary', async (req, res) => {
                     totalStudents: 0,
                     onTime: 0,
                     late: 0,
+                    excused: 0,
                     absent: 0,  // No absences on non-instructional days
                     present: 0,
                     attendanceRate: null  // N/A for non-instructional days
                 },
-                thresholds: LATE_THRESHOLD
+                thresholds: DEFAULT_LATE_THRESHOLD
             });
         }
         
@@ -132,31 +192,55 @@ router.get('/summary', async (req, res) => {
             .find(attendanceQuery)
             .toArray();
         
-        // Count present and late
+        // Fetch section schedules for proper late/absent calculation
+        const dayName = getDayName(dateParam);
+        const sectionSchedules = {};
+        
+        const allSchedules = await db.collection('schedules').find({}).toArray();
+        for (const sched of allSchedules) {
+            sectionSchedules[sched.section] = sched;
+        }
+        
+        // Count by status
         let onTime = 0;
         let late = 0;
+        let excused = 0;
+        let markedAbsent = 0;  // Explicitly marked as absent
         
         for (const record of records) {
             // Check if record has explicit status
-            if (record.status === 'late') {
+            if (record.status === 'excused') {
+                excused++;
+            } else if (record.status === 'absent') {
+                markedAbsent++;
+            } else if (record.status === 'late') {
                 late++;
             } else if (record.status === 'present') {
                 onTime++;
             } else {
-                // No explicit status - compute based on time threshold
-                if (isLate(record.time, record.session)) {
+                // No explicit status - compute based on section schedule
+                const sectionSched = sectionSchedules[record.section] || null;
+                const computedStatus = getAttendanceStatus(record.time, record.session, sectionSched, dayName);
+                
+                if (computedStatus === 'late') {
                     late++;
+                } else if (computedStatus === 'absent') {
+                    markedAbsent++;
                 } else {
                     onTime++;
                 }
             }
         }
         
-        // Absent = total students - those who have attendance record
-        const presentCount = onTime + late;
-        const absent = Math.max(0, totalStudents - presentCount);
+        // Absent = total students - (on time + late + excused + marked absent)
+        const accountedFor = onTime + late + excused + markedAbsent;
+        const notTapped = Math.max(0, totalStudents - accountedFor);
+        const totalAbsent = markedAbsent + notTapped;  // Include both marked and not-tapped
         
-        // Calculate attendance rate
+        // Present = on time + late (not excused, not absent)
+        const presentCount = onTime + late;
+        
+        // Calculate attendance rate (present / total)
         const attendanceRate = totalStudents > 0
             ? Math.round((presentCount / totalStudents) * 100)
             : 0;
@@ -172,11 +256,14 @@ router.get('/summary', async (req, res) => {
                 totalStudents: totalStudents,
                 onTime: onTime,
                 late: late,
-                absent: absent,
+                excused: excused,
+                absent: totalAbsent,
                 present: presentCount,
                 attendanceRate: attendanceRate
             },
-            thresholds: LATE_THRESHOLD
+            thresholds: DEFAULT_LATE_THRESHOLD,
+            graceMinutes: DEFAULT_GRACE_PERIOD,
+            absentMinutes: DEFAULT_ABSENT_THRESHOLD
         });
         
     } catch (error) {

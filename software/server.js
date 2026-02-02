@@ -108,6 +108,10 @@ async function createIndexes() {
         // Settings index (for admin settings like Saturday classes)
         await db.collection('settings').createIndex({ key: 1 }, { unique: true });
         
+        // Schedules indexes (section schedules with adviser assignments)
+        await db.collection('schedules').createIndex({ section: 1 }, { unique: true });
+        await db.collection('schedules').createIndex({ adviser_id: 1 });
+        
         // Clean up: Remove nfc_id field from teachers where it's null (prevents sparse index issues)
         await db.collection('teachers').updateMany(
             { nfc_id: null },
@@ -219,6 +223,8 @@ const studentsRoutes = require('./routes/students');
 const statsRoutes = require('./routes/stats');
 const calendarRoutes = require('./routes/calendar');
 const exportRoutes = require('./routes/export');
+const schedulesRoutes = require('./routes/schedules');
+const notificationsRoutes = require('./routes/notifications');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -229,6 +235,8 @@ app.use('/api/students', studentsRoutes);
 app.use('/api/teachers', studentsRoutes);  // Reuse for teachers
 app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/schedules', schedulesRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // ========================================
 // DEBUG ENDPOINT (Remove in production)

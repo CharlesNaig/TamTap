@@ -20,6 +20,9 @@ import os
 import logging
 import threading
 import time
+import urllib.request
+import urllib.error
+import urllib.parse
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -50,6 +53,98 @@ DEFAULT_DB_FILE = os.path.join(_PROJECT_ROOT, "database", "tamtap_users.json")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
 MONGODB_NAME = os.getenv("MONGODB_NAME", "tamtap")
 MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
+
+# API Server URL for schedule fetch
+API_SERVER_URL = os.getenv("API_URL", "http://localhost:3000")
+API_TIMEOUT = 2  # seconds
+
+# Default schedule thresholds (used if API unavailable)
+DEFAULT_TIME_IN = "07:30"
+DEFAULT_GRACE_PERIOD = 20  # minutes after time_in = late
+DEFAULT_ABSENT_THRESHOLD = 60  # minutes after time_in = absent
+
+
+def time_to_minutes(time_str):
+    """Convert HH:MM or HH:MM:SS to minutes since midnight"""
+    parts = time_str.split(":")
+    hours = int(parts[0])
+    minutes = int(parts[1]) if len(parts) > 1 else 0
+    return hours * 60 + minutes
+
+
+def fetch_section_schedule(section):
+    """
+    Fetch today's schedule for a section from the API.
+    Returns: dict with time_in, grace_period, absent_threshold or None
+    """
+    if not section:
+        return None
+    
+    try:
+        url = f"{API_SERVER_URL}/api/schedules/today/{urllib.parse.quote(section)}"
+        req = urllib.request.Request(url, method='GET')
+        
+        with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
+            if response.status == 200:
+                data = json.loads(response.read().decode('utf-8'))
+                if data.get('success') and data.get('data'):
+                    schedule = data['data']
+                    logger.debug("Fetched schedule for %s: %s", section, schedule)
+                    return schedule
+    except Exception as e:
+        logger.debug("Failed to fetch schedule for %s: %s", section, e)
+    
+    return None
+
+
+def calculate_attendance_status(section, arrival_time_str=None):
+    """
+    Calculate attendance status based on section schedule and arrival time.
+    
+    Args:
+        section: Student's section name
+        arrival_time_str: HH:MM:SS format, defaults to current time
+    
+    Returns:
+        str: 'on_time', 'late', or 'absent'
+    """
+    # Get current time if not provided
+    if not arrival_time_str:
+        arrival_time_str = datetime.now().strftime("%H:%M:%S")
+    
+    arrival_minutes = time_to_minutes(arrival_time_str)
+    
+    # Try to get section schedule from API
+    schedule = fetch_section_schedule(section)
+    
+    if schedule:
+        time_in = schedule.get('time_in', DEFAULT_TIME_IN)
+        grace_period = schedule.get('grace_period', DEFAULT_GRACE_PERIOD)
+        absent_threshold = schedule.get('absent_threshold', DEFAULT_ABSENT_THRESHOLD)
+    else:
+        # Use defaults
+        time_in = DEFAULT_TIME_IN
+        grace_period = DEFAULT_GRACE_PERIOD
+        absent_threshold = DEFAULT_ABSENT_THRESHOLD
+    
+    time_in_minutes = time_to_minutes(time_in)
+    late_cutoff = time_in_minutes + grace_period
+    absent_cutoff = time_in_minutes + absent_threshold
+    
+    if arrival_minutes <= time_in_minutes + grace_period:
+        status = "on_time"
+    elif arrival_minutes <= absent_cutoff:
+        status = "late"
+    else:
+        status = "absent"
+    
+    logger.debug(
+        "Status calc: section=%s, arrival=%s (%dm), time_in=%s (%dm), grace=%dm, absent=%dm → %s",
+        section, arrival_time_str, arrival_minutes, time_in, time_in_minutes, 
+        grace_period, absent_threshold, status
+    )
+    
+    return status
 
 
 class Database:
@@ -591,6 +686,13 @@ class Database:
         
         now = datetime.now()
         photo_filename = os.path.basename(photo_path) if photo_path else None
+        time_str = now.strftime("%H:%M:%S")
+        
+        # Get section for status calculation
+        section = user_data.get("section", "") if user_data else ""
+        
+        # Calculate status based on section schedule
+        status = calculate_attendance_status(section, time_str)
         
         # Build record
         record = {
@@ -598,11 +700,11 @@ class Database:
             "name": name,
             "role": role,
             "date": now.strftime("%Y-%m-%d %H:%M:%S"),
-            "time": now.strftime("%H:%M:%S"),
+            "time": time_str,
             "photo": photo_filename,
             "photo_path": photo_path,
             "session": "AM" if now.hour < 12 else "PM",
-            "status": "present"
+            "status": status
         }
         
         # Add user details if available

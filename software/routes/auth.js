@@ -70,6 +70,15 @@ router.post('/login', async (req, res) => {
         // Check if password change is required
         const forcePasswordChange = user.forcePasswordChange === true;
 
+        // Determine role_type for teachers (admin, adviser, or teacher)
+        let role_type = role; // default: 'admin' or 'teacher'
+        let advised_section = null;
+        
+        if (role === 'teacher') {
+            role_type = user.role_type || 'teacher';  // admin, adviser, or teacher
+            advised_section = user.advised_section || null;
+        }
+
         // Create session
         req.session.user = {
             id: user._id.toString(),
@@ -77,11 +86,13 @@ router.post('/login', async (req, res) => {
             name: user.name || user.username,
             email: user.email || '',
             role: role,
+            role_type: role_type,  // More specific role (admin/adviser/teacher)
+            advised_section: advised_section,  // For advisers only
             sections_handled: user.sections_handled || [],  // For teachers
             forcePasswordChange: forcePasswordChange
         };
 
-        console.log(`[INFO] Login successful: ${username} (${role})${forcePasswordChange ? ' [password change required]' : ''}`);
+        console.log(`[INFO] Login successful: ${username} (${role}/${role_type})${forcePasswordChange ? ' [password change required]' : ''}`);
 
         res.json({
             success: true,
@@ -89,6 +100,8 @@ router.post('/login', async (req, res) => {
                 username: user.username,
                 name: user.name || user.username,
                 role: role,
+                role_type: role_type,
+                advised_section: advised_section,
                 sections_handled: user.sections_handled || [],
                 forcePasswordChange: forcePasswordChange
             }
@@ -136,6 +149,8 @@ router.get('/me', requireAuth, (req, res) => {
             name: req.user.name,
             email: req.user.email || '',
             role: req.user.role,
+            role_type: req.user.role_type || req.user.role,
+            advised_section: req.user.advised_section || null,
             sections_handled: req.user.sections_handled || [],
             forcePasswordChange: req.user.forcePasswordChange || false
         }

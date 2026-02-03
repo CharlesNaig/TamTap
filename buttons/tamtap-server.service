@@ -1,0 +1,22 @@
+[Unit]
+Description=TAMTAP Node.js Backend Server
+Documentation=https://github.com/CharlesNaig/TamTap
+After=network.target mongod.service
+
+[Service]
+Type=simple
+WorkingDirectory=/home/charles/TamTap/software
+ExecStart=/usr/bin/node /home/charles/TamTap/software/server.js
+Restart=on-failure
+RestartSec=5
+User=charles
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tamtap-server
+
+[Install]
+WantedBy=multi-user.target

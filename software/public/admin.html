@@ -319,15 +319,18 @@
                 <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                         <h2 class="text-base sm:text-lg font-semibold text-gray-700"><i class="fas fa-calendar-alt mr-2 text-feu-green"></i>Section Schedules</h2>
-                        <p class="text-xs sm:text-sm text-gray-500">Configure arrival time and grace periods per section</p>
+                        <p class="text-xs sm:text-sm text-gray-500">Configure daily class times and grace periods per section</p>
                     </div>
-                    <div class="flex gap-2 w-full sm:w-auto">
+                    <div class="flex gap-2 w-full sm:w-auto flex-wrap">
+                        <button onclick="downloadScheduleTemplate()" class="flex-1 sm:flex-none bg-gray-500 hover:bg-gray-600 text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors">
+                            <i class="fas fa-download mr-1"></i>Template
+                        </button>
                         <label class="flex-1 sm:flex-none bg-yellow-500 hover:bg-yellow-600 text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors cursor-pointer text-center">
-                            <i class="fas fa-file-upload mr-1"></i>Import XLSX
+                            <i class="fas fa-file-upload mr-1"></i>Import
                             <input type="file" id="schedule-xlsx-input" accept=".xlsx,.xls" onchange="importScheduleXLSX()" class="hidden">
                         </label>
                         <button onclick="showAddScheduleModal()" class="flex-1 sm:flex-none bg-feu-green hover:bg-feu-green-dark text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors">
-                            <i class="fas fa-plus mr-1"></i>Add Schedule
+                            <i class="fas fa-plus mr-1"></i>Add
                         </button>
                     </div>
                 </div>
@@ -339,9 +342,9 @@
                             <tr>
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Adviser</th>
-                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time In</th>
-                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Late After</th>
-                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Absent After</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Mon-Fri</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saturday</th>
+                                <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Grace</th>
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
@@ -479,28 +482,48 @@
 
     <!-- Add Schedule Modal -->
     <div id="add-schedule-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Add Schedule">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-lg fade-in max-h-[90vh] overflow-y-auto">
             <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-plus mr-2 text-feu-green"></i>Add Section Schedule</h3>
                 <button onclick="closeModal('add-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
             <form id="add-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
-                <div>
-                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
-                    <select name="section" required class="w-full border rounded px-3 py-2 text-sm" id="add-schedule-section">
-                        <option value="">Select Section</option>
-                    </select>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
+                        <select name="section" required class="w-full border rounded px-3 py-2 text-sm" id="add-schedule-section">
+                            <option value="">Select Section</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adviser (optional)</label>
+                        <select name="adviser_id" class="w-full border rounded px-3 py-2 text-sm" id="add-schedule-adviser">
+                            <option value="">No Adviser</option>
+                        </select>
+                    </div>
                 </div>
+                
+                <!-- Weekly Schedule Grid -->
                 <div>
-                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adviser (optional)</label>
-                    <select name="adviser_id" class="w-full border rounded px-3 py-2 text-sm" id="add-schedule-adviser">
-                        <option value="">No Adviser</option>
-                    </select>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Weekly Schedule</label>
+                    <div class="border rounded overflow-hidden">
+                        <div class="grid grid-cols-3 gap-0 bg-gray-100 text-xs font-medium text-gray-600 text-center">
+                            <div class="py-2 border-r">Day</div>
+                            <div class="py-2 border-r">Start</div>
+                            <div class="py-2">End</div>
+                        </div>
+                        <div id="add-schedule-days" class="divide-y">
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Monday</div><input type="time" name="mon_start" value="07:00" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="mon_end" value="17:00" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Tuesday</div><input type="time" name="tue_start" value="07:00" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="tue_end" value="17:00" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Wednesday</div><input type="time" name="wed_start" value="07:00" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="wed_end" value="17:00" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Thursday</div><input type="time" name="thu_start" value="07:00" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="thu_end" value="17:00" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Friday</div><input type="time" name="fri_start" value="07:00" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="fri_end" value="16:00" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center bg-yellow-50"><div class="py-2 px-2 text-sm font-medium text-yellow-700">Saturday</div><input type="time" name="sat_start" class="border-l border-r px-2 py-2 text-sm" placeholder="None"><input type="time" name="sat_end" class="px-2 py-2 text-sm" placeholder="None"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Leave Saturday blank if no Saturday classes</p>
                 </div>
-                <div>
-                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Time In (24h format)</label>
-                    <input type="time" name="time_in" value="07:30" required class="w-full border rounded px-3 py-2 text-sm">
-                </div>
+                
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Late After (min)</label>
@@ -521,27 +544,47 @@
 
     <!-- Edit Schedule Modal -->
     <div id="edit-schedule-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-3 sm:p-4" role="dialog" aria-modal="true" aria-label="Edit Schedule">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-md fade-in max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-[320px] xs:max-w-sm sm:max-w-lg fade-in max-h-[90vh] overflow-y-auto">
             <div class="p-3 sm:p-4 border-b flex justify-between items-center sticky top-0 bg-white">
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-check mr-2 text-feu-green"></i>Edit Schedule</h3>
                 <button onclick="closeModal('edit-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
             <form id="edit-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <input type="hidden" name="section">
-                <div>
-                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
-                    <input type="text" id="edit-schedule-section-display" disabled class="w-full border rounded px-3 py-2 text-sm bg-gray-100">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
+                        <input type="text" id="edit-schedule-section-display" disabled class="w-full border rounded px-3 py-2 text-sm bg-gray-100">
+                    </div>
+                    <div>
+                        <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adviser</label>
+                        <select name="adviser_id" class="w-full border rounded px-3 py-2 text-sm" id="edit-schedule-adviser">
+                            <option value="">No Adviser</option>
+                        </select>
+                    </div>
                 </div>
+                
+                <!-- Weekly Schedule Grid -->
                 <div>
-                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Adviser</label>
-                    <select name="adviser_id" class="w-full border rounded px-3 py-2 text-sm" id="edit-schedule-adviser">
-                        <option value="">No Adviser</option>
-                    </select>
+                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Weekly Schedule</label>
+                    <div class="border rounded overflow-hidden">
+                        <div class="grid grid-cols-3 gap-0 bg-gray-100 text-xs font-medium text-gray-600 text-center">
+                            <div class="py-2 border-r">Day</div>
+                            <div class="py-2 border-r">Start</div>
+                            <div class="py-2">End</div>
+                        </div>
+                        <div id="edit-schedule-days" class="divide-y">
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Monday</div><input type="time" name="mon_start" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="mon_end" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Tuesday</div><input type="time" name="tue_start" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="tue_end" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Wednesday</div><input type="time" name="wed_start" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="wed_end" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Thursday</div><input type="time" name="thu_start" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="thu_end" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center"><div class="py-2 px-2 text-sm font-medium">Friday</div><input type="time" name="fri_start" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="fri_end" class="px-2 py-2 text-sm"></div>
+                            <div class="grid grid-cols-3 gap-0 items-center bg-yellow-50"><div class="py-2 px-2 text-sm font-medium text-yellow-700">Saturday</div><input type="time" name="sat_start" class="border-l border-r px-2 py-2 text-sm"><input type="time" name="sat_end" class="px-2 py-2 text-sm"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Leave Saturday blank if no Saturday classes</p>
                 </div>
-                <div>
-                    <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Time In (24h format)</label>
-                    <input type="time" name="time_in" required class="w-full border rounded px-3 py-2 text-sm">
-                </div>
+                
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Late After (min)</label>
@@ -900,14 +943,26 @@
             const mobile = document.getElementById('schedules-mobile');
             
             if (allSchedules.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No schedules configured. Click "Add Schedule" to create one.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No schedules configured. Click "Add" to create one.</td></tr>';
                 mobile.innerHTML = '<div class="text-center text-gray-400 py-6">No schedules configured</div>';
                 return;
+            }
+            
+            // Helper to format weekly schedule summary
+            function getScheduleSummary(ws) {
+                if (!ws) return { weekday: '07:00-17:00', sat: 'None' };
+                const mon = ws.monday || { start: '07:00', end: '17:00' };
+                const sat = ws.saturday || {};
+                return {
+                    weekday: `${mon.start || '07:00'}-${mon.end || '17:00'}`,
+                    sat: sat.start ? `${sat.start}-${sat.end}` : 'None'
+                };
             }
             
             // Desktop table
             tbody.innerHTML = allSchedules.map(s => {
                 const adviser = allTeachers.find(t => t._id === s.adviser_id);
+                const summary = getScheduleSummary(s.weekly_schedule);
                 return `
                     <tr class="hover:bg-gray-50">
                         <td class="px-3 lg:px-4 py-3">
@@ -917,9 +972,9 @@
                             </span>
                         </td>
                         <td class="px-3 lg:px-4 py-3 text-gray-600">${adviser ? adviser.name : '<span class="text-gray-400">—</span>'}</td>
-                        <td class="px-3 lg:px-4 py-3 font-mono">${s.time_in || '07:30'}</td>
-                        <td class="px-3 lg:px-4 py-3">${s.grace_period || 20} min</td>
-                        <td class="px-3 lg:px-4 py-3">${s.absent_threshold || 60} min</td>
+                        <td class="px-3 lg:px-4 py-3 font-mono text-sm">${summary.weekday}</td>
+                        <td class="px-3 lg:px-4 py-3 font-mono text-sm ${summary.sat === 'None' ? 'text-gray-400' : 'text-yellow-600'}">${summary.sat}</td>
+                        <td class="px-3 lg:px-4 py-3">${s.grace_period_minutes || 20} min</td>
                         <td class="px-3 lg:px-4 py-3">
                             <div class="flex items-center gap-1">
                                 <button onclick="editSchedule('${s.section}')" class="text-blue-600 hover:text-blue-800 p-1.5" title="Edit">
@@ -937,6 +992,7 @@
             // Mobile cards
             mobile.innerHTML = allSchedules.map(s => {
                 const adviser = allTeachers.find(t => t._id === s.adviser_id);
+                const summary = getScheduleSummary(s.weekly_schedule);
                 return `
                     <div class="border rounded-lg p-3">
                         <div class="flex justify-between items-start mb-2">
@@ -950,9 +1006,9 @@
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-2 text-xs text-gray-600">
-                            <div><span class="text-gray-400">Time:</span> ${s.time_in || '07:30'}</div>
-                            <div><span class="text-gray-400">Late:</span> ${s.grace_period || 20}m</div>
-                            <div><span class="text-gray-400">Absent:</span> ${s.absent_threshold || 60}m</div>
+                            <div><span class="text-gray-400">M-F:</span> ${summary.weekday}</div>
+                            <div><span class="text-gray-400">Sat:</span> ${summary.sat}</div>
+                            <div><span class="text-gray-400">Grace:</span> ${s.grace_period_minutes || 20}m</div>
                         </div>
                     </div>
                 `;
@@ -988,9 +1044,18 @@
             const form = document.getElementById('edit-schedule-form');
             form.querySelector('input[name="section"]').value = schedule.section;
             document.getElementById('edit-schedule-section-display').value = schedule.section;
-            form.querySelector('input[name="time_in"]').value = schedule.time_in || '07:30';
-            form.querySelector('input[name="grace_period"]').value = schedule.grace_period || 20;
-            form.querySelector('input[name="absent_threshold"]').value = schedule.absent_threshold || 60;
+            form.querySelector('input[name="grace_period"]').value = schedule.grace_period_minutes || 20;
+            form.querySelector('input[name="absent_threshold"]').value = schedule.absent_threshold_minutes || 60;
+            
+            // Populate weekly schedule
+            const ws = schedule.weekly_schedule || {};
+            const days = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+            const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            days.forEach((d, i) => {
+                const dayData = ws[dayNames[i]] || {};
+                form.querySelector(`input[name="${d}_start"]`).value = dayData.start || (d === 'sat' ? '' : '07:00');
+                form.querySelector(`input[name="${d}_end"]`).value = dayData.end || (d === 'sat' ? '' : '17:00');
+            });
             
             populateAdviserDropdown('edit-schedule-adviser', schedule.adviser_id || '');
             
@@ -1025,6 +1090,39 @@
             } catch (e) {
                 Swal.fire({ icon: 'error', title: 'Error', text: e.message, confirmButtonColor: '#0a8249' });
             }
+        }
+
+        function downloadScheduleTemplate() {
+            // CSV headers matching the import format
+            const headers = ['Section', 'Grade', 'Adviser Name', 'Mon Start', 'Mon End', 'Tue Start', 'Tue End', 'Wed Start', 'Wed End', 'Thu Start', 'Thu End', 'Fri Start', 'Fri End', 'Sat Start', 'Sat End'];
+            
+            // Example rows
+            const rows = [
+                ['ICT-A', '12', 'Juan Dela Cruz', '07:00', '17:00', '07:00', '17:00', '07:00', '17:00', '07:00', '17:00', '07:00', '16:00', '', ''],
+                ['ICT-B', '12', 'Maria Santos', '08:00', '17:00', '08:00', '17:00', '08:00', '17:00', '08:00', '17:00', '08:00', '16:00', '08:00', '12:00'],
+                ['STEM-A', '11', '', '07:30', '16:00', '07:30', '16:00', '07:30', '16:00', '07:30', '16:00', '07:30', '15:00', '', '']
+            ];
+            
+            // Build CSV content
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.join(',') + '\n';
+            });
+            
+            // Create download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'schedule-import-template.csv';
+            link.click();
+            URL.revokeObjectURL(link.href);
+            
+            Swal.fire({
+                icon: 'info',
+                title: 'Template Downloaded',
+                html: '<p class="text-sm text-gray-600">Open in Excel, edit your sections, then save as <strong>.xlsx</strong> before importing.</p><p class="text-xs text-gray-500 mt-2">Leave Sat Start/End blank for no Saturday classes.</p>',
+                confirmButtonColor: '#0a8249'
+            });
         }
 
         async function importScheduleXLSX() {
@@ -1066,12 +1164,23 @@
         document.getElementById('add-schedule-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const form = e.target;
+            
+            // Build weekly_schedule object
+            const weekly_schedule = {
+                monday:    { start: form.mon_start.value || '07:00', end: form.mon_end.value || '17:00' },
+                tuesday:   { start: form.tue_start.value || '07:00', end: form.tue_end.value || '17:00' },
+                wednesday: { start: form.wed_start.value || '07:00', end: form.wed_end.value || '17:00' },
+                thursday:  { start: form.thu_start.value || '07:00', end: form.thu_end.value || '17:00' },
+                friday:    { start: form.fri_start.value || '07:00', end: form.fri_end.value || '17:00' },
+                saturday:  { start: form.sat_start.value || null, end: form.sat_end.value || null }
+            };
+            
             const payload = {
                 section: form.section.value,
                 adviser_id: form.adviser_id.value || null,
-                time_in: form.time_in.value,
-                grace_period: parseInt(form.grace_period.value),
-                absent_threshold: parseInt(form.absent_threshold.value)
+                weekly_schedule,
+                grace_period_minutes: parseInt(form.grace_period.value),
+                absent_threshold_minutes: parseInt(form.absent_threshold.value)
             };
             
             try {
@@ -1100,11 +1209,22 @@
             e.preventDefault();
             const form = e.target;
             const section = form.section.value;
+            
+            // Build weekly_schedule object
+            const weekly_schedule = {
+                monday:    { start: form.mon_start.value || '07:00', end: form.mon_end.value || '17:00' },
+                tuesday:   { start: form.tue_start.value || '07:00', end: form.tue_end.value || '17:00' },
+                wednesday: { start: form.wed_start.value || '07:00', end: form.wed_end.value || '17:00' },
+                thursday:  { start: form.thu_start.value || '07:00', end: form.thu_end.value || '17:00' },
+                friday:    { start: form.fri_start.value || '07:00', end: form.fri_end.value || '17:00' },
+                saturday:  { start: form.sat_start.value || null, end: form.sat_end.value || null }
+            };
+            
             const payload = {
                 adviser_id: form.adviser_id.value || null,
-                time_in: form.time_in.value,
-                grace_period: parseInt(form.grace_period.value),
-                absent_threshold: parseInt(form.absent_threshold.value)
+                weekly_schedule,
+                grace_period_minutes: parseInt(form.grace_period.value),
+                absent_threshold_minutes: parseInt(form.absent_threshold.value)
             };
             
             try {

@@ -59,23 +59,43 @@ API_SERVER_URL = os.getenv("API_URL", "http://localhost:3000")
 API_TIMEOUT = 2  # seconds
 
 # Default schedule thresholds (used if API unavailable)
-DEFAULT_TIME_IN = "07:30"
-DEFAULT_GRACE_PERIOD = 20  # minutes after time_in = late
-DEFAULT_ABSENT_THRESHOLD = 60  # minutes after time_in = absent
+DEFAULT_START_TIME = "07:00"
+DEFAULT_END_TIME = "17:00"
+DEFAULT_GRACE_PERIOD = 20  # minutes after start = late
+DEFAULT_ABSENT_THRESHOLD = 60  # minutes after start = absent
+EARLY_BUFFER_MINUTES = 30  # Allow tap this many minutes before class starts
+
+
+# Decline reasons for hardware
+class DeclineReason:
+    NO_CLASSES_TODAY = "NO_CLASSES_TODAY"
+    TOO_EARLY = "TOO_EARLY"
+    CLASSES_ENDED = "CLASSES_ENDED"
 
 
 def time_to_minutes(time_str):
     """Convert HH:MM or HH:MM:SS to minutes since midnight"""
-    parts = time_str.split(":")
+    if not time_str:
+        return 0
+    parts = str(time_str).split(":")
     hours = int(parts[0])
     minutes = int(parts[1]) if len(parts) > 1 else 0
     return hours * 60 + minutes
 
 
+def get_day_name():
+    """Get current day name in lowercase (matches JS Date.getDay() convention)"""
+    # Python weekday(): 0=Monday, 6=Sunday
+    # JS getDay(): 0=Sunday, 6=Saturday
+    # We use the same names as the API: monday, tuesday, etc.
+    days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    return days[datetime.now().weekday()]
+
+
 def fetch_section_schedule(section):
     """
     Fetch today's schedule for a section from the API.
-    Returns: dict with time_in, grace_period, absent_threshold or None
+    Returns: dict with schedule (start/end), grace_period_minutes, absent_threshold_minutes
     """
     if not section:
         return None
@@ -87,51 +107,103 @@ def fetch_section_schedule(section):
         with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode('utf-8'))
-                if data.get('success') and data.get('data'):
-                    schedule = data['data']
-                    logger.debug("Fetched schedule for %s: %s", section, schedule)
-                    return schedule
+                if data.get('success'):
+                    logger.debug("Fetched schedule for %s: %s", section, data)
+                    return data
     except Exception as e:
         logger.debug("Failed to fetch schedule for %s: %s", section, e)
     
     return None
 
 
-def calculate_attendance_status(section, arrival_time_str=None):
+def validate_tap_time(section, arrival_time_str=None):
+    """
+    Validate if a student can tap at this time based on schedule.
+    
+    Returns:
+        tuple: (is_valid, decline_reason or None, schedule_data)
+        - is_valid: True if tap is allowed
+        - decline_reason: DeclineReason constant if declined, None if allowed
+        - schedule_data: The schedule data for further processing
+    """
+    if not arrival_time_str:
+        arrival_time_str = datetime.now().strftime("%H:%M:%S")
+    
+    arrival_minutes = time_to_minutes(arrival_time_str)
+    schedule_data = fetch_section_schedule(section)
+    
+    if not schedule_data:
+        # No schedule found - use defaults, allow tap
+        return True, None, {
+            'schedule': {'start': DEFAULT_START_TIME, 'end': DEFAULT_END_TIME},
+            'grace_period_minutes': DEFAULT_GRACE_PERIOD,
+            'absent_threshold_minutes': DEFAULT_ABSENT_THRESHOLD
+        }
+    
+    today_schedule = schedule_data.get('schedule')
+    
+    # No classes today (Sunday or Saturday with no schedule)
+    if not today_schedule or not today_schedule.get('start'):
+        logger.info("No classes scheduled for section %s today", section)
+        return False, DeclineReason.NO_CLASSES_TODAY, schedule_data
+    
+    start_time = today_schedule.get('start')
+    end_time = today_schedule.get('end')
+    
+    start_minutes = time_to_minutes(start_time)
+    end_minutes = time_to_minutes(end_time) if end_time else start_minutes + 600  # Default 10 hours
+    
+    # Check if too early (more than EARLY_BUFFER before class)
+    if arrival_minutes < start_minutes - EARLY_BUFFER_MINUTES:
+        logger.info("Too early for section %s: arrived %s, class starts %s", 
+                   section, arrival_time_str, start_time)
+        return False, DeclineReason.TOO_EARLY, schedule_data
+    
+    # Check if classes ended
+    if arrival_minutes > end_minutes:
+        logger.info("Classes ended for section %s: arrived %s, class ended %s",
+                   section, arrival_time_str, end_time)
+        return False, DeclineReason.CLASSES_ENDED, schedule_data
+    
+    # Tap is valid
+    return True, None, schedule_data
+
+
+def calculate_attendance_status(section, arrival_time_str=None, schedule_data=None):
     """
     Calculate attendance status based on section schedule and arrival time.
     
     Args:
         section: Student's section name
         arrival_time_str: HH:MM:SS format, defaults to current time
+        schedule_data: Pre-fetched schedule data (optional, to avoid duplicate API call)
     
     Returns:
         str: 'on_time', 'late', or 'absent'
     """
-    # Get current time if not provided
     if not arrival_time_str:
         arrival_time_str = datetime.now().strftime("%H:%M:%S")
     
     arrival_minutes = time_to_minutes(arrival_time_str)
     
-    # Try to get section schedule from API
-    schedule = fetch_section_schedule(section)
+    # Use provided schedule data or fetch
+    if not schedule_data:
+        schedule_data = fetch_section_schedule(section)
     
-    if schedule:
-        time_in = schedule.get('time_in', DEFAULT_TIME_IN)
-        grace_period = schedule.get('grace_period', DEFAULT_GRACE_PERIOD)
-        absent_threshold = schedule.get('absent_threshold', DEFAULT_ABSENT_THRESHOLD)
+    if schedule_data and schedule_data.get('schedule'):
+        start_time = schedule_data['schedule'].get('start', DEFAULT_START_TIME)
+        grace_period = schedule_data.get('grace_period_minutes', DEFAULT_GRACE_PERIOD)
+        absent_threshold = schedule_data.get('absent_threshold_minutes', DEFAULT_ABSENT_THRESHOLD)
     else:
-        # Use defaults
-        time_in = DEFAULT_TIME_IN
+        start_time = DEFAULT_START_TIME
         grace_period = DEFAULT_GRACE_PERIOD
         absent_threshold = DEFAULT_ABSENT_THRESHOLD
     
-    time_in_minutes = time_to_minutes(time_in)
-    late_cutoff = time_in_minutes + grace_period
-    absent_cutoff = time_in_minutes + absent_threshold
+    start_minutes = time_to_minutes(start_time)
+    late_cutoff = start_minutes + grace_period
+    absent_cutoff = start_minutes + absent_threshold
     
-    if arrival_minutes <= time_in_minutes + grace_period:
+    if arrival_minutes <= late_cutoff:
         status = "on_time"
     elif arrival_minutes <= absent_cutoff:
         status = "late"
@@ -139,9 +211,9 @@ def calculate_attendance_status(section, arrival_time_str=None):
         status = "absent"
     
     logger.debug(
-        "Status calc: section=%s, arrival=%s (%dm), time_in=%s (%dm), grace=%dm, absent=%dm → %s",
-        section, arrival_time_str, arrival_minutes, time_in, time_in_minutes, 
-        grace_period, absent_threshold, status
+        "Status: section=%s, arrival=%s (%dm), start=%s (%dm), grace=%dm → %s",
+        section, arrival_time_str, arrival_minutes, start_time, start_minutes, 
+        grace_period, status
     )
     
     return status

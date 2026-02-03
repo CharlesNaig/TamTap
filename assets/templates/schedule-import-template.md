@@ -1,65 +1,83 @@
 # Schedule Import Template
 
-## XLSX File Format
+## XLSX/CSV File Format
 
-Create an Excel file (`.xlsx`) with the following columns:
+Create a spreadsheet file with the following columns:
 
 | Column | Header Name | Required | Example |
 |--------|-------------|----------|---------|
-| A | `section` | ✅ Yes | `11-STEM-A` |
-| B | `time_in` | ✅ Yes | `07:30` |
-| C | `grace_period` | No (default: 20) | `20` |
-| D | `absent_threshold` | No (default: 60) | `60` |
+| A | `Section` | ✅ Yes | `11-STEM-A` |
+| B | `Grade` | No | `11` |
+| C | `Adviser Name` | No | `Juan Dela Cruz` |
+| D | `Mon Start` | No (default: 07:00) | `07:00` |
+| E | `Mon End` | No (default: 17:00) | `17:00` |
+| F | `Tue Start` | No | `07:00` |
+| G | `Tue End` | No | `17:00` |
+| H | `Wed Start` | No | `07:00` |
+| I | `Wed End` | No | `17:00` |
+| J | `Thu Start` | No | `07:00` |
+| K | `Thu End` | No | `17:00` |
+| L | `Fri Start` | No | `07:00` |
+| M | `Fri End` | No | `16:00` |
+| N | `Sat Start` | No (blank = no classes) | `08:00` |
+| O | `Sat End` | No | `12:00` |
 
 ## Example Data
 
-| section | time_in | grace_period | absent_threshold |
-|---------|---------|--------------|------------------|
-| 11-STEM-A | 07:30 | 20 | 60 |
-| 11-STEM-B | 07:30 | 20 | 60 |
-| 11-ABM-A | 07:45 | 15 | 45 |
-| 12-HUMSS-A | 08:00 | 20 | 60 |
-| 12-TVL-A | 07:30 | 30 | 90 |
+| Section | Grade | Adviser Name | Mon Start | Mon End | Tue Start | Tue End | Wed Start | Wed End | Thu Start | Thu End | Fri Start | Fri End | Sat Start | Sat End |
+|---------|-------|--------------|-----------|---------|-----------|---------|-----------|---------|-----------|---------|-----------|---------|-----------|---------|
+| ICT-A | 12 | Juan Dela Cruz | 07:00 | 17:00 | 07:00 | 17:00 | 07:00 | 17:00 | 07:00 | 17:00 | 07:00 | 16:00 | | |
+| ICT-B | 12 | Maria Santos | 08:00 | 17:00 | 08:00 | 17:00 | 08:00 | 17:00 | 08:00 | 17:00 | 08:00 | 16:00 | 08:00 | 12:00 |
+| STEM-A | 11 | | 07:30 | 16:00 | 07:30 | 16:00 | 07:30 | 16:00 | 07:30 | 16:00 | 07:30 | 15:00 | | |
 
 ## Column Definitions
 
-### `section` (Required)
-The section name. Must match exactly with sections in the students database.
-
-### `time_in` (Required)
-Expected arrival time in 24-hour format (HH:MM).
-- `07:30` = 7:30 AM
+### Time Format
+All times should be in **24-hour format (HH:MM)**:
+- `07:00` = 7:00 AM
 - `13:00` = 1:00 PM
+- `17:00` = 5:00 PM
 
-### `grace_period` (Optional)
-Minutes after `time_in` before a student is marked **LATE**.
-- Default: `20` minutes
-- Example: If `time_in = 07:30` and `grace_period = 20`, students arriving at 07:51 are marked late.
+### Saturday Classes
+- Leave `Sat Start` and `Sat End` **blank** if no Saturday classes
+- If Saturday has classes, fill in both start and end times
 
-### `absent_threshold` (Optional)
-Minutes after `time_in` before a student is marked **ABSENT**.
-- Default: `60` minutes
-- Example: If `time_in = 07:30` and `absent_threshold = 60`, students arriving at 08:31 are marked absent.
+## Card Decline Logic
 
-## Status Logic
+When a student taps their card, the system checks:
 
 ```
-arrival_time <= time_in + grace_period     → ON_TIME
-arrival_time <= time_in + absent_threshold → LATE
-arrival_time > time_in + absent_threshold  → ABSENT
+IF today is Saturday AND saturday schedule is blank:
+    → DECLINE: "No classes today"
+
+IF current_time < schedule_start - 30 minutes:
+    → DECLINE: "Too early"
+
+IF current_time > schedule_end:
+    → DECLINE: "Classes ended"
+
+OTHERWISE:
+    → Allow tap and calculate status (on_time, late, or absent)
 ```
 
-## Import Notes
+## Grace Period & Absent Threshold
 
-1. The first row must be the header row with column names.
-2. Duplicate sections will be skipped during import.
-3. Invalid time formats will cause the row to be skipped.
-4. Adviser assignment must be done manually in the admin panel after import.
-5. Sections not found in the students database can still have schedules configured.
+These are configured per-section in the Admin Panel (not in the import):
+- **Grace Period**: Minutes after start time before marked LATE (default: 20)
+- **Absent Threshold**: Minutes after start time before marked ABSENT (default: 60)
 
 ## How to Import
 
-1. Go to **Admin Panel** → **Schedules** tab
-2. Click **Import XLSX** button
-3. Select your `.xlsx` file
-4. Review the import summary (imported vs. skipped counts)
+1. Download the template from Admin Panel → Schedules → **Template** button
+2. Open the CSV in Excel
+3. Edit the data for your sections
+4. Save as `.xlsx` format (Excel Workbook)
+5. Go to Admin Panel → Schedules → **Import** button
+6. Select your `.xlsx` file
+7. Review the import summary
+
+## Notes
+
+- Duplicate sections will update existing schedules
+- Adviser assignment links to existing teacher accounts by name
+- Section names must match exactly with student records

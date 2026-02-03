@@ -6,7 +6,7 @@ After=network.target mongod.service
 [Service]
 Type=simple
 WorkingDirectory=/home/charles/TamTap/software
-ExecStart=/usr/bin/node /home/charles/TamTap/software/server.js
+ExecStart=/home/charles/.nvm/versions/node/v24.13.0/bin/node /home/charles/TamTap/software/server.js
 Restart=on-failure
 RestartSec=5
 User=charles

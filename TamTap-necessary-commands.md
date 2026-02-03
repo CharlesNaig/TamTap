@@ -87,6 +87,18 @@ python3 excel_id.py            # Excel ID generation/export utility
 ```bash
 ./startup.sh                   # Manual start via script
 sudo systemctl start tamtap    # Start via systemd
-sudo systemctl status tamtap   # Check service status
+g   # Check service status
 sudo systemctl restart tamtap  # Restart after code update
+```
+
+
+# checking back logs:
+```
+# Check all 3 services
+sudo systemctl status tamtap-buttons.service
+sudo systemctl status tamtap.service
+sudo systemctl status tamtap-server.service
+
+# View live button logs
+journalctl -u tamtap-buttons.service -f
 ```

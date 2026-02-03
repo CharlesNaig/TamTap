@@ -153,11 +153,8 @@ def validate_tap_time(section, arrival_time_str=None):
     start_minutes = time_to_minutes(start_time)
     end_minutes = time_to_minutes(end_time) if end_time else start_minutes + 600  # Default 10 hours
     
-    # Check if too early (more than EARLY_BUFFER before class)
-    if arrival_minutes < start_minutes - EARLY_BUFFER_MINUTES:
-        logger.info("Too early for section %s: arrived %s, class starts %s", 
-                   section, arrival_time_str, start_time)
-        return False, DeclineReason.TOO_EARLY, schedule_data
+    # Note: Early arrivals are allowed (no TOO_EARLY decline)
+    # Students can tap anytime before classes end
     
     # Check if classes ended
     if arrival_minutes > end_minutes:

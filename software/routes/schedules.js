@@ -47,6 +47,43 @@ const DEFAULT_GRACE_PERIOD = 20;      // Minutes after start = Late
 const DEFAULT_ABSENT_THRESHOLD = 60;  // Minutes after start = Absent
 
 /**
+ * Migrate old schedule format (time_in) to new weekly_schedule format
+ */
+function migrateScheduleFormat(schedule) {
+    if (schedule.weekly_schedule) {
+        return schedule; // Already migrated
+    }
+    
+    // Old format: time_in, grace_period, absent_threshold
+    const timeIn = schedule.time_in || '07:00';
+    
+    // Calculate end time: time_in + 9 hours (default school day)
+    const [hours, minutes] = timeIn.split(':').map(Number);
+    const endHours = Math.min(hours + 9, 23);
+    const endTime = `${String(endHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    
+    // Create weekly_schedule from old format
+    schedule.weekly_schedule = {
+        monday:    { start: timeIn, end: endTime },
+        tuesday:   { start: timeIn, end: endTime },
+        wednesday: { start: timeIn, end: endTime },
+        thursday:  { start: timeIn, end: endTime },
+        friday:    { start: timeIn, end: endTime },
+        saturday:  { start: null, end: null }  // Disabled by default
+    };
+    
+    // Migrate old field names
+    if (schedule.grace_period !== undefined && schedule.grace_period_minutes === undefined) {
+        schedule.grace_period_minutes = schedule.grace_period;
+    }
+    if (schedule.absent_threshold !== undefined && schedule.absent_threshold_minutes === undefined) {
+        schedule.absent_threshold_minutes = schedule.absent_threshold;
+    }
+    
+    return schedule;
+}
+
+/**
  * GET /api/schedules
  * List all section schedules
  * Admins see all, advisers/teachers see only their sections
@@ -76,10 +113,13 @@ router.get('/', async (req, res) => {
             .sort({ grade: 1, section: 1 })
             .toArray();
 
+        // Apply migration to ensure all schedules have weekly_schedule format
+        const migratedSchedules = schedules.map(migrateScheduleFormat);
+
         res.json({
             success: true,
-            count: schedules.length,
-            data: schedules
+            count: migratedSchedules.length,
+            data: migratedSchedules
         });
 
     } catch (error) {
@@ -155,9 +195,12 @@ router.get('/:section', async (req, res) => {
             });
         }
 
+        // Apply migration for old format schedules
+        const migratedSchedule = migrateScheduleFormat(schedule);
+
         res.json({
             success: true,
-            data: schedule
+            data: migratedSchedule
         });
 
     } catch (error) {
@@ -549,15 +592,17 @@ router.get('/today/:section', async (req, res) => {
             });
         }
 
-        const todaySchedule = schedule.weekly_schedule?.[today] || null;
+        // Apply migration for old format schedules
+        const migratedSchedule = migrateScheduleFormat(schedule);
+        const todaySchedule = migratedSchedule.weekly_schedule?.[today] || null;
 
         res.json({
             success: true,
             section,
             day: today,
             schedule: todaySchedule,
-            grace_period_minutes: schedule.grace_period_minutes || DEFAULT_GRACE_PERIOD,
-            absent_threshold_minutes: schedule.absent_threshold_minutes || DEFAULT_ABSENT_THRESHOLD
+            grace_period_minutes: migratedSchedule.grace_period_minutes || DEFAULT_GRACE_PERIOD,
+            absent_threshold_minutes: migratedSchedule.absent_threshold_minutes || DEFAULT_ABSENT_THRESHOLD
         });
 
     } catch (error) {

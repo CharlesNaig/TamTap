@@ -349,19 +349,37 @@ app.post('/api/hardware/attendance', (req, res) => {
 
 /**
  * POST /api/hardware/fail
- * Called by tamtap.py when attendance fails (no face detected)
+ * Called by tamtap.py when attendance fails (no face detected or schedule declined)
  */
 app.post('/api/hardware/fail', (req, res) => {
     try {
         const data = req.body;
+        const reason = data.reason || 'unknown';
         
-        logger.hardware('Attendance failed:', data.reason || 'unknown');
+        // Map decline reasons to user-friendly messages
+        const declineMessages = {
+            'NO_CLASSES_TODAY': 'No classes scheduled today',
+            'TOO_EARLY': 'Too early - classes haven\'t started',
+            'CLASSES_ENDED': 'Classes have ended for today',
+            'SCHEDULE_DECLINED': 'Tap declined by schedule',
+            'NO_FACE_DETECTED': 'No face detected',
+            'EYES_NOT_VISIBLE': 'Eyes not visible in photo',
+            'FACE_PARTIALLY_VISIBLE': 'Face partially visible',
+            'MULTIPLE_FACES_DETECTED': 'Multiple faces detected',
+            'DETECTION_TIMEOUT': 'Face detection timed out'
+        };
         
-        // Broadcast failure to clients
+        const friendlyReason = declineMessages[reason] || reason;
+        
+        logger.hardware('Attendance failed:', friendlyReason);
+        
+        // Broadcast failure to clients with decline reason
         broadcast('attendance:fail', {
             nfc_id: data.nfc_id || '',
-            reason: data.reason || 'Face detection failed',
-            name: data.name || ''
+            name: data.name || '',
+            reason: friendlyReason,
+            decline_code: reason,
+            timestamp: new Date().toISOString()
         });
         
         res.json({ success: true, message: 'Failure broadcasted' });

@@ -12,7 +12,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #ffffff;
+    background: #fbfcfc;
     opacity: 1;
     transition: opacity 0.3s ease-out;
 }

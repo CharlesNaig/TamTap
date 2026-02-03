@@ -39,6 +39,7 @@ except ImportError:
 
 # Database module (shared sync logic)
 from database import Database as SharedDatabase
+from database import validate_tap_time, DeclineReason
     
 # ========================================
 # LOGGING CONFIGURATION
@@ -1007,6 +1008,35 @@ def process_card(nfc_id):
         beep(count=2, duration=0.2, pause=0.1)
         time.sleep(1.5)
         led_off(GPIO_RED_LED)
+        current_state = State.IDLE
+        return False
+    
+    # === SCHEDULE VALIDATION ===
+    # Check if tap is allowed based on section schedule (day/time)
+    section = user_data.get("section", "") if user_data else ""
+    is_valid, decline_reason, schedule_data = validate_tap_time(section)
+    
+    if not is_valid:
+        led_off(GPIO_GREEN_LED)
+        
+        # Show appropriate LCD message
+        if decline_reason == DeclineReason.NO_CLASSES_TODAY:
+            lcd.show("NO CLASSES", "TODAY")
+            logger.info("Declined %s: No classes today for %s", name, section)
+        elif decline_reason == DeclineReason.CLASSES_ENDED:
+            lcd.show("CLASSES ENDED", "SEE YOU TOMORROW")
+            logger.info("Declined %s: Classes ended for %s", name, section)
+        else:
+            lcd.show("TAP DECLINED", "CHECK SCHEDULE")
+        
+        led_on(GPIO_RED_LED)
+        beep(count=2, duration=0.15, pause=0.1)
+        time.sleep(1.5)
+        led_off(GPIO_RED_LED)
+        
+        # Notify API server of decline
+        notify_attendance_fail(nfc_id, name, decline_reason or "SCHEDULE_DECLINED")
+        
         current_state = State.IDLE
         return False
     

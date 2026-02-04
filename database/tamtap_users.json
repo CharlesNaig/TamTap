@@ -1,5 +1,105 @@
 {
   "students": {
+    "100582761834": {
+      "nfc_id": "100582761834",
+      "tamtap_id": "001",
+      "first_name": "Tamaraw",
+      "last_name": "001",
+      "name": "Tamaraw 001",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:18:12"
+    },
+    "101338195344": {
+      "nfc_id": "101338195344",
+      "tamtap_id": "002",
+      "first_name": "TAMARAW",
+      "last_name": "002",
+      "name": "Tamaraw 002",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:19:33"
+    },
+    "718236231055": {
+      "nfc_id": "718236231055",
+      "tamtap_id": "003",
+      "first_name": "Tamaraw",
+      "last_name": "003",
+      "name": "Tamaraw 003",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:20:52"
+    },
+    "927313831212": {
+      "nfc_id": "927313831212",
+      "tamtap_id": "004",
+      "first_name": "Tamaraw",
+      "last_name": "004",
+      "name": "Tamaraw 004",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:21:18"
+    },
+    "512094381405": {
+      "nfc_id": "512094381405",
+      "tamtap_id": "005",
+      "first_name": "Tamaraw",
+      "last_name": "005",
+      "name": "Tamaraw 005",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:24:29"
+    },
+    "927615886655": {
+      "nfc_id": "927615886655",
+      "tamtap_id": "006",
+      "first_name": "Tamaraw",
+      "last_name": "006",
+      "name": "Tamaraw 006",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:24:47"
+    },
+    "925768951135": {
+      "nfc_id": "925768951135",
+      "tamtap_id": "007",
+      "first_name": "Tamaraw",
+      "last_name": "007",
+      "name": "Tamaraw 007",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:25:23"
+    },
+    "446277297561": {
+      "nfc_id": "446277297561",
+      "tamtap_id": "008",
+      "first_name": "Tamaraw",
+      "last_name": "008",
+      "name": "Tamaraw 008",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:25:51"
+    },
+    "927062304019": {
+      "nfc_id": "927062304019",
+      "tamtap_id": "009",
+      "first_name": "Tamaraw",
+      "last_name": "009",
+      "name": "Tamaraw 009",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:26:16"
+    },
+    "306924889394": {
+      "nfc_id": "306924889394",
+      "tamtap_id": "010",
+      "first_name": "Tamaraw",
+      "last_name": "010",
+      "name": "Tamaraw 010",
+      "grade": "11",
+      "section": "ACADEMIC 1",
+      "registered": "2026-01-23 21:26:39"
+    },
     "2710951593": {
       "nfc_id": "2710951593",
       "email": "r2026001@feuroosevelt.edu.ph",
@@ -38,5 +138,5 @@
   "attendance": [],
   "pending_attendance": [],
   "next_tamtap_id": 1,
-  "last_sync": "2026-01-19 23:07:29"
+  "last_sync": "2026-02-04 20:40:32"
 }

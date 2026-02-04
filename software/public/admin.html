@@ -74,7 +74,35 @@
         .auth-loading {
             visibility: hidden;
         }
+        
+        /* Console Output Styling */
+        .console-output {
+            scrollbar-width: thin;
+            scrollbar-color: #4b5563 #1f2937;
+        }
+        .console-output::-webkit-scrollbar {
+            width: 6px;
+        }
+        .console-output::-webkit-scrollbar-track {
+            background: #1f2937;
+        }
+        .console-output::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 3px;
+        }
+        .console-output::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
+        }
+        
+        /* Pulse animation for live indicator */
+        @keyframes pulse-live {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse { animation: pulse-live 1.5s ease-in-out infinite; }
     </style>
+    <!-- Socket.IO for live logs -->
+    <script src="/socket.io/socket.io.js" defer></script>
 </head>
 <body class="bg-gray-100 min-h-screen flex flex-col auth-loading">
     <!-- ========================================
@@ -196,6 +224,10 @@
                 <button onclick="showTab('schedules')" id="tab-schedules"
                         class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
                     <i class="fas fa-calendar-alt mr-1 sm:mr-2"></i>Schedules
+                </button>
+                <button onclick="showTab('logs')" id="tab-logs"
+                        class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
+                    <i class="fas fa-terminal mr-1 sm:mr-2"></i>System Logs
                 </button>
             </div>
         </div>
@@ -363,6 +395,98 @@
                     <div class="border rounded-lg p-3"><div class="skeleton skeleton-text w-16 mb-2"></div><div class="skeleton skeleton-text-sm w-28"></div></div>
                 </div>
                 <div id="schedules-mobile" class="sm:hidden p-3 space-y-3 hidden">
+                </div>
+            </div>
+        </div>
+
+        <!-- System Logs Tab -->
+        <div id="panel-logs" class="tab-panel hidden">
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-700">
+                        <i class="fas fa-terminal mr-2 text-feu-green"></i>System Console Logs
+                        <span id="logs-status" class="ml-2 text-xs font-normal px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Disconnected</span>
+                    </h2>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button onclick="toggleLogStream()" id="btn-stream-toggle" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 sm:px-4 py-2 rounded text-sm transition-colors flex-1 sm:flex-none">
+                            <i class="fas fa-play mr-1"></i><span>Start Live</span>
+                        </button>
+                        <button onclick="clearAllLogs()" class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-2 rounded text-sm transition-colors">
+                            <i class="fas fa-trash-alt mr-1"></i>Clear
+                        </button>
+                        <button onclick="refreshLogs()" class="border border-gray-300 text-gray-600 hover:bg-gray-50 px-3 py-2 rounded text-sm transition-colors">
+                            <i class="fas fa-sync-alt mr-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Console Grid - 3 Terminals -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 lg:gap-1 p-1 bg-gray-100">
+                    <!-- TAMTAP Buttons Console -->
+                    <div class="console-container flex flex-col">
+                        <div class="console-header bg-gray-800 text-white px-3 py-2 flex items-center justify-between rounded-t-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                </div>
+                                <span class="text-xs font-mono ml-2">tamtap-buttons</span>
+                            </div>
+                            <span id="status-buttons" class="text-xs text-gray-400"><i class="fas fa-circle text-gray-500 mr-1"></i>idle</span>
+                        </div>
+                        <div id="console-buttons" class="console-output bg-gray-900 text-green-400 font-mono text-xs p-3 h-64 lg:h-80 overflow-y-auto rounded-b-lg">
+                            <div class="text-gray-500">// GPIO Button Controller</div>
+                            <div class="text-gray-500">// Waiting for logs...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAMTAP Service Console (Hardware) -->
+                    <div class="console-container flex flex-col">
+                        <div class="console-header bg-gray-800 text-white px-3 py-2 flex items-center justify-between rounded-t-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                </div>
+                                <span class="text-xs font-mono ml-2">tamtap-hardware</span>
+                            </div>
+                            <span id="status-hardware" class="text-xs text-gray-400"><i class="fas fa-circle text-gray-500 mr-1"></i>idle</span>
+                        </div>
+                        <div id="console-hardware" class="console-output bg-gray-900 text-cyan-400 font-mono text-xs p-3 h-64 lg:h-80 overflow-y-auto rounded-b-lg">
+                            <div class="text-gray-500">// NFC + Camera Service</div>
+                            <div class="text-gray-500">// Waiting for logs...</div>
+                        </div>
+                    </div>
+                    
+                    <!-- TAMTAP Server Console (Node.js) -->
+                    <div class="console-container flex flex-col">
+                        <div class="console-header bg-gray-800 text-white px-3 py-2 flex items-center justify-between rounded-t-lg">
+                            <div class="flex items-center gap-2">
+                                <div class="flex gap-1.5">
+                                    <span class="w-3 h-3 rounded-full bg-red-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-yellow-500"></span>
+                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                </div>
+                                <span class="text-xs font-mono ml-2">tamtap-server</span>
+                            </div>
+                            <span id="status-server" class="text-xs text-gray-400"><i class="fas fa-circle text-gray-500 mr-1"></i>idle</span>
+                        </div>
+                        <div id="console-server" class="console-output bg-gray-900 text-yellow-400 font-mono text-xs p-3 h-64 lg:h-80 overflow-y-auto rounded-b-lg">
+                            <div class="text-gray-500">// Node.js Backend Server</div>
+                            <div class="text-gray-500">// Waiting for logs...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Log Legend -->
+                <div class="p-3 border-t bg-gray-50 flex flex-wrap gap-4 text-xs">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-green-400"></span> INFO</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span> WARN</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-400"></span> ERROR</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-cyan-400"></span> DEBUG</span>
+                    <span class="text-gray-400 ml-auto">Logs fetched via journalctl from Raspberry Pi systemd services</span>
                 </div>
             </div>
         </div>
@@ -1512,6 +1636,213 @@
                 const [nfc_id, first_name, last_name, grade, section] = line.split(',').map(s => s.trim());
                 return { nfc_id, first_name, last_name, grade, section };
             }).filter(s => s.nfc_id && s.section);
+        }
+
+        // ========================================
+        // SYSTEM LOGS CONSOLE
+        // ========================================
+        let logSocket = null;
+        let isStreamingLogs = false;
+        const MAX_LOG_LINES = 200;
+        
+        const LOG_COLORS = {
+            'info': 'text-green-400',
+            'notice': 'text-green-300',
+            'warn': 'text-yellow-400',
+            'warning': 'text-yellow-400',
+            'error': 'text-red-400',
+            'crit': 'text-red-500',
+            'alert': 'text-red-600',
+            'emerg': 'text-red-700',
+            'debug': 'text-cyan-400'
+        };
+        
+        const SERVICE_CONSOLES = {
+            'buttons': 'console-buttons',
+            'hardware': 'console-hardware',
+            'server': 'console-server'
+        };
+        
+        function getLogColor(level) {
+            return LOG_COLORS[level] || 'text-gray-300';
+        }
+        
+        function formatLogEntry(entry) {
+            const time = new Date(entry.timestamp).toLocaleTimeString('en-US', { hour12: false });
+            const colorClass = getLogColor(entry.level);
+            const levelBadge = entry.level ? `<span class="text-gray-500">[${entry.level.toUpperCase().padEnd(5)}]</span>` : '';
+            return `<div class="${colorClass}"><span class="text-gray-600">${time}</span> ${levelBadge} ${escapeHtml(entry.message)}</div>`;
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        function appendLog(service, entry) {
+            const consoleEl = document.getElementById(SERVICE_CONSOLES[service]);
+            if (!consoleEl) return;
+            
+            // Create log line
+            const logLine = document.createElement('div');
+            logLine.className = getLogColor(entry.level);
+            const time = new Date(entry.timestamp).toLocaleTimeString('en-US', { hour12: false });
+            logLine.innerHTML = `<span class="text-gray-600">${time}</span> ${escapeHtml(entry.message)}`;
+            
+            consoleEl.appendChild(logLine);
+            
+            // Trim old logs
+            while (consoleEl.children.length > MAX_LOG_LINES) {
+                consoleEl.removeChild(consoleEl.firstChild);
+            }
+            
+            // Auto-scroll to bottom
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+        
+        function clearAllLogs() {
+            Object.values(SERVICE_CONSOLES).forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerHTML = '<div class="text-gray-500">// Console cleared</div>';
+                }
+            });
+        }
+        
+        async function refreshLogs() {
+            try {
+                const res = await fetch('/api/logs?lines=50', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to fetch logs');
+                
+                const data = await res.json();
+                
+                if (data.success && data.logs) {
+                    // Clear and populate each console
+                    Object.entries(data.logs).forEach(([service, logs]) => {
+                        const consoleEl = document.getElementById(SERVICE_CONSOLES[service]);
+                        if (consoleEl) {
+                            consoleEl.innerHTML = logs.map(entry => formatLogEntry(entry)).join('');
+                            consoleEl.scrollTop = consoleEl.scrollHeight;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Failed to refresh logs:', e);
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Logs Unavailable',
+                    text: 'journalctl not available. Deploy to Raspberry Pi for live logs.',
+                    confirmButtonColor: '#0a8249'
+                });
+            }
+        }
+        
+        function toggleLogStream() {
+            if (isStreamingLogs) {
+                stopLogStream();
+            } else {
+                startLogStream();
+            }
+        }
+        
+        function startLogStream() {
+            if (isStreamingLogs) return;
+            
+            // Connect to Socket.IO for live logs
+            if (typeof io === 'undefined') {
+                // Load Socket.IO if not already loaded
+                const script = document.createElement('script');
+                script.src = '/socket.io/socket.io.js';
+                script.onload = () => initLogSocket();
+                document.head.appendChild(script);
+            } else {
+                initLogSocket();
+            }
+        }
+        
+        function initLogSocket() {
+            logSocket = io();
+            
+            logSocket.on('connect', () => {
+                isStreamingLogs = true;
+                updateStreamUI(true);
+                
+                // Subscribe to all service logs
+                logSocket.emit('logs:subscribe', ['buttons', 'hardware', 'server']);
+                
+                // Update status indicators
+                updateServiceStatus('buttons', 'streaming');
+                updateServiceStatus('hardware', 'streaming');
+                updateServiceStatus('server', 'streaming');
+            });
+            
+            logSocket.on('logs:entry', (entry) => {
+                appendLog(entry.service, entry);
+            });
+            
+            logSocket.on('logs:error', (data) => {
+                appendLog(data.service, {
+                    timestamp: new Date().toISOString(),
+                    message: `ERROR: ${data.error}`,
+                    level: 'error'
+                });
+            });
+            
+            logSocket.on('disconnect', () => {
+                isStreamingLogs = false;
+                updateStreamUI(false);
+                updateServiceStatus('buttons', 'disconnected');
+                updateServiceStatus('hardware', 'disconnected');
+                updateServiceStatus('server', 'disconnected');
+            });
+        }
+        
+        function stopLogStream() {
+            if (logSocket) {
+                logSocket.emit('logs:unsubscribe');
+                logSocket.disconnect();
+                logSocket = null;
+            }
+            isStreamingLogs = false;
+            updateStreamUI(false);
+            updateServiceStatus('buttons', 'idle');
+            updateServiceStatus('hardware', 'idle');
+            updateServiceStatus('server', 'idle');
+        }
+        
+        function updateStreamUI(isActive) {
+            const btn = document.getElementById('btn-stream-toggle');
+            const status = document.getElementById('logs-status');
+            
+            if (isActive) {
+                btn.innerHTML = '<i class="fas fa-stop mr-1"></i><span>Stop Live</span>';
+                btn.classList.remove('bg-feu-green', 'hover:bg-feu-green-dark');
+                btn.classList.add('bg-red-500', 'hover:bg-red-600');
+                status.innerHTML = '<i class="fas fa-circle text-green-500 mr-1 animate-pulse"></i>Live';
+                status.classList.remove('bg-gray-100', 'text-gray-500');
+                status.classList.add('bg-green-100', 'text-green-700');
+            } else {
+                btn.innerHTML = '<i class="fas fa-play mr-1"></i><span>Start Live</span>';
+                btn.classList.remove('bg-red-500', 'hover:bg-red-600');
+                btn.classList.add('bg-feu-green', 'hover:bg-feu-green-dark');
+                status.innerHTML = '<i class="fas fa-circle text-gray-500 mr-1"></i>Disconnected';
+                status.classList.remove('bg-green-100', 'text-green-700');
+                status.classList.add('bg-gray-100', 'text-gray-500');
+            }
+        }
+        
+        function updateServiceStatus(service, state) {
+            const statusEl = document.getElementById(`status-${service}`);
+            if (!statusEl) return;
+            
+            const states = {
+                'idle': '<i class="fas fa-circle text-gray-500 mr-1"></i>idle',
+                'streaming': '<i class="fas fa-circle text-green-400 mr-1 animate-pulse"></i>live',
+                'disconnected': '<i class="fas fa-circle text-red-400 mr-1"></i>offline'
+            };
+            
+            statusEl.innerHTML = states[state] || states['idle'];
         }
 
         // ========================================

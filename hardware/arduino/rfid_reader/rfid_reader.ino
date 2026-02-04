@@ -159,7 +159,7 @@ String getUIDHex() {
             uid += "0";
         }
         uid += String(rfid.uid.uidByte[i], HEX);
-    }
+    }   
     uid.toUpperCase();
     return uid;
 }

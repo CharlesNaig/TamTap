@@ -157,6 +157,10 @@ io.on('connection', (socket) => {
     });
 });
 
+// Setup live log streaming via Socket.IO
+const { setupLogStreaming } = require('./routes/logs');
+setupLogStreaming(io);
+
 // Broadcast helper function
 function broadcast(event, data) {
     io.emit(event, {
@@ -225,6 +229,7 @@ const calendarRoutes = require('./routes/calendar');
 const exportRoutes = require('./routes/export');
 const schedulesRoutes = require('./routes/schedules');
 const notificationsRoutes = require('./routes/notifications');
+const logsRoutes = require('./routes/logs');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -237,6 +242,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/schedules', schedulesRoutes);
 app.use('/api/notifications', notificationsRoutes);
+app.use('/api/logs', logsRoutes);
 
 // ========================================
 // DEBUG ENDPOINT (Remove in production)

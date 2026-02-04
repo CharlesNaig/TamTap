@@ -18,7 +18,7 @@
         preloader.className = 'tamtap-preloader'; // Visible by default for initial page load
         preloader.innerHTML = `
             <div class="tamtap-preloader-content">
-                <img src="/assets/animations/tamtap-walking.gif" alt="Loading..." class="tamtap-preloader-gif">
+                <img src="/assets/animations/tamtap-walk.gif" alt="Loading..." class="tamtap-preloader-gif">
                 <p class="tamtap-preloader-text">Loading <span>TAMTAP</span>...</p>
                 <p class="tamtap-preloader-subtext">Please wait</p>
             </div>

@@ -711,7 +711,7 @@
                          alt="Attendance Photo" 
                          class="w-full h-auto max-h-[400px] object-contain">
                     <div id="photo-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100">
-                        <img src="/assets/animations/tamtap-walking.gif" alt="Loading..." class="w-16 h-16 sm:w-20 sm:h-20">
+                        <img src="/assets/animations/tamtap-walk.gif" alt="Loading..." class="w-16 h-16 sm:w-20 sm:h-20">
                         <p class="text-sm text-feu-green mt-2">Loading photo...</p>
                     </div>
                 </div>
@@ -1720,7 +1720,7 @@
             // Open the new detail modal
             document.getElementById('detail-student-name').textContent = name;
             document.getElementById('detail-student-section').textContent = 'Loading...';
-            document.getElementById('detail-records').innerHTML = '<tr><td colspan="4" class="px-3 py-10 text-center"><img src="/assets/animations/tamtap-walking.gif" alt="Loading..." class="w-12 h-12 mx-auto mb-2"><span class="text-gray-400 text-sm">Loading history...</span></td></tr>';
+            document.getElementById('detail-records').innerHTML = '<tr><td colspan="4" class="px-3 py-10 text-center"><img src="/assets/animations/tamtap-walk.gif" alt="Loading..." class="w-12 h-12 mx-auto mb-2"><span class="text-gray-400 text-sm">Loading history...</span></td></tr>';
             
             // Reset summary
             ['detail-total', 'detail-present', 'detail-late', 'detail-absent', 'detail-excused', 'detail-rate'].forEach(id => {
@@ -1875,7 +1875,7 @@
             // Reset image
             document.getElementById('photo-modal-image').src = '';
             document.getElementById('photo-loading').classList.remove('hidden');
-            document.getElementById('photo-loading').innerHTML = '<img src="/assets/animations/tamtap-walking.gif" alt="Loading..." class="w-16 h-16 sm:w-20 sm:h-20"><p class="text-sm text-feu-green mt-2">Loading photo...</p>';
+            document.getElementById('photo-loading').innerHTML = '<img src="/assets/animations/tamtap-walk.gif" alt="Loading..." class="w-16 h-16 sm:w-20 sm:h-20"><p class="text-sm text-feu-green mt-2">Loading photo...</p>';
         }
 
         // ========================================

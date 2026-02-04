@@ -284,7 +284,7 @@ Files to modify:
 - #file:../../software/public/login.html
 
 Files to use in the center for the preloader:
-- #file:../../assets/animations/tamtap-walking.gif (already exist)
+- #file:../../assets/animations/tamtap-walk.gif (already exist)
 
 ==================================================
 PRIORITY ORDER

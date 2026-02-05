@@ -237,11 +237,14 @@ router.post('/', async (req, res) => {
             return res.status(409).json({ error: 'Schedule already exists for this section' });
         }
 
+        // Validate adviser_id before ObjectId conversion
+        const validAdviserId = adviser_id && ObjectId.isValid(adviser_id) ? new ObjectId(adviser_id) : null;
+
         const newSchedule = {
             section,
             grade: grade || '',
-            adviser_id: adviser_id ? new ObjectId(adviser_id) : null,
-            adviser_name: adviser_name || null,
+            adviser_id: validAdviserId,
+            adviser_name: validAdviserId ? (adviser_name || null) : null,
             weekly_schedule: weekly_schedule || DEFAULT_SCHEDULE,
             grace_period_minutes: DEFAULT_GRACE_PERIOD,
             absent_threshold_minutes: DEFAULT_ABSENT_THRESHOLD,
@@ -320,13 +323,14 @@ router.put('/:section', async (req, res) => {
         // Only admin can change adviser
         if (user.role === 'admin') {
             if (adviser_id !== undefined) {
-                updates.adviser_id = adviser_id ? new ObjectId(adviser_id) : null;
-                updates.adviser_name = adviser_name || null;
+                const validAdviserId = adviser_id && ObjectId.isValid(adviser_id) ? new ObjectId(adviser_id) : null;
+                updates.adviser_id = validAdviserId;
+                updates.adviser_name = validAdviserId ? (adviser_name || null) : null;
 
                 // Update new adviser's role_type and advised_section
-                if (adviser_id) {
+                if (validAdviserId) {
                     await db.collection('teachers').updateOne(
-                        { _id: new ObjectId(adviser_id) },
+                        { _id: validAdviserId },
                         { $set: { advised_section: section, role_type: 'adviser' } }
                     );
                 }

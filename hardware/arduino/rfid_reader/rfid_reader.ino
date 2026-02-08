@@ -37,6 +37,29 @@ unsigned long lastCardTime = 0;
 unsigned long cardDebounce = 1500; // 1.5 second debounce between same card reads
 String lastCardUID = "";
 
+bool initRC522() {
+    // Hardware reset: pull RST LOW then HIGH to force cold start
+    digitalWrite(RST_PIN, LOW);
+    delay(50);
+    digitalWrite(RST_PIN, HIGH);
+    delay(50);
+    
+    // Initialize SPI bus and MFRC522
+    SPI.begin();
+    rfid.PCD_Init();
+    delay(200); // Some clones need extra stabilization time
+    
+    // Verify communication via version register
+    byte version = rfid.PCD_ReadRegister(rfid.VersionReg);
+    if (version == 0x00 || version == 0xFF) {
+        return false;
+    }
+    
+    Serial.print("INFO:RC522_VERSION_");
+    Serial.println(version, HEX);
+    return true;
+}
+
 void setup() {
     // Initialize serial communication
     Serial.begin(9600);
@@ -44,21 +67,25 @@ void setup() {
         ; // Wait for serial port to connect (needed for native USB)
     }
     
-    // Initialize SPI bus
-    SPI.begin();
+    // RST pin as output for hardware reset
+    pinMode(RST_PIN, OUTPUT);
     
-    // Initialize MFRC522
-    rfid.PCD_Init();
-    delay(100);
+    // Retry RC522 init up to 3 times with hardware reset
+    bool rc522Found = false;
+    for (byte attempt = 1; attempt <= 3; attempt++) {
+        Serial.print("INFO:INIT_ATTEMPT_");
+        Serial.println(attempt);
+        
+        rc522Found = initRC522();
+        if (rc522Found) break;
+        
+        delay(500); // Wait before retry
+    }
     
-    // Check if reader is connected
-    byte version = rfid.PCD_ReadRegister(rfid.VersionReg);
-    if (version == 0x00 || version == 0xFF) {
+    if (!rc522Found) {
         Serial.println("ERROR:RC522_NOT_FOUND");
     } else {
         Serial.println("READY");
-        Serial.print("INFO:RC522_VERSION_");
-        Serial.println(version, HEX);
     }
 }
 

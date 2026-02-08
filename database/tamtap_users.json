@@ -100,6 +100,376 @@
       "section": "ACADEMIC 1",
       "registered": "2026-01-23 21:26:39"
     },
+    "410620389580": {
+      "nfc_id": "410620389580",
+      "tamtap_id": "100",
+      "first_name": "Sophia Clairet",
+      "last_name": "Bihis",
+      "name": "Sophia Clairet Bihis",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:34:40"
+    },
+    "340844144664": {
+      "nfc_id": "340844144664",
+      "tamtap_id": "101",
+      "first_name": "Gabrielle Brije",
+      "last_name": "Camilo",
+      "name": "Gabrielle Brije Camilo",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:35:12"
+    },
+    "203701413926": {
+      "nfc_id": "203701413926",
+      "tamtap_id": "102",
+      "first_name": "Rosenelyn",
+      "last_name": "Ca\u00f1a",
+      "name": "Rosenelyn Ca\u00f1a",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:40:06"
+    },
+    "957854247100": {
+      "nfc_id": "957854247100",
+      "tamtap_id": "103",
+      "first_name": "Stephanie",
+      "last_name": "Estal",
+      "name": "Stephanie Estal",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:40:30"
+    },
+    "274314094701": {
+      "nfc_id": "274314094701",
+      "tamtap_id": "104",
+      "first_name": "Margareth",
+      "last_name": "Jimenez",
+      "name": "Margareth Jimenez",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:41:02"
+    },
+    "339658345824": {
+      "nfc_id": "339658345824",
+      "tamtap_id": "105",
+      "first_name": "Mhikaela",
+      "last_name": "Lindo",
+      "name": "Mhikaela Lindo",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:42:57"
+    },
+    "617304296716": {
+      "nfc_id": "617304296716",
+      "tamtap_id": "106",
+      "first_name": "Marga",
+      "last_name": "Luteria",
+      "name": "Marga Luteria",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:43:22"
+    },
+    "685322070151": {
+      "nfc_id": "685322070151",
+      "tamtap_id": "107",
+      "first_name": "Trishia",
+      "last_name": "Manlapaz",
+      "name": "Trishia Manlapaz",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:43:48"
+    },
+    "821231619519": {
+      "nfc_id": "821231619519",
+      "tamtap_id": "108",
+      "first_name": "Hannah",
+      "last_name": "Reyes",
+      "name": "Hannah Reyes",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:44:09"
+    },
+    "961130326052": {
+      "nfc_id": "961130326052",
+      "tamtap_id": "109",
+      "first_name": "Liane",
+      "last_name": "Valero",
+      "name": "Liane Valero",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:44:37"
+    },
+    "961376872551": {
+      "nfc_id": "961376872551",
+      "tamtap_id": "110",
+      "first_name": "Roj",
+      "last_name": "Abejo",
+      "name": "Roj Abejo",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:45:38"
+    },
+    "755878127714": {
+      "nfc_id": "755878127714",
+      "tamtap_id": "111",
+      "first_name": "Bjorn",
+      "last_name": "Angeles",
+      "name": "Bjorn Angeles",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:46:05"
+    },
+    "270808180918": {
+      "nfc_id": "270808180918",
+      "tamtap_id": "112",
+      "first_name": "Leonne",
+      "last_name": "Bacolod",
+      "name": "Leonne Bacolod",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:46:33"
+    },
+    "136989380035": {
+      "nfc_id": "136989380035",
+      "tamtap_id": "113",
+      "first_name": "Raine",
+      "last_name": "Badillo",
+      "name": "Raine Badillo",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:47:35"
+    },
+    "959793794433": {
+      "nfc_id": "959793794433",
+      "tamtap_id": "114",
+      "first_name": "Daniel",
+      "last_name": "Baluyut",
+      "name": "Daniel Baluyut",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:48:07"
+    },
+    "340413320503": {
+      "nfc_id": "340413320503",
+      "tamtap_id": "115",
+      "first_name": "Jouchiro",
+      "last_name": "Bragais",
+      "name": "Jouchiro Bragais",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:48:40"
+    },
+    "272520833061": {
+      "nfc_id": "272520833061",
+      "tamtap_id": "116",
+      "first_name": "Vonn",
+      "last_name": "Bulanhagui",
+      "name": "Vonn Bulanhagui",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:49:02"
+    },
+    "409368071487": {
+      "nfc_id": "409368071487",
+      "tamtap_id": "117",
+      "first_name": "Josh",
+      "last_name": "Candidato",
+      "name": "Josh Candidato",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:49:19"
+    },
+    "134496118832": {
+      "nfc_id": "134496118832",
+      "tamtap_id": "118",
+      "first_name": "Carl",
+      "last_name": "Carmelo",
+      "name": "Carl Carmelo",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:49:51"
+    },
+    "822539848963": {
+      "nfc_id": "822539848963",
+      "tamtap_id": "119",
+      "first_name": "Justine",
+      "last_name": "Clara",
+      "name": "Justine Clara",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:52:46"
+    },
+    "409304361099": {
+      "nfc_id": "409304361099",
+      "tamtap_id": "120",
+      "first_name": "Manuel",
+      "last_name": "Consul",
+      "name": "Manuel Consul",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:53:19"
+    },
+    "1095578347660": {
+      "nfc_id": "1095578347660",
+      "tamtap_id": "121",
+      "first_name": "Harvey",
+      "last_name": "Enriquez",
+      "name": "Harvey Enriquez",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:53:45"
+    },
+    "753921494290": {
+      "nfc_id": "753921494290",
+      "tamtap_id": "122",
+      "first_name": "Jerard",
+      "last_name": "Felipe",
+      "name": "Jerard Felipe",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:54:18"
+    },
+    "682987621803": {
+      "nfc_id": "682987621803",
+      "tamtap_id": "123",
+      "first_name": "Elijah",
+      "last_name": "Guevara",
+      "name": "Elijah Guevara",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:54:44"
+    },
+    "202746301833": {
+      "nfc_id": "202746301833",
+      "tamtap_id": "124",
+      "first_name": "Eldrenne",
+      "last_name": "Guevara",
+      "name": "Eldrenne Guevara",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:56:30"
+    },
+    "548249603565": {
+      "nfc_id": "548249603565",
+      "tamtap_id": "125",
+      "first_name": "Kenshin",
+      "last_name": "Magistrado",
+      "name": "Kenshin Magistrado",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:56:55"
+    },
+    "479217313927": {
+      "nfc_id": "479217313927",
+      "tamtap_id": "126",
+      "first_name": "Charles",
+      "last_name": "Marcelo",
+      "name": "Charles Marcelo",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:57:16"
+    },
+    "65188980826": {
+      "nfc_id": "65188980826",
+      "tamtap_id": "127",
+      "first_name": "Christian",
+      "last_name": "Mejia",
+      "name": "Christian Mejia",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:57:53"
+    },
+    "272504973354": {
+      "nfc_id": "272504973354",
+      "tamtap_id": "128",
+      "first_name": "Emmanuel",
+      "last_name": "Miguel",
+      "name": "Emmanuel Miguel",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:58:15"
+    },
+    "615626051064": {
+      "nfc_id": "615626051064",
+      "tamtap_id": "129",
+      "first_name": "Prinz",
+      "last_name": "Pastorfide",
+      "name": "Prinz Pastorfide",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:58:47"
+    },
+    "685018320298": {
+      "nfc_id": "685018320298",
+      "tamtap_id": "130",
+      "first_name": "Isaac",
+      "last_name": "Reginales",
+      "name": "Isaac Reginales",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:59:15"
+    },
+    "343154157782": {
+      "nfc_id": "343154157782",
+      "tamtap_id": "131",
+      "first_name": "Axle",
+      "last_name": "Santos",
+      "name": "Axle Santos",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 10:59:32"
+    },
+    "65568181613": {
+      "nfc_id": "65568181613",
+      "tamtap_id": "132",
+      "first_name": "Jan",
+      "last_name": "Toribio",
+      "name": "Jan Toribio",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 11:00:57"
+    },
+    "889922513047": {
+      "nfc_id": "889922513047",
+      "tamtap_id": "133",
+      "first_name": "Joaquim",
+      "last_name": "Torres",
+      "name": "Joaquim Torres",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 11:01:16"
+    },
+    "476783503367": {
+      "nfc_id": "476783503367",
+      "tamtap_id": "134",
+      "first_name": "Kenneth",
+      "last_name": "Tuano",
+      "name": "Kenneth Tuano",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 11:01:41"
+    },
+    "685308831854": {
+      "nfc_id": "685308831854",
+      "tamtap_id": "135",
+      "first_name": "Jason",
+      "last_name": "Waje",
+      "name": "Jason Waje",
+      "grade": "12",
+      "section": "ICT-B",
+      "registered": "2026-02-05 11:02:00"
+    },
+    "876948754389": {
+      "nfc_id": "876948754389",
+      "tamtap_id": "200",
+      "first_name": "Irah",
+      "last_name": "Vitug",
+      "name": "Irah Vitug",
+      "grade": "12",
+      "section": "HUMSS-A",
+      "registered": "2026-02-05 14:54:12"
+    },
     "2710951593": {
       "nfc_id": "2710951593",
       "email": "r2026001@feuroosevelt.edu.ph",
@@ -138,5 +508,5 @@
   "attendance": [],
   "pending_attendance": [],
   "next_tamtap_id": 1,
-  "last_sync": "2026-02-04 20:40:32"
+  "last_sync": "2026-02-09 03:08:57"
 }

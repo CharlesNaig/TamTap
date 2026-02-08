@@ -250,7 +250,7 @@
                         <ul class="py-2">
                             <!-- Admin Panel Link (Admin Only) -->
                             <li id="admin-link" class="hidden">
-                                <a href="/admin.html" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
+                                <a href="/admin" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
                                     <i class="fas fa-cog text-feu-gold w-5"></i> Admin Panel
                                 </a>
                             </li>
@@ -833,12 +833,12 @@
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
                 if (!res.ok) {
-                    window.location.replace('/login.html');
+                    window.location.replace('/login');
                     return;
                 }
                 const data = await res.json();
                 if (!data.success || !data.user) {
-                    window.location.replace('/login.html');
+                    window.location.replace('/login');
                     return;
                 }
                 
@@ -871,7 +871,7 @@
                 
             } catch (e) {
                 console.error('[ERROR] Auth check failed:', e);
-                window.location.replace('/login.html');
+                window.location.replace('/login');
             }
         }
 
@@ -885,7 +885,7 @@
             } catch (e) {
                 console.error('[ERROR] Logout error:', e);
             }
-            navigateTo('/login.html', 'Redirecting to login...');
+            navigateTo('/login', 'Redirecting to login...');
         }
 
         // ========================================

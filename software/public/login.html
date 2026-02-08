@@ -812,9 +812,9 @@
 
         function redirectByRole(role) {
             if (role === 'admin') {
-                navigateTo('/admin.html', 'Loading Admin Panel...');
+                navigateTo('/admin', 'Loading Admin Panel...');
             } else if (role === 'teacher') {
-                navigateTo('/dashboard.html', 'Loading Dashboard...');
+                navigateTo('/dashboard', 'Loading Dashboard...');
             } else {
                 Swal.fire({
                     icon: 'error',

@@ -33,7 +33,7 @@
                     const data = await res.json();
                     if (data.success) {
                         // Logged in - redirect to dashboard
-                        window.location.href = '/dashboard.html';
+                        window.location.href = '/dashboard';
                         return;
                     }
                 }
@@ -42,7 +42,7 @@
             }
             
             // Not logged in - redirect to login
-            window.location.href = '/login.html';
+            window.location.href = '/login';
         }
         
         checkAndRedirect();

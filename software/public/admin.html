@@ -153,10 +153,10 @@
 
             <!-- Center: Navigation (Desktop) -->
             <nav class="hidden lg:flex items-center gap-1">
-                <a href="/dashboard.html" class="px-4 py-2 text-gray-600 hover:text-feu-green hover:bg-gray-50 rounded-lg transition font-medium">
+                <a href="/dashboard" class="px-4 py-2 text-gray-600 hover:text-feu-green hover:bg-gray-50 rounded-lg transition font-medium">
                     <i class="fas fa-chart-line mr-2"></i>Dashboard
                 </a>
-                <a href="/admin.html" class="nav-active px-4 py-2 text-feu-green font-semibold rounded-lg">
+                <a href="/admin" class="nav-active px-4 py-2 text-feu-green font-semibold rounded-lg">
                     <i class="fas fa-cog mr-2"></i>Admin Panel
                 </a>
             </nav>
@@ -165,7 +165,7 @@
             <div class="flex items-center gap-2 sm:gap-3">
                 <!-- Mobile Nav Toggle -->
                 <div class="lg:hidden flex items-center gap-1 mr-2">
-                    <a href="/dashboard.html" class="p-2 text-gray-500 hover:text-feu-green hover:bg-gray-100 rounded-lg transition" title="Dashboard">
+                    <a href="/dashboard" class="p-2 text-gray-500 hover:text-feu-green hover:bg-gray-100 rounded-lg transition" title="Dashboard">
                         <i class="fas fa-chart-line"></i>
                     </a>
                 </div>
@@ -189,7 +189,7 @@
                         </div>
                         <ul class="py-2">
                             <li>
-                                <a href="/dashboard.html" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
+                                <a href="/dashboard" class="w-full text-left px-4 py-3 text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition">
                                     <i class="fas fa-chart-line text-feu-green w-5"></i> View Dashboard
                                 </a>
                             </li>
@@ -757,7 +757,7 @@
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
                 if (!res.ok) {
-                    window.location.replace('/login.html');
+                    window.location.replace('/login');
                     return;
                 }
                 const data = await res.json();
@@ -768,7 +768,7 @@
                         text: 'Admin access required',
                         confirmButtonColor: '#0a8249'
                     }).then(() => {
-                        window.location.replace('/dashboard.html');
+                        window.location.replace('/dashboard');
                     });
                     return;
                 }
@@ -784,14 +784,14 @@
                 
                 loadData();
             } catch (e) {
-                window.location.replace('/login.html');
+                window.location.replace('/login');
             }
         }
 
         async function logout() {
             showPreloader('Logging out...');
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-            navigateTo('/login.html', 'Redirecting to login...');
+            navigateTo('/login', 'Redirecting to login...');
         }
 
         // ========================================

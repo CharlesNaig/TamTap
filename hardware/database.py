@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-TAMTAP Database Module v7.1
-Unified database handler with MongoDB primary and JSON fallback/cache.
+TAMTAP Database Module v8.0
+Unified database handler with JSON-first writes and event-driven MongoDB sync.
 
-Sync Strategy:
-1. MongoDB is PRIMARY - always use when available
-2. JSON is CACHE/BACKUP - stores last known good state
-3. On startup: If MongoDB connects → pull latest → update JSON cache
-4. On disconnect: Use JSON with last synced data
+Sync Strategy (Write-First, Sync-Later):
+1. Attendance always writes to JSON pending queue first (~5ms)
+2. threading.Event signals background sync thread immediately
+3. Sync thread pushes pending records to MongoDB (non-blocking)
+4. 10s fallback timeout catches missed events
 5. On reconnect: Push pending changes → pull latest updates
 
 Usage:
@@ -234,13 +234,22 @@ class Database:
         self._stop_reconnect = threading.Event()
         self._reconnect_thread = None
         
+        # Thread safety for JSON file access
+        self._json_lock = threading.Lock()
+        
+        # Event-driven sync
+        self._sync_event = threading.Event()
+        self._stop_sync = threading.Event()
+        self._sync_thread = None
+        
         # Initialize
         self._ensure_json_exists()
         self._connect_mongodb()
         
-        # Start background reconnect thread
+        # Start background threads
         if enable_background_reconnect:
             self._start_reconnect_thread()
+            self._start_sync_thread()
     
     # ========================================
     # INITIALIZATION
@@ -440,29 +449,31 @@ class Database:
     # JSON FILE OPERATIONS
     # ========================================
     def _load_json(self):
-        """Load data from JSON file"""
-        try:
-            if os.path.exists(self.json_file):
-                with open(self.json_file, 'r') as f:
-                    data = json.load(f)
-                    # Ensure all required keys exist
-                    for key in ["students", "teachers", "attendance", "pending_attendance"]:
-                        data.setdefault(key, {} if key in ["students", "teachers"] else [])
-                    data.setdefault("next_tamtap_id", 1)
-                    return data
-        except Exception as e:
-            logger.error("JSON load error: %s", e)
-        return self._empty_structure()
+        """Load data from JSON file (thread-safe)"""
+        with self._json_lock:
+            try:
+                if os.path.exists(self.json_file):
+                    with open(self.json_file, 'r') as f:
+                        data = json.load(f)
+                        # Ensure all required keys exist
+                        for key in ["students", "teachers", "attendance", "pending_attendance"]:
+                            data.setdefault(key, {} if key in ["students", "teachers"] else [])
+                        data.setdefault("next_tamtap_id", 1)
+                        return data
+            except Exception as e:
+                logger.error("JSON load error: %s", e)
+            return self._empty_structure()
     
     def _save_json(self, data):
-        """Save data to JSON file"""
-        try:
-            with open(self.json_file, 'w') as f:
-                json.dump(data, f, indent=2)
-            return True
-        except Exception as e:
-            logger.error("JSON save error: %s", e)
-            return False
+        """Save data to JSON file (thread-safe)"""
+        with self._json_lock:
+            try:
+                with open(self.json_file, 'w') as f:
+                    json.dump(data, f, indent=2)
+                return True
+            except Exception as e:
+                logger.error("JSON save error: %s", e)
+                return False
     
     # ========================================
     # STATUS
@@ -711,30 +722,14 @@ class Database:
     # ATTENDANCE OPERATIONS
     # ========================================
     def is_already_logged_today(self, nfc_id):
-        """Check if user already has attendance today"""
+        """Check if user already has attendance today.
+        Checks JSON first (fastest, includes un-synced records), then MongoDB.
+        """
         nfc_str = str(nfc_id)
         today = datetime.now().strftime("%Y-%m-%d")
         
-        # Try MongoDB
-        if self._check_mongodb():
-            try:
-                existing = self.mongo_db.attendance.find_one({
-                    "nfc_id": nfc_str,
-                    "date": {"$regex": f"^{today}"}
-                })
-                if existing:
-                    return True
-            except Exception as e:
-                logger.error("MongoDB attendance check error: %s", e)
-        
-        # Check JSON (both attendance and pending)
+        # Check JSON first (fastest, always available, includes un-synced records)
         data = self._load_json()
-        
-        for record in data.get("attendance", []):
-            rec_nfc = str(record.get("nfc_id", record.get("uid", "")))
-            rec_date = record.get("date", "")[:10]
-            if rec_nfc == nfc_str and rec_date == today:
-                return True
         
         for record in data.get("pending_attendance", []):
             rec_nfc = str(record.get("nfc_id", record.get("uid", "")))
@@ -742,12 +737,30 @@ class Database:
             if rec_nfc == nfc_str and rec_date == today:
                 return True
         
+        for record in data.get("attendance", []):
+            rec_nfc = str(record.get("nfc_id", record.get("uid", "")))
+            rec_date = record.get("date", "")[:10]
+            if rec_nfc == nfc_str and rec_date == today:
+                return True
+        
+        # Then check MongoDB (if connected)
+        if self._check_mongodb():
+            try:
+                count = self.mongo_db.attendance.count_documents({
+                    "nfc_id": nfc_str,
+                    "date": {"$regex": f"^{today}"}
+                })
+                return count > 0
+            except Exception as e:
+                logger.error("MongoDB attendance check error: %s", e)
+        
         return False
     
     def save_attendance(self, nfc_id, name, role, photo_path=None, user_data=None):
         """
-        Save attendance record.
-        Returns: True if saved (MongoDB or JSON), False if already logged
+        Save attendance record (Write-First, Sync-Later).
+        Always writes to JSON first (~5ms), then signals background sync thread.
+        Returns: True if saved, False if already logged
         """
         if self.is_already_logged_today(nfc_id):
             logger.info("User %s already logged today", name)
@@ -785,26 +798,14 @@ class Database:
             record["grade"] = user_data.get("grade", "")
             record["section"] = user_data.get("section", "")
         
-        # Try MongoDB first
-        if self._check_mongodb():
-            try:
-                self.mongo_db.attendance.insert_one(record.copy())
-                logger.info("Attendance saved to MongoDB: %s (%s)", name, role)
-                
-                # Also save to JSON as backup
-                data = self._load_json()
-                data["attendance"].append(record)
-                self._save_json(data)
-                
-                return True
-            except Exception as e:
-                logger.error("MongoDB attendance save error: %s", e)
-        
-        # Fallback: Save to JSON pending queue
+        # ALWAYS write to JSON pending queue first (FAST, ~5ms)
         data = self._load_json()
         data["pending_attendance"].append(record)
         self._save_json(data)
-        logger.info("Attendance saved to JSON (pending sync): %s (%s)", name, role)
+        logger.info("Attendance saved locally: %s (%s)", name, role)
+        
+        # Signal sync thread to wake up and push to MongoDB
+        self._sync_event.set()
         
         return True
     
@@ -911,6 +912,90 @@ class Database:
             logger.info("Background reconnect thread stopped")
     
     # ========================================
+    # EVENT-DRIVEN SYNC (JSON → MongoDB)
+    # ========================================
+    def _start_sync_thread(self):
+        """Start background event-driven sync thread"""
+        if self._sync_thread and self._sync_thread.is_alive():
+            return
+        
+        self._stop_sync.clear()
+        self._sync_thread = threading.Thread(
+            target=self._sync_loop,
+            daemon=True,
+            name="MongoDB-Sync"
+        )
+        self._sync_thread.start()
+        logger.info("Background sync thread started (event-driven + 10s fallback)")
+    
+    def _sync_loop(self):
+        """
+        Event-driven sync: sleeps until a new record signals it,
+        or wakes every 10s as safety fallback.
+        """
+        while not self._stop_sync.is_set():
+            # Wait for signal OR 10s timeout (safety net for missed events)
+            self._sync_event.wait(timeout=10)
+            self._sync_event.clear()
+            
+            # Check if we should stop
+            if self._stop_sync.is_set():
+                break
+            
+            # Skip if MongoDB unavailable
+            if not self._check_mongodb():
+                continue
+            
+            # Read pending records
+            data = self._load_json()
+            pending = data.get("pending_attendance", [])
+            
+            if not pending:
+                continue
+            
+            # Sync one-by-one (don't use insert_many — one bad record kills batch)
+            synced_count = 0
+            try:
+                for record in pending:
+                    # Check for duplicate before inserting
+                    nfc_id = str(record.get("nfc_id", ""))
+                    date_str = record.get("date", "")[:10]
+                    
+                    try:
+                        existing = self.mongo_db.attendance.find_one({
+                            "nfc_id": nfc_id,
+                            "date": {"$regex": f"^{date_str}"}
+                        })
+                        
+                        if not existing:
+                            clean = {k: v for k, v in record.items() if k != "_id"}
+                            self.mongo_db.attendance.insert_one(clean)
+                        
+                        synced_count += 1
+                    except Exception as e:
+                        logger.error("Sync insert error for %s: %s", nfc_id, e)
+                        break  # Stop on first error, retry rest next cycle
+            except Exception as e:
+                logger.error("Sync loop error after %d records: %s", synced_count, e)
+            
+            # Move successfully synced to confirmed, keep failures in pending
+            if synced_count > 0:
+                confirmed = pending[:synced_count]
+                data = self._load_json()
+                data["attendance"].extend(confirmed)
+                data["pending_attendance"] = data["pending_attendance"][synced_count:]
+                self._save_json(data)
+                logger.info("Synced %d/%d records to MongoDB", synced_count, len(pending))
+    
+    def stop_sync(self):
+        """Stop the background sync thread"""
+        self._stop_sync.set()
+        self._sync_event.set()  # Wake thread so it can exit
+        if self._sync_thread and self._sync_thread.is_alive():
+            self._sync_thread.join(timeout=3)
+            logger.info("Background sync thread stopped")
+    
+    # ========================================
     # STATUS & UTILITIES
     # ========================================
     def get_status(self):
@@ -932,8 +1017,11 @@ class Database:
     # CLEANUP
     # ========================================
     def close(self):
-        """Close database connections and stop background thread"""
-        # Stop reconnect thread first
+        """Close database connections and stop background threads"""
+        # Stop sync thread first (flush pending if possible)
+        self.stop_sync()
+        
+        # Stop reconnect thread
         self.stop_reconnect()
         
         # Close MongoDB connection

@@ -14,6 +14,7 @@ import sys
 import subprocess
 import logging
 import shutil
+import threading
 import urllib.request
 import urllib.error
 from datetime import datetime
@@ -633,16 +634,24 @@ def notify_api_server(endpoint, data):
         return False
 
 def notify_attendance_success(record):
-    """Notify API server of successful attendance"""
-    notify_api_server('/api/hardware/attendance', record)
+    """Notify API server of successful attendance (fire-and-forget, non-blocking)"""
+    threading.Thread(
+        target=notify_api_server,
+        args=('/api/hardware/attendance', record),
+        daemon=True
+    ).start()
 
 def notify_attendance_fail(nfc_id, name, reason):
-    """Notify API server of failed attendance"""
-    notify_api_server('/api/hardware/fail', {
-        'nfc_id': str(nfc_id),
-        'name': name,
-        'reason': reason
-    })
+    """Notify API server of failed attendance (fire-and-forget, non-blocking)"""
+    threading.Thread(
+        target=notify_api_server,
+        args=('/api/hardware/fail', {
+            'nfc_id': str(nfc_id),
+            'name': name,
+            'reason': reason
+        }),
+        daemon=True
+    ).start()
 
 # ========================================
 # CAMERA & FACE DETECTION (OpenCV + Haar Cascade)

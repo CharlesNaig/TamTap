@@ -5,7 +5,7 @@
 Create a spreadsheet file with the following columns:
 
 | Column | Header Name | Required | Example |
-|--------|-------------|----------|---------|
+| ------ | ----------- | -------- | ------- |
 | A | `Section` | ✅ Yes | `11-STEM-A` |
 | B | `Grade` | No | `11` |
 | C | `Adviser Name` | No | `Juan Dela Cruz` |
@@ -25,7 +25,7 @@ Create a spreadsheet file with the following columns:
 ## Example Data
 
 | Section | Grade | Adviser Name | Mon Start | Mon End | Tue Start | Tue End | Wed Start | Wed End | Thu Start | Thu End | Fri Start | Fri End | Sat Start | Sat End |
-|---------|-------|--------------|-----------|---------|-----------|---------|-----------|---------|-----------|---------|-----------|---------|-----------|---------|
+| ------- | ----- | ------------ | --------- | ------- | --------- | ------- | --------- | ------- | --------- | ------- | --------- | ------- | --------- | ------- |
 | ICT-A | 12 | Juan Dela Cruz | 07:00 | 17:00 | 07:00 | 17:00 | 07:00 | 17:00 | 07:00 | 17:00 | 07:00 | 16:00 | | |
 | ICT-B | 12 | Maria Santos | 08:00 | 17:00 | 08:00 | 17:00 | 08:00 | 17:00 | 08:00 | 17:00 | 08:00 | 16:00 | 08:00 | 12:00 |
 | STEM-A | 11 | | 07:30 | 16:00 | 07:30 | 16:00 | 07:30 | 16:00 | 07:30 | 16:00 | 07:30 | 15:00 | | |
@@ -33,12 +33,15 @@ Create a spreadsheet file with the following columns:
 ## Column Definitions
 
 ### Time Format
+
 All times should be in **24-hour format (HH:MM)**:
+
 - `07:00` = 7:00 AM
 - `13:00` = 1:00 PM
 - `17:00` = 5:00 PM
 
 ### Saturday Classes
+
 - Leave `Sat Start` and `Sat End` **blank** if no Saturday classes
 - If Saturday has classes, fill in both start and end times
 
@@ -46,7 +49,7 @@ All times should be in **24-hour format (HH:MM)**:
 
 When a student taps their card, the system checks:
 
-```
+```text
 IF today is Saturday AND saturday schedule is blank:
     → DECLINE: "No classes today"
 
@@ -63,6 +66,7 @@ OTHERWISE:
 ## Grace Period & Absent Threshold
 
 These are configured per-section in the Admin Panel (not in the import):
+
 - **Grace Period**: Minutes after start time before marked LATE (default: 20)
 - **Absent Threshold**: Minutes after start time before marked ABSENT (default: 60)
 

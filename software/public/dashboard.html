@@ -118,9 +118,19 @@
         .auth-loading {
             visibility: hidden;
         }
+        
+        /* Body override */
+        body {
+            padding-right: 0%;
+        }
+        
+        /* Attendance bar default width */
+        #attendance-bar {
+            width: 0%;
+        }
     </style>
 </head>
-<body style="padding-right: 0%;" class="bg-gray-50 min-h-screen flex flex-col auth-loading">
+<body class="bg-gray-50 min-h-screen flex flex-col auth-loading">
 
     <!-- ========================================
          TOP BAR (Green with Address)
@@ -376,8 +386,7 @@
                     <!-- Progress Bar -->
                     <div class="mt-2 sm:mt-3 bg-white/20 rounded-full h-2 sm:h-3">
                         <div id="attendance-bar" 
-                             class="bg-feu-gold h-2 sm:h-3 rounded-full transition-all duration-500" 
-                             style="width: 0%"></div>
+                             class="bg-feu-gold h-2 sm:h-3 rounded-full transition-all duration-500"></div>
                     </div>
                 </div>
             </div>

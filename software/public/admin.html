@@ -77,8 +77,13 @@
         
         /* Console Output Styling */
         .console-output {
-            scrollbar-width: thin;
-            scrollbar-color: #4b5563 #1f2937;
+            -ms-overflow-style: thin;
+        }
+        @supports (scrollbar-width: thin) {
+            .console-output {
+                scrollbar-width: thin;
+                scrollbar-color: #4b5563 #1f2937;
+            }
         }
         .console-output::-webkit-scrollbar {
             width: 6px;

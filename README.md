@@ -1,8 +1,8 @@
 <!-- markdownlint-disable MD033 MD036 MD041 MD001 MD051 MD060 MD040 -->
 <div align="center">
-<img src="assets/logos/TamTap.png" alt="TamTap Logo" width="400" />
+<img width="4750" height="1425" alt="TamTap Logo" src="https://github.com/user-attachments/assets/3ebbd892-85de-4a12-8305-05565e5c8ef4" />
 
-# 📛 TamTap
+# TamTap
 
 ### NFC-Based Attendance System with Camera Verification
 

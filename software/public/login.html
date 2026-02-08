@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAMTAP - Login</title>
+    <title>TAMTAP - NFC-Based Attendance System</title>
     <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -35,31 +35,25 @@
     <script src="/js/preloader.js"></script>
     <style>
         /* ========================================
-           FIXED FULL-SCREEN LAYOUT
+           SCROLLABLE PAGE LAYOUT
         ======================================== */
-        html, body {
-            height: 100%;
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-        }
-
-        .page-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh; /* Dynamic viewport height for mobile */
-            overflow: hidden;
+        html {
+            scroll-behavior: smooth;
         }
 
         /* ========================================
-           HERO SLIDESHOW GALLERY (Swipe Animation)
+           HERO SLIDESHOW
         ======================================== */
-        .hero-slideshow {
+        .hero-section {
             position: relative;
-            flex: 1;
             overflow: hidden;
-            min-height: 0;
+            height: 55vh;
+        }
+        @media (min-width: 768px) {
+            .hero-section { height: 70vh; }
+        }
+        @media (min-width: 1024px) {
+            .hero-section { height: 85vh; }
         }
 
         .slides-wrapper {
@@ -78,11 +72,36 @@
 
         .hero-slide img {
             width: 100%;
-            height: 60%;
+            height: 100%;
             object-fit: cover;
         }
 
-        /* Slideshow Navigation Dots */
+        /* Hero gradient overlay */
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                to bottom,
+                rgba(0,0,0,0.15) 0%,
+                rgba(0,0,0,0.35) 50%,
+                rgba(0,0,0,0.65) 100%
+            );
+            z-index: 2;
+        }
+
+        /* Hero text overlay */
+        .hero-text {
+            position: absolute;
+            bottom: 12%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 5;
+            width: 90%;
+            max-width: 700px;
+        }
+
+        /* Slideshow dots */
         .slideshow-dots {
             position: absolute;
             bottom: 20px;
@@ -102,25 +121,21 @@
             transition: all 0.3s ease;
             border: 2px solid transparent;
         }
-
-        .slideshow-dot:hover {
-            background: rgba(255, 255, 255, 0.8);
-        }
-
+        .slideshow-dot:hover { background: rgba(255, 255, 255, 0.8); }
         .slideshow-dot.active {
             background: white;
-            border-color: #0a8249;
+            border-color: #FFD700;
             transform: scale(1.2);
         }
 
-        /* Slideshow Arrows */
+        /* Slideshow arrows */
         .slideshow-arrow {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.9);
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.85);
             border: none;
             border-radius: 50%;
             cursor: pointer;
@@ -129,54 +144,37 @@
             align-items: center;
             justify-content: center;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
         }
-
         .slideshow-arrow:hover {
             background: white;
             transform: translateY(-50%) scale(1.1);
         }
-
-        .slideshow-arrow.prev { left: 20px; }
-        .slideshow-arrow.next { right: 20px; }
+        .slideshow-arrow.prev { left: 16px; }
+        .slideshow-arrow.next { right: 16px; }
 
         @media (max-width: 768px) {
-            .slideshow-arrow {
-                width: 40px;
-                height: 40px;
-            }
+            .slideshow-arrow { width: 38px; height: 38px; }
             .slideshow-arrow.prev { left: 10px; }
             .slideshow-arrow.next { right: 10px; }
-            .slideshow-dots { bottom: 15px; }
+            .slideshow-dots { bottom: 14px; }
             .slideshow-dot { width: 10px; height: 10px; }
         }
 
-        /* Modal Animation */
-        .modal-enter {
-            animation: modalFadeIn 0.25s ease-out;
+        /* ========================================
+           STICKY NAVBAR — SCROLL SHADOW
+        ======================================== */
+        #main-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            transition: box-shadow 0.3s ease;
         }
-        @keyframes modalFadeIn {
-            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        /* Modal Backdrop */
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+        #main-header.scrolled {
+            box-shadow: 0 2px 16px rgba(0,0,0,0.10);
         }
 
-        /* Button Hover */
-        .btn-login {
-            transition: all 0.2s ease;
-        }
-        .btn-login:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Nav Link Underline */
+        /* Nav link underline */
         .nav-link {
             position: relative;
             cursor: pointer;
@@ -191,210 +189,536 @@
             background: #0a8249;
             transition: width 0.2s;
         }
-        .nav-link:hover::after {
-            width: 100%;
+        .nav-link:hover::after { width: 100%; }
+
+        /* ========================================
+           SMART STICKY BOTTOM BAR
+        ======================================== */
+        #login-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+        }
+        #login-bottom-bar.bar-hidden {
+            transform: translateY(100%);
         }
 
-        /* Input Focus */
+        /* ========================================
+           LOGIN MODAL
+        ======================================== */
+        .modal-enter {
+            animation: modalFadeIn 0.25s ease-out;
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            -webkit-backdrop-filter: blur(8px);
+            backdrop-filter: blur(8px);
+        }
+
+        /* Input focus */
         .input-focus:focus {
             border-color: #0a8249;
             box-shadow: 0 0 0 3px rgba(10, 130, 73, 0.15);
             outline: none;
         }
 
-        /* Header fixed sizing */
-        .header-fixed {
-            flex-shrink: 0;
+        /* ========================================
+           FEATURE CARDS
+        ======================================== */
+        .feature-card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.10);
         }
 
-        /* Bottom bar fixed sizing */
-        .bottom-bar-fixed {
-            flex-shrink: 0;
+        /* ========================================
+           HOW IT WORKS — STEP CONNECTOR
+        ======================================== */
+        .step-connector {
+            display: none;
+        }
+        @media (min-width: 768px) {
+            .step-connector {
+                display: block;
+                position: absolute;
+                top: 32px;
+                left: 50%;
+                width: calc(100% + 24px);
+                height: 2px;
+                background: #0a8249;
+                opacity: 0.3;
+            }
+        }
+
+        /* ========================================
+           SECTION FADE-IN ON SCROLL
+        ======================================== */
+        .fade-section {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .fade-section.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
     </style>
 </head>
-<body class="m-0 p-0">
-
-    <div class="page-container">
+<body class="bg-white text-gray-800 antialiased">
 
     <!-- ================================================
-         HEADER (White with Logo and Nav)
+         SECTION 1: STICKY NAVBAR
     ================================================ -->
-    <header class="header-fixed bg-white py-2 sm:py-3 lg:py-4 px-4 sm:px-6 lg:px-8 xl:px-12 shadow-sm">
+    <header id="main-header" class="bg-white py-2 sm:py-3 lg:py-4 px-4 sm:px-6 lg:px-8 xl:px-12">
         <div class="w-full max-w-[1920px] mx-auto flex items-center justify-between">
             <!-- Left: Logo -->
-            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                <img src="/assets/TamTap-3D.png" 
-                     alt="TAMTAP Mascot" 
-                     class="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 xl:h-14 xl:w-14 object-contain"
-                     onerror="this.style.display='none'">
-                <span class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
-                    <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
-                </span>
-            </div>
+            <a href="#" onclick="window.scrollTo({top:0,behavior:'smooth'}); return false;" class="flex items-center no-underline">
+                <img src="/assets/TamTap.png"
+                     alt="TAMTAP"
+                     class="h-8 sm:h-10 lg:h-12 xl:h-14 object-contain">
+            </a>
 
-            <!-- Center: Nav Links (Desktop) -->
-            <nav class="hidden md:flex items-center gap-4 lg:gap-8 xl:gap-12">
-                <span class="nav-link text-feu-green font-medium text-sm lg:text-base xl:text-lg" onclick="showInfoModal('privacy')">Privacy Terms</span>
-                <span class="nav-link text-feu-green font-medium text-sm lg:text-base xl:text-lg" onclick="showInfoModal('terms')">Terms of Use</span>
-                <span class="nav-link text-feu-green font-medium text-sm lg:text-base xl:text-lg" onclick="showInfoModal('researches')">Researches</span>
+            <!-- Center + Right: Nav Links (Desktop) -->
+            <nav class="hidden md:flex items-center gap-4 lg:gap-8 xl:gap-10">
+                <span class="nav-link text-feu-green font-medium text-sm lg:text-base" onclick="showInfoModal('privacy')">Privacy Terms</span>
+                <span class="nav-link text-feu-green font-medium text-sm lg:text-base" onclick="showInfoModal('terms')">Terms of Use</span>
+                <span class="nav-link text-feu-green font-medium text-sm lg:text-base" onclick="showInfoModal('researches')">Researches</span>
+                <button onclick="openModal()"
+                        class="ml-2 border-2 border-feu-green text-feu-green font-semibold text-sm lg:text-base px-5 py-1.5 rounded-full hover:bg-feu-green hover:text-white transition min-h-[40px]">
+                    Log In <i class="fas fa-arrow-right ml-1 text-xs"></i>
+                </button>
             </nav>
 
-            <!-- Right: Mobile Menu -->
-            <div class="flex items-center">
-                <!-- Hamburger Menu (Mobile) -->
-                <button onclick="toggleMobileMenu()" class="md:hidden text-feu-green hover:text-feu-green-dark transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Toggle menu">
-                    <i id="menu-icon" class="fas fa-bars text-xl"></i>
-                </button>
-            </div>
+            <!-- Hamburger (Mobile) -->
+            <button onclick="toggleMobileMenu()" class="md:hidden text-feu-green hover:text-feu-green-dark transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Toggle menu">
+                <i id="menu-icon" class="fas fa-bars text-xl"></i>
+            </button>
         </div>
-        
+
         <!-- Mobile Navigation Menu -->
         <nav id="mobile-menu" class="hidden md:hidden mt-3 pb-2 border-t border-gray-100 pt-3">
-            <div class="flex flex-col gap-2">
-                <span class="text-feu-green font-medium text-sm py-2 px-2 hover:bg-gray-50 rounded cursor-pointer" onclick="showInfoModal('privacy')">Privacy Terms</span>
-                <span class="text-feu-green font-medium text-sm py-2 px-2 hover:bg-gray-50 rounded cursor-pointer" onclick="showInfoModal('terms')">Terms of Use</span>
-                <span class="text-feu-green font-medium text-sm py-2 px-2 hover:bg-gray-50 rounded cursor-pointer" onclick="showInfoModal('researches')">Researches</span>
+            <div class="flex flex-col gap-1">
+                <span class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded cursor-pointer" onclick="showInfoModal('privacy')">Privacy Terms</span>
+                <span class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded cursor-pointer" onclick="showInfoModal('terms')">Terms of Use</span>
+                <span class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded cursor-pointer" onclick="showInfoModal('researches')">Researches</span>
+                <button onclick="openModal()" class="mt-1 text-left text-white bg-feu-green font-semibold text-sm py-2.5 px-3 rounded hover:bg-feu-green-dark transition">
+                    <i class="fas fa-sign-in-alt mr-1"></i> Log In
+                </button>
             </div>
         </nav>
     </header>
 
     <!-- ================================================
-         HERO SLIDESHOW GALLERY
+         SECTION 2: HERO SLIDESHOW
     ================================================ -->
-    <main class="hero-slideshow">
+    <section class="hero-section">
         <!-- Slides Container -->
         <div id="slides-container">
-            <div class="hero-slide active">
-                <img src="/assets/backgrounds/Hero-page.png" alt="TAMTAP Hero 1" loading="eager">
+            <div class="slides-wrapper" id="slides-wrapper">
+                <div class="hero-slide">
+                    <img src="/assets/backgrounds/Hero-page.png" alt="TAMTAP Hero" loading="eager">
+                </div>
             </div>
-            <!-- Additional slides added via JS or manually -->
+        </div>
+
+        <!-- Gradient overlay -->
+        <div class="hero-overlay"></div>
+
+        <!-- Hero text overlay -->
+        <div class="hero-text">
+            <img src="/assets/FeuXTamTap.png"
+                 alt="FEU x TAMTAP"
+                 class="h-16 sm:h-20 lg:h-24 mx-auto mb-4 drop-shadow-lg"
+                 onerror="this.style.display='none'">
+            <h1 class="text-white text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold drop-shadow-lg leading-tight">
+                NFC-Based Attendance System
+            </h1>
+            <p class="text-gray-200 text-sm sm:text-base lg:text-lg mt-2 drop-shadow">
+                FEU Roosevelt Marikina
+            </p>
+            <button onclick="openModal()"
+                    class="mt-5 bg-feu-gold text-feu-green-dark font-bold text-sm sm:text-base px-8 py-2.5 rounded-full hover:bg-yellow-300 transition shadow-lg inline-flex items-center gap-2 min-h-[44px]">
+                <i class="fas fa-sign-in-alt"></i> Log In
+            </button>
         </div>
 
         <!-- Navigation Arrows -->
         <button class="slideshow-arrow prev" onclick="prevSlide()" aria-label="Previous slide">
-            <i class="fas fa-chevron-left text-feu-green text-lg"></i>
+            <i class="fas fa-chevron-left text-feu-green text-base"></i>
         </button>
         <button class="slideshow-arrow next" onclick="nextSlide()" aria-label="Next slide">
-            <i class="fas fa-chevron-right text-feu-green text-lg"></i>
+            <i class="fas fa-chevron-right text-feu-green text-base"></i>
         </button>
 
         <!-- Navigation Dots -->
         <div class="slideshow-dots" id="slideshow-dots"></div>
-    </main>
+    </section>
 
     <!-- ================================================
-         BOTTOM BAR (Green with Log In Button)
+         SECTION 3: WHAT IS TAMTAP?
     ================================================ -->
-    <div class="bottom-bar-fixed bg-feu-green py-2 sm:py-3 lg:py-4 flex items-center justify-center">
+    <section class="fade-section py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8 bg-white">
+        <div class="max-w-3xl mx-auto text-center">
+            <h2 class="text-3xl sm:text-4xl font-bold text-feu-green mb-6">What is TAMTAP?</h2>
+            <p class="text-gray-600 text-base sm:text-lg leading-relaxed mb-4">
+                <strong class="text-gray-800">TAMTAP</strong> is a locally hosted, NFC-based attendance system developed under the capstone project titled
+                <em>"Developing a TAMTAP NFC-Based Attendance System Using Raspberry Pi with Real-Time Dashboard Updates."</em>
+                It is designed specifically for <strong class="text-gray-800">FEU Roosevelt Marikina</strong> to provide a secure, efficient, and modern approach to attendance monitoring.
+            </p>
+            <p class="text-gray-600 text-base sm:text-lg leading-relaxed mb-4">
+                The system is powered by a Raspberry Pi, integrates NFC-based student verification, and supports camera-assisted validation to enhance authenticity. Attendance data is processed and displayed through a real-time dashboard accessible over a local area network (LAN), ensuring fast updates, controlled access, and data privacy without relying on external cloud services.
+            </p>
+            <p class="text-gray-600 text-base sm:text-lg leading-relaxed mb-4">
+                TAMTAP streamlines attendance tracking while enabling administrators to monitor, review, and backtrack records seamlessly through a secure dashboard interface.
+            </p>
+            <p class="text-feu-gold font-semibold text-sm sm:text-base tracking-wide">
+                Grade 12 ICT B Capstone Project &nbsp;|&nbsp; S.Y. 2025–2026
+            </p>
+        </div>
+    </section>
+
+    <!-- ================================================
+         SECTION 4: FEATURE CARDS
+    ================================================ -->
+    <section class="fade-section py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-2xl sm:text-3xl font-bold text-feu-green text-center mb-10 lg:mb-14">Key Features</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+
+                <!-- Card 1: NFC Tap-In -->
+                <div class="feature-card bg-white rounded-xl shadow-md p-8 text-center">
+                    <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-feu-green/10 flex items-center justify-center">
+                        <i class="fas fa-wifi text-feu-green text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">NFC Tap-In</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Students tap their NFC card on the reader for a fast, contactless check-in experience under 100ms.
+                    </p>
+                </div>
+
+                <!-- Card 2: Camera Verification -->
+                <div class="feature-card bg-white rounded-xl shadow-md p-8 text-center">
+                    <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-feu-green/10 flex items-center justify-center">
+                        <i class="fas fa-camera text-feu-green text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Camera Verification</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Face detection via Haar cascade confirms a real person is present — no proxy attendance.
+                    </p>
+                </div>
+
+                <!-- Card 3: Live Dashboard -->
+                <div class="feature-card bg-white rounded-xl shadow-md p-8 text-center">
+                    <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-feu-green/10 flex items-center justify-center">
+                        <i class="fas fa-chart-line text-feu-green text-2xl"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 mb-2">Live Dashboard</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Real-time attendance monitoring via Socket.IO on a local network dashboard accessible to teachers and admins.
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================
+         SECTION 5: HOW IT WORKS
+    ================================================ -->
+    <section class="fade-section py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white">
+        <div class="max-w-5xl mx-auto">
+            <h2 class="text-2xl sm:text-3xl font-bold text-feu-green text-center mb-10 lg:mb-14">How It Works</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 md:gap-4 lg:gap-6 relative">
+
+                <!-- Step 1 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-feu-green text-white flex items-center justify-center text-xl font-bold shadow-md">1</div>
+                    <div class="step-connector"></div>
+                    <i class="fas fa-id-card text-feu-green text-2xl mb-2"></i>
+                    <h4 class="font-semibold text-gray-800 text-sm">Tap NFC Card</h4>
+                    <p class="text-gray-400 text-xs mt-1">Student taps their card on the reader</p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-feu-green text-white flex items-center justify-center text-xl font-bold shadow-md">2</div>
+                    <div class="step-connector"></div>
+                    <i class="fas fa-face-smile text-feu-green text-2xl mb-2"></i>
+                    <h4 class="font-semibold text-gray-800 text-sm">Face Detection</h4>
+                    <p class="text-gray-400 text-xs mt-1">Camera verifies a face is present</p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-feu-green text-white flex items-center justify-center text-xl font-bold shadow-md">3</div>
+                    <div class="step-connector"></div>
+                    <i class="fas fa-check-circle text-feu-green text-2xl mb-2"></i>
+                    <h4 class="font-semibold text-gray-800 text-sm">Attendance Logged</h4>
+                    <p class="text-gray-400 text-xs mt-1">Record saved with photo &amp; timestamp</p>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="text-center relative">
+                    <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-feu-green text-white flex items-center justify-center text-xl font-bold shadow-md">4</div>
+                    <i class="fas fa-desktop text-feu-green text-2xl mb-2"></i>
+                    <h4 class="font-semibold text-gray-800 text-sm">Dashboard Updated</h4>
+                    <p class="text-gray-400 text-xs mt-1">Teachers see live updates instantly</p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================
+         SECTION 6: ABOUT THE RESEARCH
+    ================================================ -->
+    <section class="fade-section py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <!-- Image -->
+            <div class="order-2 lg:order-1">
+                <img src="/assets/backgrounds/Researchers.png"
+                     alt="TAMTAP Research Team"
+                     class="w-full rounded-xl shadow-lg"
+                     loading="lazy">
+            </div>
+            <!-- Text -->
+            <div class="order-1 lg:order-2">
+                <h2 class="text-2xl sm:text-3xl font-bold text-feu-green mb-4">About This Research</h2>
+                <p class="text-gray-600 text-base leading-relaxed mb-4">
+                    TAMTAP is a <strong>Grade 12 ICT B Capstone Project</strong> at FEU Roosevelt Marikina
+                    for S.Y. 2025–2026. It was developed to streamline student attendance tracking using
+                    contactless NFC technology, face detection verification, and real-time monitoring
+                    through a local area network.
+                </p>
+                <p class="text-gray-600 text-base leading-relaxed mb-6">
+                    The system runs entirely on-premises — no cloud services, no internet dependency.
+                    Designed for school LAN deployment with data privacy compliance under
+                    R.A. 10173.
+                </p>
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-full bg-feu-green/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user-graduate text-feu-green"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">Research Team</p>
+                        <p class="text-gray-500 text-xs">Charles Giann Marcelo et al.</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-feu-green/10 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-school text-feu-green"></i>
+                    </div>
+                    <div>
+                        <p class="font-semibold text-gray-800 text-sm">FEU Roosevelt — Marikina Campus</p>
+                        <p class="text-gray-500 text-xs">J.P. Rizal St., Lamuan, Marikina City</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================
+         SECTION 7: TECHNOLOGY STACK
+    ================================================ -->
+    <section class="fade-section py-10 sm:py-12 px-4 sm:px-6 lg:px-8 bg-white border-t border-gray-100">
+        <div class="max-w-4xl mx-auto text-center">
+            <p class="text-xs text-gray-400 uppercase tracking-widest mb-4 font-semibold">Built With</p>
+            <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-8 text-gray-400 text-xs sm:text-sm font-medium">
+                <span class="flex items-center gap-1.5"><i class="fas fa-microchip text-feu-green"></i> Raspberry Pi</span>
+                <span class="text-gray-300">•</span>
+                <span class="flex items-center gap-1.5"><i class="fab fa-node-js text-feu-green"></i> Node.js</span>
+                <span class="text-gray-300">•</span>
+                <span class="flex items-center gap-1.5"><i class="fas fa-database text-feu-green"></i> MongoDB</span>
+                <span class="text-gray-300">•</span>
+                <span class="flex items-center gap-1.5"><i class="fas fa-bolt text-feu-green"></i> Socket.IO</span>
+                <span class="text-gray-300">•</span>
+                <span class="flex items-center gap-1.5"><i class="fas fa-eye text-feu-green"></i> OpenCV</span>
+                <span class="text-gray-300">•</span>
+                <span class="flex items-center gap-1.5"><i class="fab fa-python text-feu-green"></i> Python</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================================================
+         SECTION 8: FOOTER
+    ================================================ -->
+    <footer class="bg-feu-green-dark text-white pt-12 pb-6 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+                <!-- Brand -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                        <span class="text-xl font-bold">
+                            <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                        </span>
+                    </div>
+                    <p class="text-white text-sm leading-relaxed">
+                        NFC-Based Attendance System<br>
+                        FEU Roosevelt Marikina<br>
+                        Grade 12 ICT B Capstone Project
+                    </p>
+                </div>
+                <!-- Quick Links -->
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="#" onclick="showInfoModal('privacy'); return false;" class="text-white hover:text-white transition"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Terms</a></li>
+                        <li><a href="#" onclick="showInfoModal('terms'); return false;" class="text-white hover:text-white transition"><i class="fas fa-file-contract mr-1.5 text-xs"></i>Terms of Use</a></li>
+                        <li><a href="#" onclick="showInfoModal('researches'); return false;" class="text-white hover:text-white transition"><i class="fas fa-flask mr-1.5 text-xs"></i>About the Research</a></li>
+                        <li><a href="#" onclick="openModal(); return false;" class="text-white hover:text-white transition"><i class="fas fa-sign-in-alt mr-1.5 text-xs"></i>Log In</a></li>
+                    </ul>
+                </div>
+                <!-- Contact -->
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">School</h4>
+                    <ul class="space-y-2 text-sm text-white">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-school mt-0.5 text-xs text-feu-gold"></i>
+                            <span>FEU Roosevelt — Marikina Campus</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-map-marker-alt mt-0.5 text-xs text-feu-gold"></i>
+                            <span>J.P. Rizal St., Lamuan, Marikina City</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-globe mt-0.5 text-xs text-feu-gold"></i>
+                            <a href="https://feuroosevelt.edu.ph" target="_blank" rel="noopener" class="text-white hover:text-feu-gold transition">feuroosevelt.edu.ph</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-white/15 pt-5">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white">
+                    <p>
+                        &copy; 2025 Developed by
+                        <a href="https://github.com/CharlesNaig" target="_blank" rel="noopener" class="text-feu-gold hover:text-white transition font-medium">Naig</a>
+                    </p>
+                    <p>Grade 12 ICT Capstone &nbsp;|&nbsp; FEU Roosevelt Marikina</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================================================
+         SMART STICKY BOTTOM BAR (Log In CTA)
+    ================================================ -->
+    <div id="login-bottom-bar" class="bg-feu-green py-2.5 sm:py-3 flex items-center justify-center shadow-[0_-2px_10px_rgba(0,0,0,0.15)]">
         <button onclick="openModal()"
-                class="btn-login bg-feu-green border-2 border-feu-gold text-white font-bold text-sm sm:text-base lg:text-lg px-8 sm:px-12 lg:px-16 xl:px-20 py-2 sm:py-2.5 lg:py-3 rounded-full inline-flex items-center justify-center gap-2 hover:bg-feu-gold hover:text-feu-green-dark focus:outline-none focus:ring-2 focus:ring-feu-gold focus:ring-offset-2 min-h-[44px]">
+                class="bg-feu-green border-2 border-feu-gold text-white font-bold text-sm sm:text-base px-10 sm:px-14 lg:px-20 py-2 sm:py-2.5 rounded-full inline-flex items-center justify-center gap-2 hover:bg-feu-gold hover:text-feu-green-dark transition focus:outline-none focus:ring-2 focus:ring-feu-gold focus:ring-offset-2 min-h-[44px]">
+            <i class="fas fa-sign-in-alt"></i>
             <span class="underline underline-offset-2">Log In</span>
         </button>
     </div>
-
-    </div> <!-- End page-container -->
 
     <!-- ================================================
          LOGIN MODAL (Hidden by Default)
     ================================================ -->
     <div id="login-modal" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <!-- Modal wrapper for positioning mascot -->
         <div class="relative modal-enter">
-            <!-- Hugging Mascot - Responsive positioning -->
-            <!-- Mobile: bottom-right peeking, Tablet+: side hugging -->
-            <img src="/assets/TAMTAP-Hugging.png" 
-                 alt="TAMTAP Mascot Hugging" 
+            <!-- Hugging Mascot -->
+            <img src="/assets/TAMTAP-Hugging.png"
+                 alt="TAMTAP Mascot Hugging"
                  class="absolute z-10 pointer-events-none
                         w-20 xs:w-24 sm:w-36 md:w-40 lg:w-48 xl:w-56
                         -right-2 xs:-right-4 sm:-right-10 md:-right-14 lg:-right-18 xl:-right-24
                         -bottom-8 xs:-bottom-10 sm:bottom-auto sm:top-1/4 md:top-1/3
                         opacity-90 sm:opacity-100">
-            
+
             <div class="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-[94%] xs:w-[92%] sm:w-full max-w-[320px] xs:max-w-sm sm:max-w-md lg:max-w-lg xl:max-w-xl mx-auto overflow-hidden max-h-[90vh] overflow-y-auto">
 
-            <!-- Modal Header with Logo -->
-            <div class="bg-white px-8 pt-8 pb-4 text-center">
-                <!-- Mascot Image -->
-                <img src="/assets/logos/TamTap-wteachers.png" 
-                     alt="TAMTAP Mascot" 
-                     class="h-28 mx-auto mb-3">
-                
-                
+                <!-- Modal Header with Logo -->
+                <div class="bg-white px-8 pt-8 pb-4 text-center">
+                    <img src="/assets/logos/TamTap-wteachers.png"
+                         alt="TAMTAP Mascot"
+                         class="h-28 mx-auto mb-3">
+                </div>
 
-            <!-- Login Form -->
-            <form id="login-form" class="px-8 py-6 space-y-5">
-                <!-- Email Address -->
-                <!-- Email Address -->
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
-                    <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
-                       <i class="fas fa-envelope" aria-hidden="true"></i> Email Address
-                    </label>
-                    <div class="relative flex-1 w-full">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base"></span>
-                        <input type="text" 
-                               id="username" 
-                               name="username" 
-                               required
-                               autocomplete="username"
-                               class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
-                               aria-label="Email Address">
+                <!-- Login Form -->
+                <form id="login-form" class="px-8 py-6 space-y-5">
+                    <!-- Email Address -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
+                        <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
+                            <i class="fas fa-envelope" aria-hidden="true"></i> Email Address
+                        </label>
+                        <div class="relative flex-1 w-full">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base"></span>
+                            <input type="text"
+                                   id="username"
+                                   name="username"
+                                   required
+                                   autocomplete="username"
+                                   class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
+                                   aria-label="Email Address">
+                        </div>
                     </div>
-                </div>
 
-                <!-- Password -->
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
-                    <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
-                        <i class="fas fa-lock" aria-hidden="true"></i> Password
-                    </label>
-                    <div class="relative flex-1 w-full">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base"></span>
-                        <input type="password" 
-                               id="password" 
-                               name="password" 
-                               required
-                               autocomplete="current-password"
-                               class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
-                               aria-label="Password">
+                    <!-- Password -->
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
+                        <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
+                            <i class="fas fa-lock" aria-hidden="true"></i> Password
+                        </label>
+                        <div class="relative flex-1 w-full">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base"></span>
+                            <input type="password"
+                                   id="password"
+                                   name="password"
+                                   required
+                                   autocomplete="current-password"
+                                   class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
+                                   aria-label="Password">
+                        </div>
                     </div>
-                </div>
 
-                <!-- Error Message -->
-                <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm px-3 py-2 rounded-lg">
-                    <i class="fas fa-circle-exclamation mr-1"></i>
-                    <span id="login-error-text"></span>
-                </div>
+                    <!-- Error Message -->
+                    <div id="login-error" class="hidden bg-red-50 border border-red-200 text-red-600 text-sm px-3 py-2 rounded-lg">
+                        <i class="fas fa-circle-exclamation mr-1"></i>
+                        <span id="login-error-text"></span>
+                    </div>
 
-                <!-- Submit Button -->
-                <div class="pt-2 text-center">
-                    <button type="submit" 
-                            id="login-btn"
-                            class="bg-feu-green hover:bg-feu-gold hover:text-feu-green-dark border-2 border-feu-green hover:border-feu-gold text-white font-bold text-base px-10 py-3 rounded-full transition inline-flex items-center justify-center gap-2 min-h-[48px]">
-                        <span id="btn-text" class="underline underline-offset-2">Log In</span>
-                        <i id="btn-spinner" class="fas fa-spinner fa-spin hidden"></i>
+                    <!-- Submit Button -->
+                    <div class="pt-2 text-center">
+                        <button type="submit"
+                                id="login-btn"
+                                class="bg-feu-green hover:bg-feu-gold hover:text-feu-green-dark border-2 border-feu-green hover:border-feu-gold text-white font-bold text-base px-10 py-3 rounded-full transition inline-flex items-center justify-center gap-2 min-h-[48px]">
+                            <span id="btn-text" class="underline underline-offset-2">Log In</span>
+                            <i id="btn-spinner" class="fas fa-spinner fa-spin hidden"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Helper Text -->
+                <div class="px-6 pb-6 text-center">
+                    <p class="text-gray-400 text-xs mb-3">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Accounts are provided by the administrator
+                    </p>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-sm py-2 px-4 min-h-[44px] min-w-[44px]">
+                        <i class="fas fa-xmark mr-1"></i> Close
                     </button>
                 </div>
-            </form>
-
-            <!-- Helper Text -->
-            <div class="px-6 pb-6 text-center">
-                <p class="text-gray-400 text-xs mb-3">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    Accounts are provided by the administrator
-                </p>
-                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-sm py-2 px-4 min-h-[44px] min-w-[44px]">
-                    <i class="fas fa-xmark mr-1"></i> Close
-                </button>
             </div>
         </div>
-        </div> <!-- End modal wrapper -->
     </div>
 
     <!-- ================================================
          JAVASCRIPT
     ================================================ -->
     <script>
-        // Mobile Menu Toggle
+        // ========================================
+        // MOBILE MENU
+        // ========================================
         function toggleMobileMenu() {
             const menu = document.getElementById('mobile-menu');
             const icon = document.getElementById('menu-icon');
@@ -403,7 +727,9 @@
             icon.classList.toggle('fa-times');
         }
 
-        // Modal Open/Close
+        // ========================================
+        // LOGIN MODAL
+        // ========================================
         function openModal() {
             const modal = document.getElementById('login-modal');
             modal.classList.remove('hidden');
@@ -421,17 +747,17 @@
             hideError();
         }
 
-        // Close on backdrop click
         document.getElementById('login-modal').addEventListener('click', (e) => {
             if (e.target.id === 'login-modal') closeModal();
         });
 
-        // Close on ESC
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeModal();
         });
 
-        // Error handling
+        // ========================================
+        // ERROR HANDLING
+        // ========================================
         function showError(msg) {
             document.getElementById('login-error-text').textContent = msg;
             document.getElementById('login-error').classList.remove('hidden');
@@ -440,7 +766,9 @@
             document.getElementById('login-error').classList.add('hidden');
         }
 
-        // Auth check
+        // ========================================
+        // AUTH CHECK + LOGIN SUBMIT
+        // ========================================
         async function checkAuth() {
             try {
                 const res = await fetch('/api/auth/me', { credentials: 'include' });
@@ -468,7 +796,6 @@
             }
         }
 
-        // Login form submit
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             hideError();
@@ -530,111 +857,136 @@
         checkAuth();
 
         // ========================================
-        // HERO SLIDESHOW GALLERY
+        // HERO SLIDESHOW
         // ========================================
-        
-        // Hero images array - add more images to this array
-        // Place images in /assets/backgrounds/ folder
-        // Hero images array - add more images here
-        // Place images in /assets/backgrounds/ folder
         const heroImages = [
             '/assets/backgrounds/Researchers.png',
             '/assets/backgrounds/Hero-page.png',
             '/assets/backgrounds/Hero-page-2.png',
-            // '/assets/backgrounds/Hero-page-3.png',
         ];
-        
+
         let currentSlide = 0;
         let slideInterval = null;
-        const SLIDE_DURATION = 8000; // 8 seconds per slide
-        
+        const SLIDE_DURATION = 8000;
+
         function initSlideshow() {
             const container = document.getElementById('slides-container');
             const dotsContainer = document.getElementById('slideshow-dots');
-            
-            // Clear existing and create wrapper
+
             container.innerHTML = '<div class="slides-wrapper" id="slides-wrapper"></div>';
             const wrapper = document.getElementById('slides-wrapper');
             dotsContainer.innerHTML = '';
-            
-            // Create slides inside wrapper
+
             heroImages.forEach((src, index) => {
                 const slide = document.createElement('div');
                 slide.className = 'hero-slide';
                 slide.innerHTML = `<img src="${src}" alt="TAMTAP Hero ${index + 1}" loading="${index === 0 ? 'eager' : 'lazy'}">`;
                 wrapper.appendChild(slide);
-                
-                // Create dot
+
                 const dot = document.createElement('button');
                 dot.className = `slideshow-dot ${index === 0 ? 'active' : ''}`;
                 dot.setAttribute('aria-label', `Go to slide ${index + 1}`);
                 dot.onclick = () => goToSlide(index);
                 dotsContainer.appendChild(dot);
             });
-            
-            // Hide arrows and dots if only one image
+
             if (heroImages.length <= 1) {
                 document.querySelectorAll('.slideshow-arrow').forEach(el => el.style.display = 'none');
                 dotsContainer.style.display = 'none';
             }
-            
-            // Start auto-play
+
             startSlideshow();
         }
-        
+
         function startSlideshow() {
             if (heroImages.length > 1) {
                 slideInterval = setInterval(() => nextSlide(), SLIDE_DURATION);
             }
         }
-        
+
         function stopSlideshow() {
             if (slideInterval) {
                 clearInterval(slideInterval);
                 slideInterval = null;
             }
         }
-        
+
         function goToSlide(index) {
             const wrapper = document.getElementById('slides-wrapper');
             const dots = document.querySelectorAll('.slideshow-dot');
-            
-            // Remove active from current dot
+
             dots[currentSlide]?.classList.remove('active');
-            
-            // Update index with bounds
+
             currentSlide = index;
             if (currentSlide >= heroImages.length) currentSlide = 0;
             if (currentSlide < 0) currentSlide = heroImages.length - 1;
-            
-            // Swipe to new slide using translateX
+
             wrapper.style.transform = `translateX(-${currentSlide * 100}%)`;
-            
-            // Update active dot
             dots[currentSlide]?.classList.add('active');
-            
-            // Reset timer
+
             stopSlideshow();
             startSlideshow();
         }
-        
-        function nextSlide() {
-            goToSlide(currentSlide + 1);
-        }
-        
-        function prevSlide() {
-            goToSlide(currentSlide - 1);
-        }
-        
-        // Initialize slideshow
+
+        function nextSlide() { goToSlide(currentSlide + 1); }
+        function prevSlide() { goToSlide(currentSlide - 1); }
+
         initSlideshow();
+
+        // ========================================
+        // STICKY NAVBAR — SCROLL SHADOW
+        // ========================================
+        const mainHeader = document.getElementById('main-header');
+
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 10) {
+                mainHeader.classList.add('scrolled');
+            } else {
+                mainHeader.classList.remove('scrolled');
+            }
+        }, { passive: true });
+
+        // ========================================
+        // SMART STICKY BOTTOM BAR — HIDE ON SCROLL DOWN
+        // ========================================
+        let lastScrollY = 0;
+        const bottomBar = document.getElementById('login-bottom-bar');
+
+        window.addEventListener('scroll', () => {
+            const currentScrollY = window.scrollY;
+
+            if (currentScrollY > lastScrollY && currentScrollY > 100) {
+                // Scrolling DOWN past 100px — hide
+                bottomBar.classList.add('bar-hidden');
+            } else {
+                // Scrolling UP — show
+                bottomBar.classList.remove('bar-hidden');
+            }
+
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+
+        // ========================================
+        // SECTION FADE-IN ON SCROLL (IntersectionObserver)
+        // ========================================
+        const fadeSections = document.querySelectorAll('.fade-section');
+        const fadeObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    fadeObserver.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        fadeSections.forEach(section => fadeObserver.observe(section));
 
         // ========================================
         // INFO MODALS (Privacy, Terms, Researches)
         // ========================================
         function showInfoModal(type) {
             let title, content;
-            
+
             switch(type) {
                 case 'privacy':
                     title = 'Privacy Terms';
@@ -642,7 +994,7 @@
                         <div class="text-left space-y-4">
                             <h3 class="font-bold text-feu-green">Data Privacy Act Compliance</h3>
                             <p class="text-gray-600 text-sm">
-                                TAMTAP is committed to protecting your personal information in accordance with 
+                                TAMTAP is committed to protecting your personal information in accordance with
                                 the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>.
                             </p>
                             <h4 class="font-semibold text-gray-800">Information We Collect:</h4>
@@ -654,8 +1006,8 @@
                             </ul>
                             <h4 class="font-semibold text-gray-800">Data Usage:</h4>
                             <p class="text-gray-600 text-sm">
-                                All data collected is used solely for attendance tracking purposes 
-                                and is stored securely on local school servers. No data is transmitted 
+                                All data collected is used solely for attendance tracking purposes
+                                and is stored securely on local school servers. No data is transmitted
                                 to external services.
                             </p>
                             <p class="text-gray-500 text-xs mt-4">
@@ -665,7 +1017,7 @@
                         </div>
                     `;
                     break;
-                    
+
                 case 'terms':
                     title = 'Terms of Use';
                     content = `
@@ -686,27 +1038,27 @@
                             </ul>
                             <h4 class="font-semibold text-gray-800">System Guidelines:</h4>
                             <p class="text-gray-600 text-sm">
-                                TAMTAP operates on a local network within school premises. 
-                                The system is designed for attendance monitoring and does not 
+                                TAMTAP operates on a local network within school premises.
+                                The system is designed for attendance monitoring and does not
                                 perform facial recognition or store biometric data.
                             </p>
                         </div>
                     `;
                     break;
-                    
+
                 case 'researches':
                     title = 'About This Research';
                     content = `
                         <div class="text-left space-y-4">
                             <h3 class="font-bold text-feu-green">TAMTAP Research Project</h3>
                             <p class="text-gray-600 text-sm">
-                                <strong>Grade 12 ICT Capstone Project</strong><br>
+                                <strong>Grade 12 ICT B Capstone Project</strong><br>
                                 FEU Roosevelt Marikina | S.Y. 2025–2026
                             </p>
                             <h4 class="font-semibold text-gray-800">Project Description:</h4>
                             <p class="text-gray-600 text-sm">
-                                TAMTAP is an NFC-based attendance system designed to streamline 
-                                student check-ins using contactless technology, face detection 
+                                TAMTAP is an NFC-based attendance system designed to streamline
+                                student check-ins using contactless technology, face detection
                                 verification, and real-time monitoring through a LAN dashboard.
                             </p>
                             <h4 class="font-semibold text-gray-800">Research Team:</h4>
@@ -725,7 +1077,7 @@
                     `;
                     break;
             }
-            
+
             Swal.fire({
                 title: title,
                 html: content,

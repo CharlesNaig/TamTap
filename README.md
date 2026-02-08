@@ -6,7 +6,7 @@
 
 ### NFC-Based Attendance System with Camera Verification
 
-**Grade 12 ICT Capstone Project | FEU Roosevelt Marikina | S.Y. 2025–2026**
+**Grade 12 ICT B Capstone Project | FEU Roosevelt Marikina | S.Y. 2025–2026**
 
 ![Version](https://img.shields.io/badge/version-2.1.0-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)

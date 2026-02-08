@@ -1,5 +1,6 @@
 <!-- markdownlint-disable MD033 MD036 MD041 MD001 MD051 MD060 MD040 -->
 <div align="center">
+<img src="assets/logos/TamTap.png" alt="TamTap Logo" width="400" />
 
 # 📛 TamTap
 

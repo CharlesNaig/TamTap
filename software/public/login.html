@@ -42,6 +42,30 @@
         }
 
         /* ========================================
+           CUSTOM SCROLLBAR
+        ======================================== */
+        /* Webkit (Chrome, Edge, Safari) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #0a8249;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #034c16;
+        }
+
+        /* Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #0a8249 #f1f1f1;
+        }
+
+        /* ========================================
            HERO SLIDESHOW
         ======================================== */
         .hero-section {
@@ -76,7 +100,7 @@
             object-fit: cover;
         }
 
-        /* Hero gradient overlay */
+        /* Hero gradient overlay — visible on hover only */
         .hero-overlay {
             position: absolute;
             inset: 0;
@@ -87,6 +111,11 @@
                 rgba(0,0,0,0.65) 100%
             );
             z-index: 2;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .hero-section:hover .hero-overlay {
+            opacity: 1;
         }
 
         /* Hero text overlay */

@@ -39,13 +39,26 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        // Check admins collection first
-        let user = await db.collection('admins').findOne({ username: username.toLowerCase() });
+        // Normalize input — could be username or email
+        const identifier = username.toLowerCase().trim();
+
+        // Check admins collection first (match username or email)
+        let user = await db.collection('admins').findOne({
+            $or: [
+                { username: identifier },
+                { email: identifier }
+            ]
+        });
         let role = 'admin';
 
-        // If not admin, check teachers
+        // If not admin, check teachers (match username or email)
         if (!user) {
-            user = await db.collection('teachers').findOne({ username: username.toLowerCase() });
+            user = await db.collection('teachers').findOne({
+                $or: [
+                    { username: identifier },
+                    { email: identifier }
+                ]
+            });
             role = 'teacher';
         }
 

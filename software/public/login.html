@@ -676,26 +676,20 @@
 
                 <!-- Login Form -->
                 <form id="login-form" class="px-8 py-6 space-y-5">
-                    <!-- Email Address -->
+                    <!-- Username or Email -->
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-1 sm:gap-4">
                         <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
-                            <i class="fas fa-envelope" aria-hidden="true"></i> Email Address
+                            <i class="fas fa-user" aria-hidden="true"></i> Username
                         </label>
                         <div class="flex-1 w-full">
-                            <input type="email"
+                            <input type="text"
                                    id="username"
                                    name="username"
                                    required
                                    autocomplete="username"
-                                   placeholder="e.g. teacher@feu.edu.ph"
-                                   oninput="validateEmailField()"
-                                   onblur="validateEmailField()"
+                                   placeholder="Username or email"
                                    class="px-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
-                                   aria-label="Email Address"
-                                   aria-describedby="email-hint">
-                            <p id="email-hint" class="hidden text-red-500 text-xs mt-1">
-                                <i class="fas fa-exclamation-circle mr-0.5"></i> Please provide a valid email address
-                            </p>
+                                   aria-label="Username or Email">
                         </div>
                     </div>
 
@@ -790,33 +784,7 @@
             if (e.key === 'Escape') closeModal();
         });
 
-        // ========================================
-        // EMAIL VALIDATION (real-time)
-        // ========================================
-        function validateEmailField() {
-            const input = document.getElementById('username');
-            const hint = document.getElementById('email-hint');
-            const val = input.value.trim();
 
-            // Only validate if user has typed something
-            if (!val) {
-                input.classList.remove('border-red-500');
-                input.classList.add('border-gray-800');
-                hint.classList.add('hidden');
-                return;
-            }
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(val)) {
-                input.classList.remove('border-gray-800');
-                input.classList.add('border-red-500');
-                hint.classList.remove('hidden');
-            } else {
-                input.classList.remove('border-red-500');
-                input.classList.add('border-gray-800');
-                hint.classList.add('hidden');
-            }
-        }
 
         // ========================================
         // ERROR HANDLING
@@ -870,15 +838,7 @@
             const btnSpinner = document.getElementById('btn-spinner');
 
             if (!username || !password) {
-                showError('Please enter email and password');
-                return;
-            }
-
-            // Validate email format
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(username)) {
-                validateEmailField();
-                showError('Please provide a valid email address');
+                showError('Please enter username/email and password');
                 return;
             }
 
@@ -914,7 +874,7 @@
                         }
                     }
                 } else {
-                    showError(data.error || 'Invalid email or password');
+                    showError(data.error || 'Invalid username or password');
                 }
             } catch (err) {
                 showError('Unable to connect to server.');

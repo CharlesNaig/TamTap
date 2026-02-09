@@ -649,6 +649,21 @@
                     </h3>
                     <div class="flex items-center gap-2 sm:gap-3">
                         <span id="roster-count" class="text-xs sm:text-sm text-gray-500">0 students</span>
+                        <!-- Sort Buttons -->
+                        <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+                            <button onclick="setRosterSort('name')" id="sort-btn-name" 
+                                    class="px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium transition bg-white text-feu-green shadow-sm" title="Sort by Name">
+                                <i class="fas fa-font mr-0.5"></i> Name <i id="sort-icon-name" class="fas fa-arrow-up-a-z text-[9px] ml-0.5"></i>
+                            </button>
+                            <button onclick="setRosterSort('tamtap_id')" id="sort-btn-tamtap_id" 
+                                    class="px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium transition text-gray-500 hover:bg-gray-200" title="Sort by TAMTAP ID">
+                                <i class="fas fa-hashtag mr-0.5"></i> ID <i id="sort-icon-tamtap_id" class="fas fa-arrow-up-1-9 text-[9px] ml-0.5 hidden"></i>
+                            </button>
+                            <button onclick="setRosterSort('status')" id="sort-btn-status" 
+                                    class="px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium transition text-gray-500 hover:bg-gray-200" title="Sort by Today's Status">
+                                <i class="fas fa-circle-check mr-0.5"></i> Status <i id="sort-icon-status" class="fas fa-arrow-up text-[9px] ml-0.5 hidden"></i>
+                            </button>
+                        </div>
                         <!-- Search Input -->
                         <div class="relative">
                             <input type="text" id="roster-search" 
@@ -674,10 +689,16 @@
                         <thead class="bg-gray-100">
                             <tr>
                                 <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-12">#</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-feu-green select-none" onclick="setRosterSort('name')">
+                                    Student Name <i id="th-icon-name" class="fas fa-arrow-up-a-z text-feu-green text-[9px] ml-0.5"></i>
+                                </th>
                                 <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Section</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">TAMTAP ID</th>
-                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Today's Status</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell cursor-pointer hover:text-feu-green select-none" onclick="setRosterSort('tamtap_id')">
+                                    TAMTAP ID <i id="th-icon-tamtap_id" class="fas text-[9px] ml-0.5 hidden"></i>
+                                </th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase cursor-pointer hover:text-feu-green select-none" onclick="setRosterSort('status')">
+                                    Today's Status <i id="th-icon-status" class="fas text-[9px] ml-0.5 hidden"></i>
+                                </th>
                                 <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-24">Action</th>
                             </tr>
                         </thead>
@@ -973,6 +994,7 @@
         let rosterData = null;           // Cached roster from /api/students/section/:section
         let currentStudentNfcId = null;  // NFC ID of student in detail modal
         let currentStudentName = null;   // Name of student in detail modal
+        let rosterSort = { field: 'name', dir: 'asc' }; // Roster sort state
 
         // ========================================
         // TIMEZONE HELPER - Asia/Manila (UTC+8)
@@ -1703,6 +1725,9 @@
                 );
             }
 
+            // Apply sorting
+            filtered = sortRosterData(filtered);
+
             countEl.textContent = query 
                 ? `${filtered.length} of ${rosterData.length} students` 
                 : `${rosterData.length} students`;
@@ -1764,6 +1789,87 @@
 
         function searchRoster(query) {
             renderRoster();
+        }
+
+        // ========================================
+        // ROSTER SORTING
+        // ========================================
+        function setRosterSort(field) {
+            if (rosterSort.field === field) {
+                // Toggle direction
+                rosterSort.dir = rosterSort.dir === 'asc' ? 'desc' : 'asc';
+            } else {
+                rosterSort.field = field;
+                rosterSort.dir = 'asc';
+            }
+            updateSortUI();
+            renderRoster();
+        }
+
+        function updateSortUI() {
+            const fields = ['name', 'tamtap_id', 'status'];
+            fields.forEach(f => {
+                const btn = document.getElementById(`sort-btn-${f}`);
+                const icon = document.getElementById(`sort-icon-${f}`);
+                const thIcon = document.getElementById(`th-icon-${f}`);
+                const isActive = rosterSort.field === f;
+
+                // Header buttons
+                if (btn) {
+                    btn.className = isActive
+                        ? 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium transition bg-white text-feu-green shadow-sm'
+                        : 'px-2 py-1 rounded-md text-[10px] sm:text-xs font-medium transition text-gray-500 hover:bg-gray-200';
+                }
+                if (icon) {
+                    icon.classList.toggle('hidden', !isActive);
+                    if (isActive) icon.className = `fas ${getSortIconClass(f)} text-[9px] ml-0.5`;
+                }
+
+                // Table header icons
+                if (thIcon) {
+                    thIcon.classList.toggle('hidden', !isActive);
+                    if (isActive) thIcon.className = `fas ${getSortIconClass(f)} text-feu-green text-[9px] ml-0.5`;
+                }
+            });
+        }
+
+        function getSortIconClass(field) {
+            const asc = rosterSort.dir === 'asc';
+            if (field === 'name') return asc ? 'fa-arrow-up-a-z' : 'fa-arrow-down-z-a';
+            if (field === 'tamtap_id') return asc ? 'fa-arrow-up-1-9' : 'fa-arrow-down-9-1';
+            return asc ? 'fa-arrow-up' : 'fa-arrow-down';
+        }
+
+        function sortRosterData(data) {
+            const { field, dir } = rosterSort;
+            const mult = dir === 'asc' ? 1 : -1;
+
+            // Build attendance lookup for status sorting
+            const attendanceMap = {};
+            currentRecords.forEach(r => {
+                if (r.nfc_id) attendanceMap[r.nfc_id] = r;
+            });
+
+            const statusOrder = { 'present': 1, 'on-time': 1, 'late': 2, 'absent': 3, 'excused': 4 };
+
+            return [...data].sort((a, b) => {
+                if (field === 'name') {
+                    return mult * a.name.localeCompare(b.name);
+                }
+                if (field === 'tamtap_id') {
+                    const idA = parseInt((a.tamtap_id || '0').replace(/\D/g, '')) || 0;
+                    const idB = parseInt((b.tamtap_id || '0').replace(/\D/g, '')) || 0;
+                    return mult * (idA - idB);
+                }
+                if (field === 'status') {
+                    const attA = attendanceMap[a.nfc_id];
+                    const attB = attendanceMap[b.nfc_id];
+                    const sA = attA ? (statusOrder[attA.status] || 5) : 99;
+                    const sB = attB ? (statusOrder[attB.status] || 5) : 99;
+                    return mult * (sA - sB);
+                }
+                return 0;
+            });
         }
 
         // ========================================

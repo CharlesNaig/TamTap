@@ -681,15 +681,21 @@
                         <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
                             <i class="fas fa-envelope" aria-hidden="true"></i> Email Address
                         </label>
-                        <div class="relative flex-1 w-full">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base"></span>
-                            <input type="text"
+                        <div class="flex-1 w-full">
+                            <input type="email"
                                    id="username"
                                    name="username"
                                    required
                                    autocomplete="username"
-                                   class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
-                                   aria-label="Email Address">
+                                   placeholder="e.g. teacher@feu.edu.ph"
+                                   oninput="validateEmailField()"
+                                   onblur="validateEmailField()"
+                                   class="px-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
+                                   aria-label="Email Address"
+                                   aria-describedby="email-hint">
+                            <p id="email-hint" class="hidden text-red-500 text-xs mt-1">
+                                <i class="fas fa-exclamation-circle mr-0.5"></i> Please provide a valid email address
+                            </p>
                         </div>
                     </div>
 
@@ -698,14 +704,14 @@
                         <label class="text-sm font-semibold text-gray-700 sm:w-36 uppercase tracking-wide">
                             <i class="fas fa-lock" aria-hidden="true"></i> Password
                         </label>
-                        <div class="relative flex-1 w-full">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-feu-green-dark text-base"></span>
+                        <div class="flex-1 w-full">
                             <input type="password"
                                    id="password"
                                    name="password"
                                    required
                                    autocomplete="current-password"
-                                   class="pl-10 pr-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
+                                   placeholder="Enter your password"
+                                   class="px-3 py-2.5 sm:py-2 border-2 border-gray-800 rounded text-base sm:text-sm input-focus transition w-full min-h-[44px]"
                                    aria-label="Password">
                         </div>
                     </div>
@@ -785,6 +791,34 @@
         });
 
         // ========================================
+        // EMAIL VALIDATION (real-time)
+        // ========================================
+        function validateEmailField() {
+            const input = document.getElementById('username');
+            const hint = document.getElementById('email-hint');
+            const val = input.value.trim();
+
+            // Only validate if user has typed something
+            if (!val) {
+                input.classList.remove('border-red-500');
+                input.classList.add('border-gray-800');
+                hint.classList.add('hidden');
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(val)) {
+                input.classList.remove('border-gray-800');
+                input.classList.add('border-red-500');
+                hint.classList.remove('hidden');
+            } else {
+                input.classList.remove('border-red-500');
+                input.classList.add('border-gray-800');
+                hint.classList.add('hidden');
+            }
+        }
+
+        // ========================================
         // ERROR HANDLING
         // ========================================
         function showError(msg) {
@@ -837,6 +871,14 @@
 
             if (!username || !password) {
                 showError('Please enter email and password');
+                return;
+            }
+
+            // Validate email format
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(username)) {
+                validateEmailField();
+                showError('Please provide a valid email address');
                 return;
             }
 

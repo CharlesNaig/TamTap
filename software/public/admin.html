@@ -504,7 +504,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-plus mr-2 text-feu-green"></i>Add New Teacher</h3>
                 <button onclick="closeModal('add-teacher-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-teacher-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="add-teacher-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Username</label>
                     <input type="text" name="username" required class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., ms.santos">
@@ -542,7 +542,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-plus mr-2 text-feu-green"></i>Add New Student</h3>
                 <button onclick="closeModal('add-student-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-student-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="add-student-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">NFC Card ID</label>
                     <input type="text" name="nfc_id" required class="w-full border rounded px-3 py-2 text-sm" placeholder="Scan or enter NFC ID">
@@ -582,7 +582,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-edit mr-2 text-feu-green"></i>Edit Teacher</h3>
                 <button onclick="closeModal('edit-teacher-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="edit-teacher-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="edit-teacher-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <input type="hidden" name="id">
                 <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -616,7 +616,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-plus mr-2 text-feu-green"></i>Add Section Schedule</h3>
                 <button onclick="closeModal('add-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="add-schedule-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
@@ -678,7 +678,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-check mr-2 text-feu-green"></i>Edit Schedule</h3>
                 <button onclick="closeModal('edit-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="edit-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="edit-schedule-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <input type="hidden" name="section">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -736,8 +736,7 @@
     <footer class="bg-feu-green-dark text-white/80 text-center py-3 sm:py-4 mt-auto">
         <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
             <div class="flex items-center gap-2 sm:gap-3">
-                <img src="/assets/logos/FEU.png" alt="FEU" class="h-6 sm:h-8 w-auto opacity-90">
-                <img src="/assets/logos/TAMTAP.png" alt="TAMTAP" class="h-6 sm:h-8 w-auto opacity-90">
+                <img src="../../assets/TamTap-3D.png" alt="FEU" class="h-6 sm:h-8 w-auto opacity-90">
             </div>
             <div class="flex flex-col items-center sm:items-start">
                 <p class="text-xs sm:text-sm">TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>

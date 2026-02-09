@@ -54,8 +54,8 @@
         .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .status-present { background-color: #22c55e; }
         .status-late { background-color: #eab308; }
-        .status-absent { background-color: #1f2937; }
-        .status-unknown { background-color: #9ca3af; }
+        .status-absent { background-color: #ef4444; }
+        .status-unknown { background-color: #1f2937; }
         
         /* Clickable Row */
         .clickable-row { cursor: pointer; transition: background-color 0.2s; }
@@ -295,6 +295,25 @@
                 </select>
             </div>
             
+            <!-- View Toggle Tabs -->
+            <div class="flex items-center gap-0.5 sm:gap-1 bg-gray-200/60 rounded-lg p-0.5">
+                <button onclick="setView('attendance')" 
+                        id="view-tab-attendance"
+                        class="view-tab px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md bg-feu-green text-white font-medium whitespace-nowrap transition-all">
+                    <i class="fas fa-clipboard-list mr-1"></i><span class="hidden sm:inline">Attendance</span>
+                </button>
+                <button onclick="setView('roster')" 
+                        id="view-tab-roster"
+                        class="view-tab px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md text-gray-600 hover:bg-white/60 font-medium whitespace-nowrap transition-all">
+                    <i class="fas fa-users mr-1"></i><span class="hidden sm:inline">My Students</span>
+                </button>
+                <button onclick="setView('not-tapped')" 
+                        id="view-tab-not-tapped"
+                        class="view-tab px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md text-gray-600 hover:bg-white/60 font-medium whitespace-nowrap transition-all">
+                    <i class="fas fa-user-clock mr-1"></i><span class="hidden sm:inline">Not Yet Tapped</span>
+                </button>
+            </div>
+            
             <!-- Date Range Tabs -->
             <div class="flex items-center gap-0.5 sm:gap-1 ml-auto overflow-x-auto">
                 <button onclick="setDateRange('today')" 
@@ -357,6 +376,11 @@
                 <span>Refresh</span>
             </button>
         </div>
+
+        <!-- ========================================
+             VIEW: ATTENDANCE (default)
+        ======================================== -->
+        <div id="view-attendance">
 
         <!-- ========================================
              ATTENDANCE SUMMARY CARD
@@ -610,6 +634,136 @@
                 <p class="text-xs sm:text-sm">Select a section and date to view records</p>
             </div>
         </div>
+
+        </div><!-- /view-attendance -->
+
+        <!-- ========================================
+             VIEW: MY STUDENTS (Roster)
+        ======================================== -->
+        <div id="view-roster" class="hidden">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow overflow-hidden">
+                <!-- Roster Header -->
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">
+                        <i class="fas fa-users text-feu-green mr-1.5 sm:mr-2"></i> My Students
+                    </h3>
+                    <div class="flex items-center gap-2 sm:gap-3">
+                        <span id="roster-count" class="text-xs sm:text-sm text-gray-500">0 students</span>
+                        <!-- Search Input -->
+                        <div class="relative">
+                            <input type="text" id="roster-search" 
+                                   onkeyup="searchRoster(this.value)"
+                                   placeholder="Search student..."
+                                   class="border border-gray-200 rounded-lg pl-8 pr-3 py-1.5 sm:py-2 text-xs sm:text-sm w-36 sm:w-48 focus:ring-2 focus:ring-feu-green focus:border-feu-green transition">
+                            <i class="fas fa-search absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 border-b flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-600">
+                    <span><span class="status-dot status-present mr-0.5 sm:mr-1"></span> Present</span>
+                    <span><span class="status-dot status-late mr-0.5 sm:mr-1"></span> Late</span>
+                    <span><span class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block mr-0.5 sm:mr-1"></span> No Tap Yet</span>
+                </div>
+
+                <!-- Roster Table (Desktop) -->
+                <div class="overflow-x-auto hidden sm:block">
+                    <table class="w-full">
+                        <caption class="sr-only">Student roster</caption>
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-12">#</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Section</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">TAMTAP ID</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Today's Status</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-24">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="roster-table" class="divide-y divide-gray-200">
+                            <tr><td colspan="6" class="px-3 py-8 text-center text-gray-400">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>Loading roster...
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Roster Mobile Cards -->
+                <div id="roster-cards" class="sm:hidden divide-y divide-gray-100">
+                    <div class="p-6 text-center text-gray-400">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p class="text-sm">Loading roster...</p>
+                    </div>
+                </div>
+
+                <!-- Roster Empty State -->
+                <div id="roster-empty" class="hidden p-6 sm:p-8 text-center text-gray-400">
+                    <i class="fas fa-users-slash text-3xl sm:text-4xl mb-2 sm:mb-3"></i>
+                    <p class="text-sm sm:text-base">No students found</p>
+                    <p class="text-xs sm:text-sm">No students are registered in your assigned sections</p>
+                </div>
+            </div>
+        </div><!-- /view-roster -->
+
+        <!-- ========================================
+             VIEW: NOT YET TAPPED
+        ======================================== -->
+        <div id="view-not-tapped" class="hidden">
+            <!-- Date restriction notice -->
+            <div id="not-tapped-date-notice" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4 mb-4 text-center">
+                <i class="fas fa-info-circle text-yellow-600 mr-1.5"></i>
+                <span class="text-yellow-700 text-xs sm:text-sm">"Not Yet Tapped" view is only available for today's date. Switch to <button onclick="setDateRange('today')" class="underline font-semibold">Today</button> to use this view.</span>
+            </div>
+
+            <div class="bg-white rounded-lg sm:rounded-xl shadow overflow-hidden">
+                <!-- Not-Tapped Header -->
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">
+                        <i class="fas fa-user-clock text-feu-green mr-1.5 sm:mr-2"></i> Not Yet Tapped
+                    </h3>
+                    <span id="not-tapped-count" class="text-xs sm:text-sm text-gray-500">-- students pending</span>
+                </div>
+
+                <!-- Not-Tapped Table (Desktop) -->
+                <div class="overflow-x-auto hidden sm:block">
+                    <table class="w-full">
+                        <caption class="sr-only">Students who have not tapped today</caption>
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-12">#</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Student Name</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Section</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">TAMTAP ID</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-24">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="not-tapped-table" class="divide-y divide-gray-200">
+                            <tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">
+                                <i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>Loading...
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Not-Tapped Mobile Cards -->
+                <div id="not-tapped-cards" class="sm:hidden divide-y divide-gray-100">
+                    <div class="p-6 text-center text-gray-400">
+                        <i class="fas fa-spinner fa-spin text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- All Tapped State -->
+                <div id="not-tapped-empty" class="hidden p-6 sm:p-8 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-3">
+                        <i class="fas fa-check-circle text-3xl text-green-500"></i>
+                    </div>
+                    <p class="text-base font-semibold text-gray-700">All students have tapped today!</p>
+                    <p class="text-sm text-gray-400 mt-1">Every enrolled student has recorded attendance.</p>
+                </div>
+            </div>
+        </div><!-- /view-not-tapped -->
+
     </main>
 
     <!-- ========================================
@@ -805,6 +959,8 @@
         let currentRecords = [];
         let currentDateRange = 'today';
         let breakdownAvailable = false; // Track if backend provides status breakdown
+        let currentView = 'attendance';  // 'attendance' | 'roster' | 'not-tapped'
+        let rosterData = null;           // Cached roster from /api/students/section/:section
 
         // ========================================
         // TIMEZONE HELPER - Asia/Manila (UTC+8)
@@ -944,6 +1100,7 @@
         function onSectionChange() {
             const section = document.getElementById('section-select').value;
             document.getElementById('current-section-display').textContent = section || 'All Sections';
+            rosterData = null; // Invalidate roster cache on section change
             refreshData();
         }
 
@@ -1242,6 +1399,10 @@
             // Always hide skeletons and show content
             if (icon) icon.classList.remove('fa-spin');
             hideSkeletons();
+
+            // Re-render secondary views if active (they depend on currentRecords)
+            if (currentView === 'roster') renderRoster();
+            else if (currentView === 'not-tapped') loadRoster().then(() => renderNotTapped());
         }
 
         // ========================================
@@ -1427,6 +1588,254 @@
             }
         }
 
+        // ========================================
+        // VIEW SWITCHING (Attendance / Roster / Not-Tapped)
+        // ========================================
+        function setView(view) {
+            currentView = view;
+
+            // Toggle visibility
+            ['attendance', 'roster', 'not-tapped'].forEach(v => {
+                const el = document.getElementById(`view-${v}`);
+                if (el) el.classList.toggle('hidden', v !== view);
+            });
+
+            // Update tab styles
+            document.querySelectorAll('.view-tab').forEach(tab => {
+                tab.classList.remove('bg-feu-green', 'text-white');
+                tab.classList.add('text-gray-600', 'hover:bg-white/60');
+            });
+            const activeTab = document.getElementById(`view-tab-${view}`);
+            if (activeTab) {
+                activeTab.classList.remove('text-gray-600', 'hover:bg-white/60');
+                activeTab.classList.add('bg-feu-green', 'text-white');
+            }
+
+            // Load data for the selected view
+            if (view === 'roster') {
+                loadRoster();
+            } else if (view === 'not-tapped') {
+                loadRoster().then(() => renderNotTapped());
+            }
+        }
+
+        // ========================================
+        // ROSTER: Load + Render
+        // Backend: GET /api/students/section/:section
+        // ========================================
+        async function loadRoster() {
+            // Use cached data if available
+            if (rosterData) {
+                renderRoster();
+                return;
+            }
+
+            const sectionSelect = document.getElementById('section-select');
+            const section = sectionSelect ? sectionSelect.value : '';
+
+            // Build sections string (comma-separated)
+            let sections = section;
+            if (!sections) {
+                const userSections = currentUser?.sections_handled || [];
+                sections = userSections.join(',');
+            }
+
+            if (!sections) {
+                rosterData = [];
+                renderRoster();
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/students/section/${encodeURIComponent(sections)}`);
+                const json = await res.json();
+                if (json.success) {
+                    // Sort alphabetically by name
+                    rosterData = (json.data || []).sort((a, b) => a.name.localeCompare(b.name));
+                } else {
+                    rosterData = [];
+                }
+            } catch (err) {
+                console.error('[ROSTER] Failed to load:', err);
+                rosterData = [];
+            }
+
+            renderRoster();
+        }
+
+        function renderRoster() {
+            const tbody = document.getElementById('roster-table');
+            const cards = document.getElementById('roster-cards');
+            const emptyEl = document.getElementById('roster-empty');
+            const countEl = document.getElementById('roster-count');
+            const searchEl = document.getElementById('roster-search');
+            
+            if (!rosterData || rosterData.length === 0) {
+                tbody.innerHTML = '';
+                cards.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                countEl.textContent = '0 students';
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+
+            // Apply search filter
+            const query = (searchEl?.value || '').toLowerCase().trim();
+            let filtered = rosterData;
+            if (query) {
+                filtered = rosterData.filter(s => 
+                    s.name.toLowerCase().includes(query) ||
+                    (s.tamtap_id || '').toLowerCase().includes(query) ||
+                    (s.section || '').toLowerCase().includes(query)
+                );
+            }
+
+            countEl.textContent = query 
+                ? `${filtered.length} of ${rosterData.length} students` 
+                : `${rosterData.length} students`;
+
+            // Build a lookup of today's attendance by nfc_id
+            const attendanceMap = {};
+            currentRecords.forEach(r => {
+                if (r.nfc_id) attendanceMap[r.nfc_id] = r;
+            });
+
+            // Desktop table
+            tbody.innerHTML = filtered.map((s, i) => {
+                const att = attendanceMap[s.nfc_id];
+                const statusHtml = att
+                    ? `<span class="status-dot ${getStatusDotClass(att.status)} mr-1"></span><span class="text-xs">${att.status || 'present'}</span>`
+                    : `<span class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block mr-1"></span><span class="text-xs text-gray-400">No tap</span>`;
+                return `
+                <tr class="clickable-row hover:bg-gray-50 cursor-pointer" onclick="showStudentHistory('${s.nfc_id}', '${escapeHtml(s.name)}')">
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center text-xs text-gray-400">${i + 1}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-sm font-medium text-gray-900">${escapeHtml(s.name)}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell">
+                        <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s.section || '--'}</span>
+                    </td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell text-xs text-gray-500 font-mono">${s.tamtap_id || '--'}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">${statusHtml}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
+                        <button onclick="event.stopPropagation(); showStudentHistory('${s.nfc_id}', '${escapeHtml(s.name)}')" 
+                                class="text-feu-green hover:text-feu-green-dark text-xs font-medium">
+                            <i class="fas fa-history mr-0.5"></i> View
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            // Mobile cards
+            cards.innerHTML = filtered.map(s => {
+                const att = attendanceMap[s.nfc_id];
+                const statusHtml = att
+                    ? `<span class="status-dot ${getStatusDotClass(att.status)} mr-1"></span><span class="text-xs">${att.status || 'present'}</span>`
+                    : `<span class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block mr-1"></span><span class="text-xs text-gray-400">No tap</span>`;
+                return `
+                <div class="p-3 hover:bg-gray-50 cursor-pointer" onclick="showStudentHistory('${s.nfc_id}', '${escapeHtml(s.name)}')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-feu-green/10 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user text-feu-green text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(s.name)}</p>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                ${statusHtml}
+                                <span class="text-[10px] text-gray-400 ml-1">${s.section || ''}</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function searchRoster(query) {
+            renderRoster();
+        }
+
+        // ========================================
+        // NOT YET TAPPED: Render
+        // Cross-references roster vs currentRecords
+        // ========================================
+        function renderNotTapped() {
+            const tbody = document.getElementById('not-tapped-table');
+            const cards = document.getElementById('not-tapped-cards');
+            const emptyEl = document.getElementById('not-tapped-empty');
+            const countEl = document.getElementById('not-tapped-count');
+            const noticeEl = document.getElementById('not-tapped-date-notice');
+
+            // Show date notice if not viewing today
+            const isToday = currentDateRange === 'today';
+            if (noticeEl) noticeEl.classList.toggle('hidden', isToday);
+
+            if (!rosterData || rosterData.length === 0) {
+                tbody.innerHTML = '';
+                cards.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                countEl.textContent = '-- students pending';
+                return;
+            }
+
+            // Build set of nfc_ids that have tapped (from current records)
+            const tappedIds = new Set();
+            currentRecords.forEach(r => {
+                if (r.nfc_id) tappedIds.add(r.nfc_id);
+            });
+
+            // Filter roster to students NOT in tappedIds
+            const notTapped = rosterData.filter(s => !tappedIds.has(s.nfc_id));
+
+            countEl.textContent = `${notTapped.length} of ${rosterData.length} students haven't tapped${isToday ? ' today' : ''}`;
+
+            if (notTapped.length === 0) {
+                tbody.innerHTML = '';
+                cards.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+
+            // Desktop table
+            tbody.innerHTML = notTapped.map((s, i) => `
+                <tr class="clickable-row hover:bg-gray-50 cursor-pointer" onclick="showStudentHistory('${s.nfc_id}', '${escapeHtml(s.name)}')">
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center text-xs text-gray-400">${i + 1}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-sm font-medium text-gray-900">${escapeHtml(s.name)}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell">
+                        <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s.section || '--'}</span>
+                    </td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell text-xs text-gray-500 font-mono">${s.tamtap_id || '--'}</td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
+                        <button onclick="event.stopPropagation(); showStudentHistory('${s.nfc_id}', '${escapeHtml(s.name)}')" 
+                                class="text-feu-green hover:text-feu-green-dark text-xs font-medium">
+                            <i class="fas fa-history mr-0.5"></i> View
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Mobile cards
+            cards.innerHTML = notTapped.map(s => `
+                <div class="p-3 hover:bg-gray-50 cursor-pointer" onclick="showStudentHistory('${s.nfc_id}', '${escapeHtml(s.name)}')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-user-clock text-red-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">${escapeHtml(s.name)}</p>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <span class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block mr-1"></span>
+                                <span class="text-xs text-gray-400">No tap</span>
+                                <span class="text-[10px] text-gray-400 ml-1">${s.section || ''}</span>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-right text-gray-300 text-xs"></i>
+                    </div>
+                </div>
+            `).join('');
+        }
+
         function renderTable(records) {
             const tbody = document.getElementById('attendance-table');
             document.getElementById('empty-state').classList.add('hidden');
@@ -1597,28 +2006,21 @@
                 
                 console.log('[DEBUG] Fetching stats from:', summaryUrl);
                 
-                // Fetch both general stats and summary in parallel
-                const [statsRes, summaryRes] = await Promise.all([
-                    fetch('/api/stats', { credentials: 'include' }),
-                    fetch(summaryUrl, { credentials: 'include' })
-                ]);
+                // Fetch summary stats (section-filtered, includes totalStudents)
+                const summaryRes = await fetch(summaryUrl, { credentials: 'include' });
                 
-                console.log('[DEBUG] Stats responses:', statsRes.status, summaryRes.status);
+                console.log('[DEBUG] Summary response:', summaryRes.status);
                 
-                const statsData = await statsRes.json();
                 const summaryData = await summaryRes.json();
                 
-                console.log('[DEBUG] Stats data:', statsData.success, 'Summary:', summaryData.success);
-                
-                // General stats (total students, attendance rate from global)
-                if (statsData.success) {
-                    const totalStudents = document.getElementById('total-students');
-                    if (totalStudents) totalStudents.textContent = statsData.stats?.students || 0;
-                }
+                console.log('[DEBUG] Summary:', summaryData.success);
                 
                 // Check calendar status first
                 if (summaryData.success && summaryData.isInstructional === false) {
                     // Non-instructional day - show special state
+                    // Still update total students from summary (section-scoped)
+                    const totalStudents = document.getElementById('total-students');
+                    if (totalStudents) totalStudents.textContent = summaryData.stats?.totalStudents || 0;
                     showNonInstructionalDay(summaryData.calendarLabel, summaryData.calendarReason);
                     return;
                 }
@@ -1629,6 +2031,10 @@
                 // Summary stats (breakdown)
                 if (summaryData.success && summaryData.stats) {
                     const summary = summaryData.stats;
+                    
+                    // Update total students (section-scoped from summary)
+                    const totalStudents = document.getElementById('total-students');
+                    if (totalStudents) totalStudents.textContent = summary.totalStudents || 0;
                     
                     // Update counts
                     document.getElementById('count-ontime').textContent = summary.onTime;

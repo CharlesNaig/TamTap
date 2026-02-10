@@ -8,6 +8,9 @@ Usage:
     python archive_attendance.py --today      # Archive today's attendance
     python archive_attendance.py --all        # Archive all attendance
     python archive_attendance.py --clear      # Clear without archiving
+    python archive_attendance.py --student <UID>              # Archive all for a student
+    python archive_attendance.py --student <UID> --today      # Archive student's today
+    python archive_attendance.py --student <UID> --date 2026-02-10  # Archive student's date
 """
 
 import os
@@ -50,8 +53,13 @@ class ArchiveDatabase(Database):
         # Disable background reconnect for CLI tool
         super().__init__(enable_background_reconnect=False)
     
-    def get_attendance_records(self, date_filter=None):
-        """Get attendance records (from MongoDB or JSON)"""
+    def get_attendance_records(self, date_filter=None, uid_filter=None):
+        """Get attendance records (from MongoDB or JSON)
+        
+        Args:
+            date_filter: Filter by date prefix (YYYY-MM-DD)
+            uid_filter: Filter by student UID
+        """
         records = []
         
         # Try MongoDB first
@@ -60,6 +68,8 @@ class ArchiveDatabase(Database):
                 query = {}
                 if date_filter:
                     query["date"] = {"$regex": f"^{date_filter}"}
+                if uid_filter:
+                    query["uid"] = uid_filter
                 
                 cursor = self.mongo_db.attendance.find(query)
                 for doc in cursor:
@@ -74,11 +84,27 @@ class ArchiveDatabase(Database):
         all_records = data.get("attendance", []) + data.get("pending_attendance", [])
         
         if date_filter:
-            records = [r for r in all_records if r.get("date", "").startswith(date_filter)]
-        else:
-            records = all_records
+            all_records = [r for r in all_records if r.get("date", "").startswith(date_filter)]
+        if uid_filter:
+            all_records = [r for r in all_records if r.get("uid") == uid_filter]
         
+        records = all_records
         return records
+    
+    def get_unique_students(self, date_filter=None):
+        """Get list of unique students from attendance records"""
+        records = self.get_attendance_records(date_filter)
+        students = {}
+        for r in records:
+            uid = r.get("uid", "unknown")
+            if uid not in students:
+                students[uid] = {
+                    "uid": uid,
+                    "name": r.get("name", "Unknown"),
+                    "count": 0
+                }
+            students[uid]["count"] += 1
+        return list(students.values())
     
     def archive_to_mongodb(self, records, archive_name):
         """Archive records to MongoDB archive collection"""
@@ -136,8 +162,13 @@ class ArchiveDatabase(Database):
             logger.error("JSON archive error: %s", e)
             return False, 0
     
-    def clear_attendance(self, date_filter=None):
-        """Clear attendance records from both MongoDB and JSON"""
+    def clear_attendance(self, date_filter=None, uid_filter=None):
+        """Clear attendance records from both MongoDB and JSON
+        
+        Args:
+            date_filter: Filter by date prefix (YYYY-MM-DD)
+            uid_filter: Filter by student UID
+        """
         deleted_mongo = 0
         deleted_json = 0
         
@@ -147,6 +178,8 @@ class ArchiveDatabase(Database):
                 query = {}
                 if date_filter:
                     query["date"] = {"$regex": f"^{date_filter}"}
+                if uid_filter:
+                    query["uid"] = uid_filter
                 
                 result = self.mongo_db.attendance.delete_many(query)
                 deleted_mongo = result.deleted_count
@@ -158,14 +191,22 @@ class ArchiveDatabase(Database):
         data = self._load_json()
         original_count = len(data.get("attendance", [])) + len(data.get("pending_attendance", []))
         
-        if date_filter:
-            data["attendance"] = [r for r in data.get("attendance", []) 
-                                  if not r.get("date", "").startswith(date_filter)]
-            data["pending_attendance"] = [r for r in data.get("pending_attendance", []) 
-                                          if not r.get("date", "").startswith(date_filter)]
-        else:
-            data["attendance"] = []
-            data["pending_attendance"] = []
+        def keep_record(r):
+            """Return True if record should be kept (not deleted)"""
+            if date_filter and r.get("date", "").startswith(date_filter):
+                if uid_filter and r.get("uid") == uid_filter:
+                    return False
+                elif not uid_filter:
+                    return False
+            elif not date_filter:
+                if uid_filter and r.get("uid") == uid_filter:
+                    return False
+                elif not uid_filter:
+                    return False
+            return True
+        
+        data["attendance"] = [r for r in data.get("attendance", []) if keep_record(r)]
+        data["pending_attendance"] = [r for r in data.get("pending_attendance", []) if keep_record(r)]
         
         new_count = len(data.get("attendance", [])) + len(data.get("pending_attendance", []))
         deleted_json = original_count - new_count
@@ -239,10 +280,11 @@ def print_menu():
     print("  1. Archive TODAY's attendance")
     print("  2. Archive ALL attendance")
     print("  3. Archive by specific date")
-    print("  4. Clear attendance (no archive)")
-    print("  5. View current attendance")
-    print("  6. List archives")
-    print("  7. Exit")
+    print("  4. Archive by STUDENT")
+    print("  5. Clear attendance (no archive)")
+    print("  6. View current attendance")
+    print("  7. List archives")
+    print("  8. Exit")
     print("-" * 35)
 
 def get_input(prompt, required=True):
@@ -255,9 +297,9 @@ def get_input(prompt, required=True):
     except (KeyboardInterrupt, EOFError):
         return None
 
-def view_attendance(db, date_filter=None):
+def view_attendance(db, date_filter=None, uid_filter=None):
     """View current attendance records"""
-    records = db.get_attendance_records(date_filter)
+    records = db.get_attendance_records(date_filter, uid_filter)
     
     if not records:
         print("\n[!] No attendance records found")
@@ -278,26 +320,41 @@ def view_attendance(db, date_filter=None):
     
     print("-" * 60)
 
-def archive_attendance(db, date_filter=None, interactive=True):
-    """Archive attendance records"""
+def archive_attendance(db, date_filter=None, interactive=True, uid_filter=None):
+    """Archive attendance records
+    
+    Args:
+        db: ArchiveDatabase instance
+        date_filter: Filter by date prefix (YYYY-MM-DD)
+        interactive: Whether to prompt for confirmation
+        uid_filter: Filter by student UID
+    """
     # Get records
-    records = db.get_attendance_records(date_filter)
+    records = db.get_attendance_records(date_filter, uid_filter)
     
     if not records:
         print("\n[!] No attendance records to archive")
         return False
     
-    print(f"\n[*] Found {len(records)} attendance records")
+    student_name = records[0].get("name", "Unknown") if uid_filter else None
+    label = f" for {student_name} ({uid_filter})" if uid_filter else ""
+    print(f"\n[*] Found {len(records)} attendance records{label}")
     
     if interactive:
-        view_attendance(db, date_filter)
+        view_attendance(db, date_filter, uid_filter)
     
     # Generate archive name
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    parts = ["archive"]
+    if uid_filter:
+        safe_uid = uid_filter.replace(" ", "_")[:16]
+        parts.append(f"student_{safe_uid}")
     if date_filter:
-        archive_name = f"archive_{date_filter.replace('-', '')}_{timestamp}"
+        parts.append(date_filter.replace('-', ''))
     else:
-        archive_name = f"archive_all_{timestamp}"
+        parts.append("all")
+    parts.append(timestamp)
+    archive_name = "_".join(parts)
     
     print(f"\n[*] Archive name: {archive_name}")
     
@@ -318,11 +375,11 @@ def archive_attendance(db, date_filter=None, interactive=True):
         if interactive:
             clear = get_input("\n> Clear these records from active database? (y/n): ")
             if clear and clear.lower() in ['y', 'yes']:
-                deleted = db.clear_attendance(date_filter)
+                deleted = db.clear_attendance(date_filter, uid_filter)
                 print(f"[OK] Cleared {deleted} records")
         else:
             # Auto-clear in non-interactive mode
-            deleted = db.clear_attendance(date_filter)
+            deleted = db.clear_attendance(date_filter, uid_filter)
             print(f"[OK] Cleared {deleted} records")
         
         return True
@@ -330,9 +387,9 @@ def archive_attendance(db, date_filter=None, interactive=True):
         print("[!] Archive failed")
         return False
 
-def clear_only(db, date_filter=None, interactive=True):
+def clear_only(db, date_filter=None, interactive=True, uid_filter=None):
     """Clear attendance without archiving"""
-    records = db.get_attendance_records(date_filter)
+    records = db.get_attendance_records(date_filter, uid_filter)
     
     if not records:
         print("\n[!] No attendance records to clear")
@@ -341,13 +398,13 @@ def clear_only(db, date_filter=None, interactive=True):
     print(f"\n[WARNING] This will DELETE {len(records)} records WITHOUT archiving!")
     
     if interactive:
-        view_attendance(db, date_filter)
+        view_attendance(db, date_filter, uid_filter)
         confirm = get_input("\n> Type 'DELETE' to confirm: ")
         if confirm != 'DELETE':
             print("[!] Clear cancelled")
             return False
     
-    deleted = db.clear_attendance(date_filter)
+    deleted = db.clear_attendance(date_filter, uid_filter)
     print(f"\n[OK] Cleared {deleted} records")
     return True
 
@@ -373,6 +430,33 @@ def list_archives(db):
     
     print("-" * 65)
 
+def pick_student(db, date_filter=None):
+    """Show list of students with attendance and let user pick one.
+    Returns the selected student UID or None."""
+    students = db.get_unique_students(date_filter)
+    
+    if not students:
+        print("\n[!] No students found in attendance records")
+        return None
+    
+    scope = f" for {date_filter}" if date_filter else " (all dates)"
+    print(f"\n[STUDENTS WITH ATTENDANCE]{scope}")
+    print("-" * 50)
+    for i, s in enumerate(students, 1):
+        print(f"  {i:2}. {s['name'][:25]:<25} | UID: {s['uid'][:16]:<16} | {s['count']} record(s)")
+    print("-" * 50)
+    
+    pick = get_input(f"\n> Select student (1-{len(students)}): ")
+    if not pick or not pick.isdigit():
+        return None
+    idx = int(pick) - 1
+    if idx < 0 or idx >= len(students):
+        print("[!] Invalid selection")
+        return None
+    
+    return students[idx]["uid"]
+
+
 def interactive_mode(db):
     """Run interactive CLI mode"""
     while True:
@@ -380,7 +464,7 @@ def interactive_mode(db):
         print_header(db)
         print_menu()
         
-        choice = get_input("\n> Select option (1-7): ")
+        choice = get_input("\n> Select option (1-8): ")
         
         if choice is None:
             continue
@@ -404,12 +488,41 @@ def interactive_mode(db):
             input("\nPress Enter to continue...")
             
         elif choice == '4':
+            # Archive by student
+            print("\n[STUDENT ARCHIVE OPTIONS]")
+            print("  1. Student - today's records")
+            print("  2. Student - all records")
+            print("  3. Student - specific date")
+            sub = get_input("\n> Select (1-3): ")
+            
+            date_f = None
+            if sub == '1':
+                date_f = datetime.now().strftime("%Y-%m-%d")
+            elif sub == '2':
+                date_f = None
+            elif sub == '3':
+                date_f = get_input("\n> Enter date (YYYY-MM-DD): ")
+                if not date_f:
+                    input("\nPress Enter to continue...")
+                    continue
+            else:
+                print("[!] Invalid option")
+                input("\nPress Enter to continue...")
+                continue
+            
+            uid = pick_student(db, date_f)
+            if uid:
+                archive_attendance(db, date_f, uid_filter=uid)
+            input("\nPress Enter to continue...")
+            
+        elif choice == '5':
             # Clear only
             print("\n[CLEAR OPTIONS]")
             print("  1. Clear today only")
             print("  2. Clear all")
             print("  3. Clear by date")
-            sub = get_input("\n> Select (1-3): ")
+            print("  4. Clear by student")
+            sub = get_input("\n> Select (1-4): ")
             
             if sub == '1':
                 today = datetime.now().strftime("%Y-%m-%d")
@@ -420,19 +533,23 @@ def interactive_mode(db):
                 date_str = get_input("\n> Enter date (YYYY-MM-DD): ")
                 if date_str:
                     clear_only(db, date_str)
+            elif sub == '4':
+                uid = pick_student(db)
+                if uid:
+                    clear_only(db, uid_filter=uid)
             input("\nPress Enter to continue...")
             
-        elif choice == '5':
+        elif choice == '6':
             # View attendance
             view_attendance(db)
             input("\nPress Enter to continue...")
             
-        elif choice == '6':
+        elif choice == '7':
             # List archives
             list_archives(db)
             input("\nPress Enter to continue...")
             
-        elif choice == '7':
+        elif choice == '8':
             print("\n[*] Goodbye!")
             break
         
@@ -457,6 +574,9 @@ Examples:
   python archive_attendance.py --clear      # Clear today without archive
   python archive_attendance.py --clear-all  # Clear all without archive
   python archive_attendance.py --list       # List archives
+  python archive_attendance.py --student ABC123              # Archive all for student
+  python archive_attendance.py --student ABC123 --today      # Archive student today
+  python archive_attendance.py --student ABC123 --date 2026-02-10  # Student + date
         """
     )
     
@@ -472,6 +592,8 @@ Examples:
                         help='Clear all attendance without archiving')
     parser.add_argument('--list', action='store_true',
                         help='List all archives')
+    parser.add_argument('--student', type=str,
+                        help='Filter by student UID (use with --today, --all, or --date)')
     
     args = parser.parse_args()
     
@@ -482,25 +604,33 @@ Examples:
         # Command line mode
         if args.today:
             today = datetime.now().strftime("%Y-%m-%d")
-            print(f"[*] Archiving attendance for {today}...")
-            archive_attendance(db, today, interactive=False)
+            label = f" for student {args.student}" if args.student else ""
+            print(f"[*] Archiving attendance for {today}{label}...")
+            archive_attendance(db, today, interactive=False, uid_filter=args.student)
             
         elif args.all:
-            print("[*] Archiving all attendance...")
-            archive_attendance(db, None, interactive=False)
+            label = f" for student {args.student}" if args.student else ""
+            print(f"[*] Archiving all attendance{label}...")
+            archive_attendance(db, None, interactive=False, uid_filter=args.student)
             
         elif args.date:
-            print(f"[*] Archiving attendance for {args.date}...")
-            archive_attendance(db, args.date, interactive=False)
+            label = f" for student {args.student}" if args.student else ""
+            print(f"[*] Archiving attendance for {args.date}{label}...")
+            archive_attendance(db, args.date, interactive=False, uid_filter=args.student)
+            
+        elif args.student and not (args.clear or args.clear_all):
+            # Student-only flag: archive all records for that student
+            print(f"[*] Archiving all attendance for student {args.student}...")
+            archive_attendance(db, None, interactive=False, uid_filter=args.student)
             
         elif args.clear:
             today = datetime.now().strftime("%Y-%m-%d")
             print(f"[*] Clearing attendance for {today}...")
-            clear_only(db, today, interactive=False)
+            clear_only(db, today, interactive=False, uid_filter=args.student)
             
         elif args.clear_all:
             print("[*] Clearing all attendance...")
-            clear_only(db, None, interactive=False)
+            clear_only(db, None, interactive=False, uid_filter=args.student)
             
         elif args.list:
             list_archives(db)

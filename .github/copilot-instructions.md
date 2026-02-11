@@ -1,7 +1,8 @@
 # 📜 **TAMTAP – GitHub Copilot Contract Instruction**
 
 **NFC-Based Attendance System | FEU Roosevelt Marikina**
-**Grade 12 ICT Capstone | S.Y. 2025–2026**
+**Capstone by group 5 of Grade 12 ICT B
+ | S.Y. 2025–2026**
 **Authors:** Charles Giann Marcelo et al.
 
 ---

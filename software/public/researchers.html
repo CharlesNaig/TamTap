@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAMTAP - Researchers</title>
+    <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'feu-green': '#0a8249',
+                        'feu-green-dark': '#034c16',
+                        'feu-green-light': '#0eb063',
+                        'feu-gold': '#FFD700'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/preloader.css">
+    <script src="/js/preloader.js"></script>
+    <style>
+        @font-face {
+            font-family: 'Della Respira';
+            src: url('/assets/fonts/DellaRespira-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        .font-brand { font-family: 'Della Respira', Georgia, serif; }
+        html { scroll-behavior: smooth; }
+        .avatar-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, #0a8249, #034c16);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Top Bar -->
+    <div class="bg-feu-green text-white text-xs sm:text-sm py-1.5 sm:py-2 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-location-dot"></i>
+                <span class="hidden sm:inline">504 J. P. Rizal St, Marikina, 1800 Metro Manila</span>
+                <span class="sm:hidden">FEU Roosevelt</span>
+            </div>
+            <span class="text-xs text-white/70">TAMTAP Attendance System</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white py-3 sm:py-4 px-4 sm:px-6 lg:px-8 shadow-sm border-b">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2 no-underline">
+                <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                <span class="font-brand text-xl font-bold">
+                    <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
+                </span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="/" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Home</a>
+                <a href="/privacy" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Privacy Policy</a>
+                <a href="/terms" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Terms of Use</a>
+                <a href="/researchers" class="text-feu-green font-semibold text-sm no-underline">Researchers</a>
+            </nav>
+            <a href="/" class="md:hidden text-feu-green text-sm font-medium no-underline"><i class="fas fa-arrow-left mr-1"></i>Back</a>
+        </div>
+    </header>
+
+    <!-- Hero Banner -->
+    <div class="bg-gradient-to-r from-feu-green to-feu-green-dark text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto text-center">
+            <p class="text-feu-gold text-xs uppercase tracking-widest font-semibold mb-2">Group 5 &mdash; Grade 12 ICT B</p>
+            <h1 class="font-brand text-3xl sm:text-4xl lg:text-5xl font-bold">The Researchers</h1>
+            <p class="mt-3 text-white/80 text-sm sm:text-base max-w-xl mx-auto">
+                Meet the team behind TAMTAP — the NFC-Based Attendance System
+            </p>
+        </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="bg-white border-b">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <nav class="text-sm text-gray-500">
+                <a href="/" class="hover:text-feu-green no-underline">Home</a>
+                <span class="mx-2">›</span>
+                <span class="text-gray-800 font-medium">Researchers</span>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <main class="flex-1 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-5xl mx-auto">
+
+            <!-- Intro -->
+            <div class="text-center mb-12">
+                <h2 class="text-2xl font-bold text-gray-800 mb-3">FEU Roosevelt Marikina</h2>
+                <p class="text-gray-500 text-sm sm:text-base max-w-2xl mx-auto">
+                    Capstone Project &mdash; S.Y. 2025–2026<br>
+                    Grade 12 ICT B &bull; Group 5
+                </p>
+            </div>
+
+            <!-- Researchers List -->
+            <div class="space-y-8" id="researchers-list">
+                <!-- Populated by JS below -->
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-feu-green-dark text-white pt-12 pb-6 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                        <span class="font-brand text-xl font-bold">
+                            <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                        </span>
+                    </div>
+                    <p class="text-white text-sm leading-relaxed">
+                        NFC-Based Attendance System<br>
+                        FEU Roosevelt Marikina<br>
+                        Grade 12 ICT B Capstone Project
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-home mr-1.5 text-xs"></i>Home</a></li>
+                        <li><a href="/privacy" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-file-contract mr-1.5 text-xs"></i>Terms of Use</a></li>
+                        <li><a href="/researchers" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-flask mr-1.5 text-xs"></i>Researchers</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">School</h4>
+                    <ul class="space-y-2 text-sm text-white">
+                        <li class="flex items-start gap-2"><i class="fas fa-school mt-0.5 text-xs text-feu-gold"></i><span>FEU Roosevelt — Marikina Campus</span></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-map-marker-alt mt-0.5 text-xs text-feu-gold"></i><span>J.P. Rizal St., Lamuan, Marikina City</span></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-globe mt-0.5 text-xs text-feu-gold"></i><a href="https://feuroosevelt.edu.ph" target="_blank" rel="noopener" class="text-white hover:text-feu-gold transition no-underline">feuroosevelt.edu.ph</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-white/15 pt-5">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white">
+                    <p>&copy; 2025</p>
+                    <p>Capstone by Group 5 of Grade 12 ICT B &nbsp;|&nbsp; FEU Roosevelt Marikina</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        /**
+         * Researchers data — alphabetical by surname.
+         * Photo naming convention: /assets/researchers/firstname-lastname.jpg
+         * If photo is missing, initials avatar is shown instead.
+         */
+        const researchers = [
+            {
+                name: 'Bjorn Gabriel Angeles',
+                role: 'Researcher',
+                photo: '/assets/researchers/bjorn-angeles.png'
+            },
+            {
+                name: 'Justine Paul Clara',
+                role: 'Researcher',
+                photo: '/assets/researchers/justine-clara.png'
+            },
+            {
+                name: 'Stephanie Estal',
+                role: 'Researcher',
+                photo: '/assets/researchers/stephanie-estal.png'
+            },
+            {
+                name: 'Mhikaela Shane Lindo',
+                role: 'Researcher',
+                photo: '/assets/researchers/mhikaela-lindo.png'
+            },
+            {
+                name: 'Kenshin Ace Magistrado',
+                role: 'Researcher',
+                photo: '/assets/researchers/kenshin-magistrado.png'
+            },
+            {
+                name: 'Charles Giann Marcelo',
+                role: 'Lead Developer',
+                photo: '/assets/researchers/charles-marcelo.png'
+            },
+            {
+                name: 'Emmanuel Miguel Jr.',
+                role: 'Researcher',
+                photo: '/assets/researchers/emmanuel-miguel.png'
+            }
+        ];
+
+        /**
+         * Extract initials from a full name.
+         * Uses first character of first and last name.
+         */
+        function getInitials(name) {
+            const parts = name.replace(/Jr\.|Sr\.|III|II/g, '').trim().split(/\s+/);
+            if (parts.length < 2) return parts[0][0].toUpperCase();
+            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        }
+
+        /**
+         * Render researcher cards with alternating layout.
+         * Even index: photo left, text right
+         * Odd index: text left, photo right
+         */
+        function renderResearchers() {
+            const container = document.getElementById('researchers-list');
+            if (!container) return;
+
+            container.innerHTML = researchers.map((r, i) => {
+                const initials = getInitials(r.name);
+                const photoId = `photo-${i}`;
+
+                return `
+                    <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                        <div class="flex flex-col sm:flex-row">
+                            <!-- Photo -->
+                            <div class="sm:w-56 md:w-64 lg:w-72 flex-shrink-0">
+                                <img 
+                                    id="${photoId}"
+                                    src="${r.photo}" 
+                                    alt="${r.name}"
+                                    class="w-full h-56 sm:h-full object-cover"
+                                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                >
+                                <div 
+                                    class="avatar-fallback w-full h-56 sm:h-full" 
+                                    style="display:none;"
+                                    aria-label="${r.name} initials"
+                                >${initials}</div>
+                            </div>
+                            <!-- Info -->
+                            <div class="flex-1 p-6 sm:p-8 flex flex-col justify-center">
+                                <span class="text-feu-gold text-xs font-semibold uppercase tracking-wide mb-1">${r.role}</span>
+                                <h3 class="text-xl sm:text-2xl font-bold text-gray-800 mb-2">${r.name}</h3>
+                                <p class="text-gray-500 text-sm sm:text-base leading-relaxed">
+                                    Grade 12 ICT B &bull; FEU Roosevelt Marikina<br>
+                                    S.Y. 2025–2026
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        renderResearchers();
+    </script>
+</body>
+</html>

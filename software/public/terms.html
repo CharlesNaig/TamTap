@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAMTAP - Terms of Use</title>
+    <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'feu-green': '#0a8249',
+                        'feu-green-dark': '#034c16',
+                        'feu-green-light': '#0eb063',
+                        'feu-gold': '#FFD700'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/css/preloader.css">
+    <script src="/js/preloader.js"></script>
+    <style>
+        @font-face {
+            font-family: 'Della Respira';
+            src: url('/assets/fonts/DellaRespira-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        .font-brand { font-family: 'Della Respira', Georgia, serif; }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Top Bar -->
+    <div class="bg-feu-green text-white text-xs sm:text-sm py-1.5 sm:py-2 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-location-dot"></i>
+                <span class="hidden sm:inline">504 J. P. Rizal St, Marikina, 1800 Metro Manila</span>
+                <span class="sm:hidden">FEU Roosevelt</span>
+            </div>
+            <span class="text-xs text-white/70">TAMTAP Attendance System</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white py-3 sm:py-4 px-4 sm:px-6 lg:px-8 shadow-sm border-b">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2 no-underline">
+                <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                <span class="font-brand text-xl font-bold">
+                    <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
+                </span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="/" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Home</a>
+                <a href="/privacy" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Privacy Policy</a>
+                <a href="/terms" class="text-feu-green font-semibold text-sm no-underline">Terms of Use</a>
+                <a href="/researchers" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Researchers</a>
+            </nav>
+            <a href="/" class="md:hidden text-feu-green text-sm font-medium no-underline"><i class="fas fa-arrow-left mr-1"></i>Back</a>
+        </div>
+    </header>
+
+    <!-- Hero Banner -->
+    <div class="bg-gradient-to-r from-feu-green to-feu-green-dark text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto text-center">
+            <p class="text-feu-gold text-xs uppercase tracking-widest font-semibold mb-2">FEU Roosevelt</p>
+            <h1 class="font-brand text-3xl sm:text-4xl lg:text-5xl font-bold">Terms of Use</h1>
+        </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="bg-white border-b">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <nav class="text-sm text-gray-500">
+                <a href="/" class="hover:text-feu-green no-underline">Home</a>
+                <span class="mx-2">›</span>
+                <span class="text-gray-800 font-medium">Terms of Use</span>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <main class="flex-1 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <!-- Main Content -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-sm border p-6 sm:p-8 lg:p-10 space-y-8">
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">1. Acceptance of Terms</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            By using the TAMTAP NFC-Based Attendance System, you agree to be bound by these Terms of Use. 
+                            These terms apply to all students, teachers, and administrators who interact with the system 
+                            within FEU Roosevelt Marikina. If you do not agree with these terms, please refrain from using 
+                            the system and contact school administration.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">2. System Description</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            TAMTAP is a locally hosted NFC-based attendance system developed as a capstone project by 
+                            Grade 12 ICT B students at FEU Roosevelt Marikina. The system uses NFC card scanning, camera-based 
+                            face detection, and a real-time LAN dashboard to facilitate attendance tracking.
+                        </p>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mt-3">
+                            The system is <strong>not</strong> a commercial product. It is a research prototype designed 
+                            for academic demonstration and school-level deployment during S.Y. 2025–2026.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">3. User Responsibilities</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mb-3">
+                            Users of the TAMTAP system agree to the following:
+                        </p>
+                        <ul class="text-gray-600 text-sm sm:text-base list-disc pl-5 space-y-2">
+                            <li><strong>Students:</strong> Must only tap their own assigned NFC card. Sharing, swapping, or using another student's card constitutes academic dishonesty.</li>
+                            <li><strong>Teachers:</strong> Must use their credentials responsibly and not share login information with unauthorized users.</li>
+                            <li><strong>Administrators:</strong> Are responsible for the proper configuration, maintenance, and security of the system.</li>
+                            <li>All users must not attempt to tamper with, bypass, or reverse-engineer any part of the system hardware or software.</li>
+                        </ul>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">4. Data Handling</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            All data collected by TAMTAP is processed in accordance with our 
+                            <a href="/privacy" class="text-feu-green hover:underline font-medium">Privacy Policy</a> 
+                            and the Data Privacy Act of 2012 (R.A. 10173). Data collection is limited to what is necessary 
+                            for attendance monitoring purposes only.
+                        </p>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mt-3">
+                            Photos captured during tap-in are used solely for face detection verification — 
+                            <strong>no facial recognition or biometric matching</strong> is performed. Photos are stored 
+                            locally on the school network and are not transmitted to external services.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">5. System Limitations</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mb-3">
+                            As a research prototype, TAMTAP has the following known limitations:
+                        </p>
+                        <ul class="text-gray-600 text-sm sm:text-base list-disc pl-5 space-y-2">
+                            <li>The system operates exclusively over the school's local area network (LAN) and is not accessible from outside the campus</li>
+                            <li>Face detection may be affected by lighting conditions, camera angle, or obstructions</li>
+                            <li>NFC card reading depends on proper card placement and hardware functionality</li>
+                            <li>The system allows one attendance record per student per day</li>
+                            <li>Uptime depends on the Raspberry Pi hardware and local network availability</li>
+                        </ul>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mt-3">
+                            The development team and school administration are <strong>not liable</strong> for attendance 
+                            discrepancies caused by hardware malfunction, network issues, or improper use of the system.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">6. Intellectual Property</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            TAMTAP is the intellectual property of the Grade 12 ICT B capstone group at FEU Roosevelt 
+                            Marikina (S.Y. 2025–2026). All code, design, documentation, and associated materials are 
+                            protected under applicable intellectual property laws. Unauthorized reproduction, distribution, 
+                            or modification is prohibited without written consent from the authors.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">7. Amendments</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            These Terms of Use may be updated periodically to reflect changes in the system or legal 
+                            requirements. Users will be notified of significant changes through the school administration. 
+                            Continued use of the system after changes constitutes acceptance of the revised terms.
+                        </p>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-feu-green mb-3">8. Contact</h2>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            For questions about these Terms of Use, please contact the school administration or 
+                            the TAMTAP research team through FEU Roosevelt Marikina campus.
+                        </p>
+                    </section>
+
+                    <div class="border-t pt-4 text-xs text-gray-400">
+                        <p>Last updated: February 2026</p>
+                        <p>Effective for S.Y. 2025–2026</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <aside class="lg:col-span-1">
+                <div class="bg-white rounded-xl shadow-sm border p-6 sticky top-4">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">System Info</h3>
+                    <ul class="space-y-3 text-sm text-gray-600">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-microchip mt-0.5 text-xs text-feu-gold"></i>
+                            <span>Raspberry Pi 4B (4GB)</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-wifi mt-0.5 text-xs text-feu-gold"></i>
+                            <span>LAN-only operation</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-database mt-0.5 text-xs text-feu-gold"></i>
+                            <span>Local MongoDB storage</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-nfc-symbol mt-0.5 text-xs text-feu-gold"></i>
+                            <span>RC522 NFC reader (SPI)</span>
+                        </li>
+                    </ul>
+                    <hr class="my-4">
+                    <p class="text-xs text-gray-500 leading-relaxed">
+                        TAMTAP is a capstone project of Grade 12 ICT B at FEU Roosevelt Marikina.
+                        All operations comply with R.A. 10173 and institutional policies.
+                    </p>
+                    <hr class="my-4">
+                    <h4 class="font-semibold text-gray-700 text-sm mb-2">Related Pages</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/privacy" class="text-feu-green hover:underline no-underline"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Policy</a></li>
+                        <li><a href="/researchers" class="text-feu-green hover:underline no-underline"><i class="fas fa-flask mr-1.5 text-xs"></i>Researchers</a></li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-feu-green-dark text-white pt-12 pb-6 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                        <span class="font-brand text-xl font-bold">
+                            <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                        </span>
+                    </div>
+                    <p class="text-white text-sm leading-relaxed">
+                        NFC-Based Attendance System<br>
+                        FEU Roosevelt Marikina<br>
+                        Grade 12 ICT B Capstone Project
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-home mr-1.5 text-xs"></i>Home</a></li>
+                        <li><a href="/privacy" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-file-contract mr-1.5 text-xs"></i>Terms of Use</a></li>
+                        <li><a href="/researchers" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-flask mr-1.5 text-xs"></i>Researchers</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">School</h4>
+                    <ul class="space-y-2 text-sm text-white">
+                        <li class="flex items-start gap-2"><i class="fas fa-school mt-0.5 text-xs text-feu-gold"></i><span>FEU Roosevelt — Marikina Campus</span></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-map-marker-alt mt-0.5 text-xs text-feu-gold"></i><span>J.P. Rizal St., Lamuan, Marikina City</span></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-globe mt-0.5 text-xs text-feu-gold"></i><a href="https://feuroosevelt.edu.ph" target="_blank" rel="noopener" class="text-white hover:text-feu-gold transition no-underline">feuroosevelt.edu.ph</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-white/15 pt-5">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white">
+                    <p>&copy; 2025</p>
+                    <p>Capstone by Group 5 of Grade 12 ICT B &nbsp;|&nbsp; FEU Roosevelt Marikina</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

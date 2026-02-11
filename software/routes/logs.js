@@ -25,6 +25,39 @@ const SERVICES = {
 const activeStreams = new Map();
 
 /**
+ * GET /api/logs/health
+ * Quick check: is journalctl available and can we read each service?
+ * Returns per-service reachability so the admin console can show status.
+ */
+router.get('/health', requireAuth, requireAdmin, async (req, res) => {
+    try {
+        const results = {};
+
+        for (const [key, syslogId] of Object.entries(SERVICES)) {
+            try {
+                const logs = await fetchJournalLogs(syslogId, 1);
+                const hasReal = logs.length > 0 && !logs[0].message.includes('journalctl');
+                results[key] = { ok: hasReal, syslogId, lastEntry: logs[0] || null };
+            } catch (e) {
+                results[key] = { ok: false, syslogId, error: e.message };
+            }
+        }
+
+        const allOk = Object.values(results).every(r => r.ok);
+
+        res.json({
+            success: true,
+            healthy: allOk,
+            platform: process.platform,
+            services: results
+        });
+    } catch (error) {
+        logger.error('Logs health check error:', error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+/**
  * GET /api/logs/:service
  * Fetch recent logs for a specific service
  * Query params: lines (default 50)

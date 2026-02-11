@@ -46,6 +46,16 @@
     <link rel="stylesheet" href="/css/preloader.css">
     <script src="/js/preloader.js"></script>
     <style>
+        /* Della Respira Brand Font */
+        @font-face {
+            font-family: 'Della Respira';
+            src: url('/assets/fonts/DellaRespira-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        .font-brand { font-family: 'Della Respira', Georgia, serif; }
+
         /* Animations */
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -167,7 +177,7 @@
                      class="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 xl:h-16 xl:w-16 object-contain"
                      onerror="this.src='/assets/TamTap.png'; this.onerror=null;">
                 <div>
-                    <span class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
+                    <span class="font-brand text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
                         <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
                     </span>
                     <p class="text-[10px] sm:text-xs lg:text-sm text-gray-500 font-medium">Teacher Dashboard</p>
@@ -953,30 +963,58 @@
     <!-- ========================================
          FOOTER
     ======================================== -->
-    <footer class="bg-feu-green py-3 sm:py-4 lg:py-5 mt-auto border-t-4 border-feu-gold">
-        <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-            <!-- Left: FEU Logo + TAMTAP Mascot -->
-            <div class="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                <img src="/assets/logos/feu-logo.png" 
-                     alt="FEU" 
-                     class="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 object-contain"
-                     onerror="this.style.display='none'">
-                <div class="flex items-center gap-1.5 sm:gap-2">
-                    <img src="/assets/TamTap-3D.png" 
-                         alt="TAMTAP Mascot" 
-                         class="h-7 w-7 sm:h-8 sm:w-8 lg:h-10 lg:w-10 object-contain"
-                         onerror="this.style.display='none'">
-                    <span class="text-base sm:text-lg lg:text-xl font-bold">
-                        <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
-                    </span>
+    <footer class="bg-feu-green-dark text-white pt-12 pb-6 px-4 sm:px-6 lg:px-8 mt-auto">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+                <!-- Brand -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                        <span class="font-brand text-xl font-bold">
+                            <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                        </span>
+                    </div>
+                    <p class="text-white text-sm leading-relaxed">
+                        NFC-Based Attendance System<br>
+                        FEU Roosevelt Marikina<br>
+                        Grade 12 ICT B Capstone Project
+                    </p>
+                </div>
+                <!-- Quick Links -->
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/privacy" class="text-white hover:text-feu-gold transition"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-white hover:text-feu-gold transition"><i class="fas fa-file-contract mr-1.5 text-xs"></i>Terms of Use</a></li>
+                        <li><a href="/researchers" class="text-white hover:text-feu-gold transition"><i class="fas fa-flask mr-1.5 text-xs"></i>Researchers</a></li>
+                        <li><a href="#" onclick="showPersonalInfo(); return false;" class="text-white hover:text-feu-gold transition"><i class="fas fa-user mr-1.5 text-xs"></i>Personal Info</a></li>
+                    </ul>
+                </div>
+                <!-- Contact -->
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">School</h4>
+                    <ul class="space-y-2 text-sm text-white">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-school mt-0.5 text-xs text-feu-gold"></i>
+                            <span>FEU Roosevelt — Marikina Campus</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-map-marker-alt mt-0.5 text-xs text-feu-gold"></i>
+                            <span>J.P. Rizal St., Lamuan, Marikina City</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-globe mt-0.5 text-xs text-feu-gold"></i>
+                            <a href="https://feuroosevelt.edu.ph" target="_blank" rel="noopener" class="text-white hover:text-feu-gold transition">feuroosevelt.edu.ph</a>
+                        </li>
+                    </ul>
                 </div>
             </div>
-            
-            <!-- Right: Capstone Info -->
-            <div class="text-center sm:text-right">
-                <p class="text-white/90 text-xs sm:text-sm font-medium italic">Grade 12 ICT Capstone S.Y. 2025-2026</p>
-                <p class="text-white/60 text-[10px] sm:text-xs mt-0.5">FEU Roosevelt Marikina</p>
-                <p class="text-white/50 text-[10px] sm:text-xs mt-0.5">© 2026 Developed by <a href="https://github.com/CharlesNaig" target="_blank" class="text-feu-gold hover:underline">Naig</a></p>
+            <!-- Divider -->
+            <div class="border-t border-white/15 pt-5">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white">
+                    <p>&copy; 2025</p>
+                    <p>Capstone by Group 5 of Grade 12 ICT B &nbsp;|&nbsp; FEU Roosevelt Marikina</p>
+                </div>
             </div>
         </div>
     </footer>

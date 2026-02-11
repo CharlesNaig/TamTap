@@ -78,7 +78,8 @@ Mobile menu adds `Log In` as the last item.
 │   Powered by Raspberry Pi with camera           │
 │   verification and real-time monitoring.        │
 │                                                 │
-│   Grade 12 ICT Capstone | S.Y. 2025-2026       │
+│   Capstone by group 5 of Grade 12 ICT B
+ | S.Y. 2025-2026       │
 │                                                 │
 └─────────────────────────────────────────────────┘
 ```
@@ -178,7 +179,8 @@ Mobile menu adds `Log In` as the last item.
 │                                                             │
 │  ──────────────────────────────────────────────────────────  │
 │  © 2025 Developed by Naig  •  github.com/CharlesNaig       │
-│  Grade 12 ICT Capstone | FEU Roosevelt Marikina             │
+│  Capstone by group 5 of Grade 12 ICT B
+ | FEU Roosevelt Marikina             │
 └─────────────────────────────────────────────────────────────┘
 ```
 

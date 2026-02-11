@@ -35,6 +35,16 @@
     <link rel="stylesheet" href="/css/preloader.css">
     <script src="/js/preloader.js"></script>
     <style>
+        /* Della Respira Brand Font */
+        @font-face {
+            font-family: 'Della Respira';
+            src: url('/assets/fonts/DellaRespira-Regular.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        .font-brand { font-family: 'Della Respira', Georgia, serif; }
+
         .fade-in { animation: fadeIn 0.3s ease-in; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         .tab-active { border-bottom: 3px solid #0a8249; color: #0a8249; }
@@ -144,7 +154,7 @@
                      class="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 xl:h-16 xl:w-16 object-contain"
                      onerror="this.src='/assets/TamTap.png'; this.onerror=null;">
                 <div>
-                    <span class="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
+                    <span class="font-brand text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold">
                         <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
                     </span>
                     <p class="text-[10px] sm:text-xs lg:text-sm text-gray-500 font-medium">Admin Panel</p>
@@ -504,7 +514,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-plus mr-2 text-feu-green"></i>Add New Teacher</h3>
                 <button onclick="closeModal('add-teacher-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-teacher-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="add-teacher-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Username</label>
                     <input type="text" name="username" required class="w-full border rounded px-3 py-2 text-sm" placeholder="e.g., ms.santos">
@@ -542,7 +552,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-plus mr-2 text-feu-green"></i>Add New Student</h3>
                 <button onclick="closeModal('add-student-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-student-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="add-student-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">NFC Card ID</label>
                     <input type="text" name="nfc_id" required class="w-full border rounded px-3 py-2 text-sm" placeholder="Scan or enter NFC ID">
@@ -582,7 +592,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-user-edit mr-2 text-feu-green"></i>Edit Teacher</h3>
                 <button onclick="closeModal('edit-teacher-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="edit-teacher-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="edit-teacher-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <input type="hidden" name="id">
                 <div>
                     <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</label>
@@ -616,7 +626,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-plus mr-2 text-feu-green"></i>Add Section Schedule</h3>
                 <button onclick="closeModal('add-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="add-schedule-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="add-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Section</label>
@@ -678,7 +688,7 @@
                 <h3 class="text-base sm:text-lg font-semibold"><i class="fas fa-calendar-check mr-2 text-feu-green"></i>Edit Schedule</h3>
                 <button onclick="closeModal('edit-schedule-modal')" class="text-gray-400 hover:text-gray-600 text-xl sm:text-2xl">&times;</button>
             </div>
-            <form id="edit-schedule-form" data-ajax class="p-3 sm:p-4 space-y-3 sm:space-y-4">
+            <form id="edit-schedule-form" class="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 <input type="hidden" name="section">
                 <div class="grid grid-cols-2 gap-3">
                     <div>
@@ -733,14 +743,58 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-feu-green-dark text-white/80 text-center py-3 sm:py-4 mt-auto">
-        <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
-            <div class="flex items-center gap-2 sm:gap-3">
-                <img src="../../assets/TamTap-3D.png" alt="FEU" class="h-6 sm:h-8 w-auto opacity-90">
+    <footer class="bg-feu-green-dark text-white pt-12 pb-6 px-4 sm:px-6 lg:px-8 mt-auto">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+                <!-- Brand -->
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                        <span class="font-brand text-xl font-bold">
+                            <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                        </span>
+                    </div>
+                    <p class="text-white text-sm leading-relaxed">
+                        NFC-Based Attendance System<br>
+                        FEU Roosevelt Marikina<br>
+                        Grade 12 ICT B Capstone Project
+                    </p>
+                </div>
+                <!-- Quick Links -->
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/privacy" class="text-white hover:text-feu-gold transition"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-white hover:text-feu-gold transition"><i class="fas fa-file-contract mr-1.5 text-xs"></i>Terms of Use</a></li>
+                        <li><a href="/researchers" class="text-white hover:text-feu-gold transition"><i class="fas fa-flask mr-1.5 text-xs"></i>Researchers</a></li>
+                        <li><a href="/dashboard" class="text-white hover:text-feu-gold transition"><i class="fas fa-chart-line mr-1.5 text-xs"></i>Dashboard</a></li>
+                    </ul>
+                </div>
+                <!-- Contact -->
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">School</h4>
+                    <ul class="space-y-2 text-sm text-white">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-school mt-0.5 text-xs text-feu-gold"></i>
+                            <span>FEU Roosevelt — Marikina Campus</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-map-marker-alt mt-0.5 text-xs text-feu-gold"></i>
+                            <span>J.P. Rizal St., Lamuan, Marikina City</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-globe mt-0.5 text-xs text-feu-gold"></i>
+                            <a href="https://feuroosevelt.edu.ph" target="_blank" rel="noopener" class="text-white hover:text-feu-gold transition">feuroosevelt.edu.ph</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-            <div class="flex flex-col items-center sm:items-start">
-                <p class="text-xs sm:text-sm">TAMTAP v2.0 | FEU Roosevelt Marikina | Grade 12 ICT Capstone S.Y. 2025-2026</p>
-                <p class="text-[10px] sm:text-xs text-white/60 mt-0.5">© 2026 Developed by <a href="https://github.com/CharlesNaig" target="_blank" class="text-feu-gold hover:underline">Naig</a></p>
+            <!-- Divider -->
+            <div class="border-t border-white/15 pt-5">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white">
+                    <p>&copy; 2025</p>
+                    <p>Capstone by Group 5 of Grade 12 ICT B &nbsp;|&nbsp; FEU Roosevelt Marikina</p>
+                </div>
             </div>
         </div>
     </footer>
@@ -1782,6 +1836,19 @@
                 updateServiceStatus('buttons', 'streaming');
                 updateServiceStatus('hardware', 'streaming');
                 updateServiceStatus('server', 'streaming');
+            });
+            
+            logSocket.on('connect_error', (err) => {
+                // Show connection errors in all console panes
+                ['buttons', 'hardware', 'server'].forEach(svc => {
+                    appendLog(svc, {
+                        timestamp: new Date().toISOString(),
+                        message: `Socket connection failed: ${err.message}`,
+                        level: 'error'
+                    });
+                });
+                isStreamingLogs = false;
+                updateStreamUI(false);
             });
             
             logSocket.on('logs:entry', (entry) => {

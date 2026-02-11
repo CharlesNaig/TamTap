@@ -373,25 +373,10 @@ class Database:
                 logger.error("Failed to push attendance: %s", e)
                 still_pending.append(record)
         
-        # Push students not in MongoDB
-        for nfc_id, user_data in data.get("students", {}).items():
-            try:
-                if not self.mongo_db.students.find_one({"nfc_id": nfc_id}):
-                    doc = {"nfc_id": nfc_id, **user_data}
-                    self.mongo_db.students.insert_one(doc)
-                    synced += 1
-            except Exception as e:
-                logger.debug("Student push note: %s", e)
-        
-        # Push teachers not in MongoDB
-        for nfc_id, user_data in data.get("teachers", {}).items():
-            try:
-                if not self.mongo_db.teachers.find_one({"nfc_id": nfc_id}):
-                    doc = {"nfc_id": nfc_id, **user_data}
-                    self.mongo_db.teachers.insert_one(doc)
-                    synced += 1
-            except Exception as e:
-                logger.debug("Teacher push note: %s", e)
+        # NOTE: Do NOT push students/teachers from JSON → MongoDB here.
+        # MongoDB is the source of truth for user data (managed via Admin Panel).
+        # Pushing stale JSON users back to MongoDB causes "ghost data" after deletion.
+        # User sync is ONE-WAY: MongoDB → JSON (via _pull_from_mongodb only).
         
         # Update JSON
         data["pending_attendance"] = still_pending

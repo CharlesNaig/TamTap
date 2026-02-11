@@ -313,11 +313,23 @@ _active_storage_dir, _is_external = init_photo_storage()
 # �📸 PHOTO HELPER FUNCTIONS
 # ========================================
 def sanitize_filename(text):
-    """Sanitize text for use in filenames - remove special chars, replace spaces"""
+    """
+    Sanitize text for use in filenames.
+    - Maps ñ→n, Ñ→N (Filipino name support)
+    - Normalizes Unicode NFC before stripping
+    - Keeps only ASCII alphanumeric and underscore
+    - Replaces spaces with underscores
+    """
+    import unicodedata
     if not text:
         return "Unknown"
-    # Replace spaces with underscores, keep only alphanumeric and underscore
-    sanitized = "".join(c if c.isalnum() or c == '_' else '_' for c in text.replace(' ', '_'))
+    # Normalize to NFC first (composed form)
+    text = unicodedata.normalize('NFC', text)
+    # Map common accented/special chars BEFORE stripping
+    char_map = {'ñ': 'n', 'Ñ': 'N', 'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u'}
+    text = ''.join(char_map.get(c, c) for c in text)
+    # Replace spaces with underscores, keep only ASCII alphanumeric and underscore
+    sanitized = ''.join(c if (c.isascii() and c.isalnum()) or c == '_' else '_' for c in text.replace(' ', '_'))
     # Remove consecutive underscores and strip
     while '__' in sanitized:
         sanitized = sanitized.replace('__', '_')
@@ -687,8 +699,8 @@ def capture_photo_for_detection(filename, timeout_ms=1000):
             [
                 'rpicam-still',
                 '-t', str(timeout_ms),
-                '--width', '640',
-                '--height', '480',
+                '--width', '600',
+                '--height', '800',
                 '-o', filename
             ],
             capture_output=True,
@@ -744,7 +756,7 @@ def detect_face_in_image(image_path):
         faces = face_cascade.detectMultiScale(
             gray,
             scaleFactor=1.15,   # Slightly larger for speed
-            minNeighbors=4,
+            minNeighbors=3,     # Relaxed from 4 for better detection on Pi
             minSize=MIN_FACE_SIZE,
             flags=cv2.CASCADE_SCALE_IMAGE
         )
@@ -799,17 +811,17 @@ def detect_face_in_image(image_path):
         eyes = eye_cascade.detectMultiScale(
             roi_upper,
             scaleFactor=1.1,
-            minNeighbors=3,
+            minNeighbors=2,     # Relaxed from 3 — eye detection is supplementary
             minSize=MIN_EYE_SIZE
         )
         
         elapsed_ms = (_time.time() - start_time) * 1000
         logger.info("Eye detection: found %d eye(s) in %.0fms total", len(eyes), elapsed_ms)
         
-        # Need at least one eye visible (one eye may be occluded in angled view)
+        # Eye detection is supplementary — warn but don't reject
         if len(eyes) < 1:
-            logger.info("No eyes detected - face may be covered or eyes closed")
-            return False, 1, FaceValidationError.EYES_NOT_VISIBLE
+            logger.warning("No eyes detected — accepting face-only (relaxed mode)")
+            return True, 1, None
         
         # Success: One face with visible eye(s)
         logger.info("Face validation passed: 1 face, %d eye(s) detected", len(eyes))

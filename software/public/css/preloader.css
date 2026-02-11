@@ -3,6 +3,20 @@
  * Shows walking mascot animation during page transitions
  */
 
+/*
+ * Instant screen cover — applied via <html class="preloading">
+ * Prevents content flash before JS preloader element is injected.
+ * This pseudo-element renders immediately from CSS (no JS body dependency).
+ */
+html.preloading::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: #fbfcfc;
+    pointer-events: none;
+}
+
 /* Preloader Overlay */
 .tamtap-preloader {
     position: fixed;
@@ -13,17 +27,18 @@
     align-items: center;
     justify-content: center;
     background: #fbfcfc;
-    opacity: 1;
-    transition: opacity 0.3s ease-out;
+    transform: translateY(0);
+    transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .tamtap-preloader.hidden {
-    opacity: 0;
     pointer-events: none;
+    visibility: hidden;
 }
 
-.tamtap-preloader.fade-out {
-    opacity: 0;
+/* Slide-up exit */
+.tamtap-preloader.slide-up {
+    transform: translateY(-100%);
 }
 
 .tamtap-preloader-content {

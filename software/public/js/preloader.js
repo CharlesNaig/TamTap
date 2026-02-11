@@ -11,11 +11,15 @@
     const MIN_PRELOADER_TIME = 3000 + Math.random() * 2000;
     let preloaderStartTime = Date.now();
 
+    // Immediately cover the screen via CSS (no body needed)
+    document.documentElement.classList.add('preloading');
+
     // Create preloader HTML
     function createPreloader() {
+        if (document.getElementById('tamtap-preloader')) return;
         const preloader = document.createElement('div');
         preloader.id = 'tamtap-preloader';
-        preloader.className = 'tamtap-preloader'; // Visible by default for initial page load
+        preloader.className = 'tamtap-preloader';
         preloader.innerHTML = `
             <div class="tamtap-preloader-content">
                 <img src="/assets/animations/tamtap-walk.gif" alt="Loading..." class="tamtap-preloader-gif">
@@ -26,6 +30,17 @@
         document.body.appendChild(preloader);
         return preloader;
     }
+
+    // Inject preloader ASAP — don't wait for DOMContentLoaded
+    function injectEarly() {
+        if (document.body) {
+            createPreloader();
+        } else {
+            // Body not ready yet — poll at next frame
+            requestAnimationFrame(injectEarly);
+        }
+    }
+    injectEarly();
 
     // Show preloader
     window.showPreloader = function(message) {
@@ -42,14 +57,18 @@
         preloader.classList.remove('hidden', 'fade-out');
     };
 
-    // Hide preloader
+    // Hide preloader — slide up then hide
     window.hidePreloader = function() {
         const preloader = document.getElementById('tamtap-preloader');
         if (preloader) {
-            preloader.classList.add('fade-out');
+            // Remove the CSS instant-cover
+            document.documentElement.classList.remove('preloading');
+            // Slide the preloader up
+            preloader.classList.add('slide-up');
+            // After transition ends, fully hide
             setTimeout(() => {
                 preloader.classList.add('hidden');
-            }, 300);
+            }, 600);
         }
     };
 
@@ -135,20 +154,18 @@
         }
     }
 
-    // Initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            createPreloader();
-            interceptLinks();
-            interceptForms();
-            handlePageUnload();
-            hideOnLoad();
-        });
-    } else {
-        createPreloader();
+    // Initialize when DOM is ready (preloader already injected early)
+    function initHandlers() {
+        createPreloader(); // no-op if already injected
         interceptLinks();
         interceptForms();
         handlePageUnload();
         hideOnLoad();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initHandlers);
+    } else {
+        initHandlers();
     }
 })();

@@ -700,7 +700,9 @@ def capture_photo_for_detection(filename, timeout_ms=1000):
                 'rpicam-still',
                 '-t', str(timeout_ms),
                 '--width', '600',
-                '--height', '800',
+                '--height', '720',
+                '--metering', 'spot',
+                '--ev', '0.5',
                 '-o', filename
             ],
             capture_output=True,
@@ -912,8 +914,10 @@ def take_attendance_photo(user_data):
                 [
                     'rpicam-still',
                     '-t', str(CAMERA_CAPTURE_TIME),
-                    '--width', '1024',
-                    '--height', '768',
+                    '--width', '600',
+                    '--height', '720',
+                    '--metering', 'spot',
+                    '--ev', '0.5',
                     '-o', filepath
                 ],
                 capture_output=True,

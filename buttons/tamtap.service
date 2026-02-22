@@ -1,0 +1,20 @@
+[Unit]
+Description=TAMTAP NFC Hardware Service
+Documentation=https://github.com/CharlesNaig/TamTap
+After=network.target mongod.service tamtap-server.service
+
+[Service]
+Type=simple
+ExecStart=/home/charles/TamTap/startup.sh
+Restart=always
+RestartSec=5
+User=root
+Environment=PYTHONUNBUFFERED=1
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tamtap
+
+[Install]
+WantedBy=multi-user.target

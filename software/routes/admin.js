@@ -12,7 +12,12 @@
  * POST /api/admin/students          - Register new student
  * POST /api/admin/students/bulk     - Bulk register students (CSV)
  * PUT  /api/admin/students/:nfc_id  - Update student
- * DELETE /api/admin/students/:nfc_id - Remove student
+ * DELETE /api/admin/students/:nfc_id - Archive student (soft delete)
+ * 
+ * POST /api/admin/students/archive-batch - Batch archive students
+ * GET  /api/admin/students/archived      - List archived students
+ * POST /api/admin/students/restore       - Restore archived student(s)
+ * DELETE /api/admin/students/archived/:nfc_id - Permanently delete archived student
  * 
  * GET  /api/admin/sections          - List all sections
  */
@@ -20,6 +25,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
@@ -61,7 +67,7 @@ router.get('/teachers', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get teachers error:', error.message);
+        logger.error('Get teachers error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch teachers' });
     }
 });
@@ -119,7 +125,7 @@ router.post('/teachers', async (req, res) => {
             created: new Date().toISOString()
         });
 
-        console.log(`[INFO] Teacher registered: ${username} by ${req.user.username}`);
+        logger.success(`Teacher registered: ${username} by ${req.user.username}`);
 
         res.status(201).json({
             success: true,
@@ -133,7 +139,7 @@ router.post('/teachers', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Register teacher error:', error.message);
+        logger.error('Register teacher error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to register teacher' });
     }
 });
@@ -176,12 +182,12 @@ router.put('/teachers/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Teacher not found' });
         }
 
-        console.log(`[INFO] Teacher updated: ${teacherId} by ${req.user.username}`);
+        logger.info(`Teacher updated: ${teacherId} by ${req.user.username}`);
 
         res.json({ success: true, message: 'Teacher updated successfully' });
 
     } catch (error) {
-        console.error('[ERROR] Update teacher error:', error.message);
+        logger.error('Update teacher error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to update teacher' });
     }
 });
@@ -208,12 +214,12 @@ router.delete('/teachers/:id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Teacher not found' });
         }
 
-        console.log(`[INFO] Teacher deleted: ${teacherId} by ${req.user.username}`);
+        logger.warn(`Teacher deleted: ${teacherId} by ${req.user.username}`);
 
         res.json({ success: true, message: 'Teacher deleted successfully' });
 
     } catch (error) {
-        console.error('[ERROR] Delete teacher error:', error.message);
+        logger.error('Delete teacher error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to delete teacher' });
     }
 });
@@ -293,7 +299,7 @@ router.post('/teachers/:id/reset-password', async (req, res) => {
         );
 
         // Log the action
-        console.log(`[INFO] Password reset for teacher ${teacher.username} by ${req.user.username} (default: ${isDefaultPassword}, forceChange: ${!!forceChange})`);
+        logger.auth(`Password reset for teacher ${teacher.username} by ${req.user.username} (default: ${isDefaultPassword}, forceChange: ${!!forceChange})`);
 
         // Log to audit collection
         await db.collection('audit_log').insertOne({
@@ -322,7 +328,7 @@ router.post('/teachers/:id/reset-password', async (req, res) => {
         res.json(response);
 
     } catch (error) {
-        console.error('[ERROR] Reset password error:', error.message);
+        logger.error('Reset password error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to reset password' });
     }
 });
@@ -368,7 +374,7 @@ router.get('/students', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get students error:', error.message);
+        logger.error('Get students error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch students' });
     }
 });
@@ -431,7 +437,7 @@ router.post('/students', async (req, res) => {
             registered: new Date().toISOString()
         });
 
-        console.log(`[INFO] Student registered: ${tamtap_id} - ${studentName} by ${req.user.username}`);
+        logger.success(`Student registered: ${tamtap_id} - ${studentName} by ${req.user.username}`);
 
         res.status(201).json({
             success: true,
@@ -445,7 +451,7 @@ router.post('/students', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Register student error:', error.message);
+        logger.error('Register student error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to register student' });
     }
 });
@@ -522,7 +528,7 @@ router.post('/students/bulk', async (req, res) => {
             }
         }
 
-        console.log(`[INFO] Bulk import: ${results.success} success, ${results.failed} failed by ${req.user.username}`);
+        logger.info(`Bulk import: ${results.success} success, ${results.failed} failed by ${req.user.username}`);
 
         res.json({
             success: true,
@@ -531,7 +537,7 @@ router.post('/students/bulk', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Bulk register error:', error.message);
+        logger.error('Bulk register error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to bulk register students' });
     }
 });
@@ -572,19 +578,19 @@ router.put('/students/:nfc_id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Student not found' });
         }
 
-        console.log(`[INFO] Student updated: ${nfcId} by ${req.user.username}`);
+        logger.info(`Student updated: ${nfcId} by ${req.user.username}`);
 
         res.json({ success: true, message: 'Student updated successfully' });
 
     } catch (error) {
-        console.error('[ERROR] Update student error:', error.message);
+        logger.error('Update student error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to update student' });
     }
 });
 
 /**
  * DELETE /api/admin/students/:nfc_id
- * Remove student
+ * Archive student (soft delete → moved to archived_students collection)
  */
 router.delete('/students/:nfc_id', async (req, res) => {
     try {
@@ -595,19 +601,217 @@ router.delete('/students/:nfc_id', async (req, res) => {
 
         const nfcId = req.params.nfc_id;
 
-        const result = await db.collection('students').deleteOne({ nfc_id: nfcId });
-
-        if (result.deletedCount === 0) {
+        // Find student first
+        const student = await db.collection('students').findOne({ nfc_id: nfcId });
+        if (!student) {
             return res.status(404).json({ success: false, error: 'Student not found' });
         }
 
-        console.log(`[INFO] Student deleted: ${nfcId} by ${req.user.username}`);
+        // Move to archived_students
+        const archiveDoc = { ...student };
+        delete archiveDoc._id;
+        archiveDoc.archived_at = new Date().toISOString();
+        archiveDoc.archived_by = req.user.username;
 
-        res.json({ success: true, message: 'Student deleted successfully' });
+        await db.collection('archived_students').insertOne(archiveDoc);
+        await db.collection('students').deleteOne({ nfc_id: nfcId });
+
+        logger.warn(`Student archived: ${nfcId} by ${req.user.username}`);
+
+        res.json({ success: true, message: 'Student archived successfully' });
 
     } catch (error) {
-        console.error('[ERROR] Delete student error:', error.message);
-        res.status(500).json({ success: false, error: 'Failed to delete student' });
+        logger.error('Archive student error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to archive student' });
+    }
+});
+
+/**
+ * POST /api/admin/students/archive-batch
+ * Batch archive multiple students
+ * Body: { nfc_ids: string[] }
+ */
+router.post('/students/archive-batch', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { nfc_ids } = req.body;
+        if (!Array.isArray(nfc_ids) || nfc_ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'nfc_ids array is required' });
+        }
+
+        const results = { archived: 0, failed: 0, errors: [] };
+
+        for (const nfcId of nfc_ids) {
+            try {
+                const student = await db.collection('students').findOne({ nfc_id: nfcId });
+                if (!student) {
+                    results.failed++;
+                    results.errors.push(`${nfcId}: not found`);
+                    continue;
+                }
+
+                const archiveDoc = { ...student };
+                delete archiveDoc._id;
+                archiveDoc.archived_at = new Date().toISOString();
+                archiveDoc.archived_by = req.user.username;
+
+                await db.collection('archived_students').insertOne(archiveDoc);
+                await db.collection('students').deleteOne({ nfc_id: nfcId });
+                results.archived++;
+            } catch (e) {
+                results.failed++;
+                results.errors.push(`${nfcId}: ${e.message}`);
+            }
+        }
+
+        logger.warn(`Batch archive: ${results.archived} archived, ${results.failed} failed by ${req.user.username}`);
+
+        res.json({
+            success: true,
+            message: `Archived ${results.archived} students, ${results.failed} failed`,
+            results
+        });
+
+    } catch (error) {
+        logger.error('Batch archive error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to batch archive students' });
+    }
+});
+
+/**
+ * GET /api/admin/students/archived
+ * List all archived students
+ */
+router.get('/students/archived', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const archived = await db.collection('archived_students')
+            .find({})
+            .sort({ archived_at: -1 })
+            .toArray();
+
+        res.json({
+            success: true,
+            count: archived.length,
+            data: archived.map(s => ({
+                nfc_id: s.nfc_id,
+                tamtap_id: s.tamtap_id || '',
+                name: s.name,
+                first_name: s.first_name || '',
+                last_name: s.last_name || '',
+                grade: s.grade || '',
+                section: s.section || '',
+                archived_at: s.archived_at,
+                archived_by: s.archived_by || 'system'
+            }))
+        });
+
+    } catch (error) {
+        logger.error('Get archived students error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to fetch archived students' });
+    }
+});
+
+/**
+ * POST /api/admin/students/restore
+ * Restore archived student(s) back to active
+ * Body: { nfc_ids: string[] }
+ */
+router.post('/students/restore', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { nfc_ids } = req.body;
+        if (!Array.isArray(nfc_ids) || nfc_ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'nfc_ids array is required' });
+        }
+
+        const results = { restored: 0, failed: 0, errors: [] };
+
+        for (const nfcId of nfc_ids) {
+            try {
+                const archived = await db.collection('archived_students').findOne({ nfc_id: nfcId });
+                if (!archived) {
+                    results.failed++;
+                    results.errors.push(`${nfcId}: not found in archive`);
+                    continue;
+                }
+
+                // Check if nfc_id already exists in active students
+                const existing = await db.collection('students').findOne({ nfc_id: nfcId });
+                if (existing) {
+                    results.failed++;
+                    results.errors.push(`${nfcId}: NFC ID already active`);
+                    continue;
+                }
+
+                // Move back to students (remove archive fields)
+                const restoreDoc = { ...archived };
+                delete restoreDoc._id;
+                delete restoreDoc.archived_at;
+                delete restoreDoc.archived_by;
+                restoreDoc.restored_at = new Date().toISOString();
+
+                await db.collection('students').insertOne(restoreDoc);
+                await db.collection('archived_students').deleteOne({ nfc_id: nfcId });
+                results.restored++;
+            } catch (e) {
+                results.failed++;
+                results.errors.push(`${nfcId}: ${e.message}`);
+            }
+        }
+
+        logger.success(`Restore: ${results.restored} restored, ${results.failed} failed by ${req.user.username}`);
+
+        res.json({
+            success: true,
+            message: `Restored ${results.restored} students, ${results.failed} failed`,
+            results
+        });
+
+    } catch (error) {
+        logger.error('Restore students error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to restore students' });
+    }
+});
+
+/**
+ * DELETE /api/admin/students/archived/:nfc_id
+ * Permanently delete an archived student (no recovery)
+ */
+router.delete('/students/archived/:nfc_id', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const nfcId = req.params.nfc_id;
+
+        const result = await db.collection('archived_students').deleteOne({ nfc_id: nfcId });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, error: 'Archived student not found' });
+        }
+
+        logger.warn(`Archived student permanently deleted: ${nfcId} by ${req.user.username}`);
+
+        res.json({ success: true, message: 'Archived student permanently deleted' });
+
+    } catch (error) {
+        logger.error('Permanent delete error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to permanently delete student' });
     }
 });
 
@@ -643,7 +847,7 @@ router.get('/sections', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get sections error:', error.message);
+        logger.error('Get sections error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch sections' });
     }
 });
@@ -682,7 +886,7 @@ router.get('/settings', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get settings error:', error.message);
+        logger.error('Get settings error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch settings' });
     }
 });
@@ -725,7 +929,7 @@ router.get('/settings/:key', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get setting error:', error.message);
+        logger.error('Get setting error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch setting' });
     }
 });
@@ -775,7 +979,7 @@ router.put('/settings/:key', async (req, res) => {
             { upsert: true }
         );
 
-        console.log(`[INFO] Setting ${key} updated to ${value} by ${req.user.username}`);
+        logger.info(`Setting ${key} updated to ${value} by ${req.user.username}`);
 
         // Log to audit
         await db.collection('audit_log').insertOne({
@@ -793,7 +997,7 @@ router.put('/settings/:key', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Update setting error:', error.message);
+        logger.error('Update setting error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to update setting' });
     }
 });
@@ -828,7 +1032,7 @@ router.post('/settings/saturday-toggle', async (req, res) => {
             { upsert: true }
         );
 
-        console.log(`[INFO] Saturday classes ${newValue ? 'ENABLED' : 'DISABLED'} by ${req.user.username}`);
+        logger.info(`Saturday classes ${newValue ? 'ENABLED' : 'DISABLED'} by ${req.user.username}`);
 
         // Log to audit
         await db.collection('audit_log').insertOne({
@@ -845,7 +1049,7 @@ router.post('/settings/saturday-toggle', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Toggle Saturday error:', error.message);
+        logger.error('Toggle Saturday error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to toggle Saturday classes' });
     }
 });

@@ -55,7 +55,7 @@ MONGODB_NAME = os.getenv("MONGODB_NAME", "tamtap")
 MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
 
 # API Server URL for schedule fetch
-API_SERVER_URL = os.getenv("API_URL", "http://localhost:3000")
+API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
 API_TIMEOUT = 2  # seconds
 
 # Default schedule thresholds (used if API unavailable)
@@ -596,6 +596,40 @@ class Database:
         self._save_json(data)
         
         return deleted_role is not None, deleted_role
+    
+    def archive_user(self, nfc_id):
+        """
+        Archive a student by NFC ID (soft delete).
+        Moves student to archived_students collection in MongoDB.
+        Returns: (success, role) or (False, None)
+        """
+        nfc_str = str(nfc_id)
+        
+        # Only archive students (teachers use hard delete)
+        if self._check_mongodb():
+            try:
+                student = self.mongo_db.students.find_one({"nfc_id": nfc_str})
+                if student:
+                    archive_doc = {k: v for k, v in student.items() if k != "_id"}
+                    archive_doc["archived_at"] = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                    archive_doc["archived_by"] = "cli"
+                    
+                    self.mongo_db.archived_students.insert_one(archive_doc)
+                    self.mongo_db.students.delete_one({"nfc_id": nfc_str})
+                    
+                    # Also remove from JSON
+                    data = self._load_json()
+                    if nfc_str in data.get("students", {}):
+                        del data["students"][nfc_str]
+                        self._save_json(data)
+                    
+                    logger.info("Student archived: %s", nfc_str)
+                    return True, "student"
+            except Exception as e:
+                logger.error("MongoDB archive error: %s", e)
+        
+        # Fallback: if no MongoDB, use hard delete
+        return self.delete_user(nfc_id)
     
     def get_all_users(self):
         """

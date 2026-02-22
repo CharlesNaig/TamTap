@@ -44,7 +44,7 @@ const PHOTO_DIRS = [
 ];
 
 // ------------------------------------------------------------------
-// Sanitizer (mirrors hardware/tamtap.py and software/utils/filenameSanitizer.js)
+// Sanitizer (mirrors hardware/tamtap.py and software/utils/filenameSanitizer.js) 100582761834
 // ------------------------------------------------------------------
 const CHAR_MAP = {
     'ñ': 'n', 'Ñ': 'N',

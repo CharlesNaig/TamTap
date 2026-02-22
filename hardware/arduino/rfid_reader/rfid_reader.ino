@@ -160,18 +160,40 @@ void loop() {
 
 /**
  * Convert UID bytes to decimal string
- * Similar format to SimpleMFRC522 on Raspberry Pi
+ * Matches SimpleMFRC522 Python library format on Raspberry Pi:
+ *   uid_to_num() reads 5 bytes (4 UID + 1 BCC) and does:
+ *     n = n * 256 + uid[i]  for i in range(5)
+ *
+ * The BCC (Block Check Character) = XOR of the 4 UID bytes.
+ * Arduino MFRC522 lib strips the BCC, so we recalculate it here.
+ * Result exceeds 32-bit, so we use uint64_t + manual decimal conversion.
  */
 String getUIDString() {
-    unsigned long uid = 0;
-    
-    // Convert bytes to unsigned long (up to 4 bytes)
+    uint64_t uid = 0;
+    byte bcc = 0;
+
+    // First 4 UID bytes (same as Pi)
     for (byte i = 0; i < rfid.uid.size && i < 4; i++) {
-        uid = uid << 8;
-        uid = uid | rfid.uid.uidByte[i];
+        uid = uid * 256 + rfid.uid.uidByte[i];
+        bcc ^= rfid.uid.uidByte[i];
     }
-    
-    return String(uid);
+
+    // 5th byte: BCC (XOR checksum) — included by SimpleMFRC522
+    uid = uid * 256 + bcc;
+
+    // Convert uint64_t to decimal string (String() only supports 32-bit)
+    if (uid == 0) return "0";
+
+    char buf[21];  // max 20 digits for uint64_t
+    byte pos = 20;
+    buf[pos] = '\0';
+
+    while (uid > 0) {
+        buf[--pos] = '0' + (byte)(uid % 10);
+        uid /= 10;
+    }
+
+    return String(&buf[pos]);
 }
 
 /**

@@ -1,4 +1,17 @@
 #!/usr/bin/env python3
+"""
+TAMTAP v8.0 - Student Registration CLI (Arduino Version)
+Uses shared Database module with MongoDB + JSON sync
+
+Features:
+  - Single student registration (NFC scan via Arduino)
+  - Batch section registration (multiple students, auto-increment TAMTAP ID)
+  - List / Delete students
+
+NOTE: This CLI registers STUDENTS only (NFC card users).
+      Teachers are registered via Admin Panel (web interface)
+      with username/password for dashboard login.
+"""
 import os
 import sys
 import signal
@@ -252,26 +265,29 @@ def clear_screen():
 
 def print_header(db, nfc_reader):
     """Print application header with DB and Arduino status"""
-    print("=" * 50)
-    print("   TAMTAP v7.0 - REGISTRATION SYSTEM")
+    print("=" * 55)
+    print("   TAMTAP v8.0 - STUDENT REGISTRATION")
     print("   NFC-Based Attendance | Arduino CLI Version")
     db_status = "[MongoDB]" if db.is_connected() else "[JSON Fallback]"
     arduino_status = f"[Arduino: {nfc_reader.port}]" if nfc_reader.connected else "[Arduino: NOT CONNECTED]"
     print(f"   Database: {db_status}")
     print(f"   Reader:   {arduino_status}")
-    print("=" * 50)
+    print("=" * 55)
+    print("\n   NOTE: Teachers are registered via Admin Panel")
+    print("         (web interface with username/password)")
 
 def print_menu():
     """Print main menu"""
     print("\n[MAIN MENU]")
-    print("-" * 30)
-    print("  1. Register Student")
-    print("  2. Register Teacher")
-    print("  3. List All Users")
-    print("  4. Delete User")
+    print("-" * 35)
+    print("  1. Register Single Student")
+    print("  2. Register Batch (Whole Section)")
+    print("  3. List All Students")
+    print("  4. Delete Student")
     print("  5. Reconnect Arduino")
-    print("  6. Exit")
-    print("-" * 30)
+    print("  6. Sync Database (Force)")
+    print("  7. Exit")
+    print("-" * 35)
 
 def get_input(prompt, required=True, max_length=50):
     """Get user input with validation"""
@@ -289,21 +305,27 @@ def get_input(prompt, required=True, max_length=50):
             print("\n[!] Cancelled")
             return None
 
-def validate_email(email):
-    """Basic email validation"""
-    if not email:
-        return True  # Email is optional
-    if '@' in email and '.' in email.split('@')[-1]:
-        return True
-    return False
+def get_int_input(prompt, min_val=1, max_val=999):
+    """Get integer input with range validation"""
+    while True:
+        value = get_input(prompt)
+        if value is None:
+            return None
+        try:
+            num = int(value)
+            if num < min_val or num > max_val:
+                print(f"[!] Must be between {min_val} and {max_val}")
+                continue
+            return num
+        except ValueError:
+            print("[!] Please enter a valid number")
 
-def register_user(role, db, nfc_reader):
-    """Register a new student or teacher"""
+def register_single(db, nfc_reader):
+    """Register a single student via NFC card"""
     clear_screen()
     print_header(db, nfc_reader)
     
-    role_upper = role.upper()
-    print(f"\n[REGISTER {role_upper}]")
+    print("\n[REGISTER SINGLE STUDENT]")
     print("-" * 30)
     
     # Step 1: Get NFC ID
@@ -339,8 +361,8 @@ def register_user(role, db, nfc_reader):
         input("\nPress Enter to continue...")
         return False
     
-    # Step 2: Get user details with new schema
-    print(f"\nStep 2: Enter {role_upper} Details")
+    # Step 2: Get student details
+    print("\nStep 2: Enter STUDENT Details")
     print("-" * 30)
     
     # TAMTAP ID (auto or manual)
@@ -354,11 +376,9 @@ def register_user(role, db, nfc_reader):
             return False
         
         if not tamtap_input:
-            # Use auto-generated ID
             tamtap_id = next_id_str
             break
         else:
-            # Validate manual input (must be numeric)
             try:
                 tamtap_num = int(tamtap_input)
                 if tamtap_num < 1:
@@ -366,7 +386,6 @@ def register_user(role, db, nfc_reader):
                     continue
                 tamtap_id = str(tamtap_num).zfill(3)
                 
-                # Check if already exists
                 if db.tamtap_id_exists(tamtap_id):
                     print(f"[!] TAMTAP ID {tamtap_id} already exists!")
                     continue
@@ -375,71 +394,57 @@ def register_user(role, db, nfc_reader):
                 print("[!] Please enter a valid number")
                 continue
     
-    # Email (optional)
-    while True:
-        email = get_input("> Email (optional, press Enter to skip): ", required=False)
-        if email is None:
-            return False
-        if validate_email(email):
-            break
-        print("[!] Invalid email format")
-    
-    # First Name
+    # Student info
     first_name = get_input("> First Name: ")
     if first_name is None:
         return False
     
-    # Last Name
     last_name = get_input("> Last Name: ")
     if last_name is None:
         return False
     
-    # Grade
-    grade = get_input("> Grade (e.g., 12): ", required=False)
+    grade = get_input("> Grade (e.g., 11, 12): ")
     if grade is None:
-        grade = ""
+        return False
     
-    # Section
-    section = get_input("> Section (e.g., ICT B): ", required=False)
+    section = get_input("> Section (e.g., ICT-A, STEM-B): ")
     if section is None:
-        section = ""
+        return False
     
-    # Confirm registration
+    # Confirm
     full_name = f"{first_name} {last_name}"
-    grade_section = f"{grade} {section}".strip() if grade or section else "N/A"
     
-    print("\n" + "=" * 35)
-    print("CONFIRM REGISTRATION")
-    print("=" * 35)
-    print(f"  TAMTAP ID: {tamtap_id}")
-    print(f"  Role:      {role_upper}")
-    print(f"  NFC ID:    {nfc_id}")
-    print(f"  Email:     {email if email else 'N/A'}")
-    print(f"  Name:      {full_name}")
-    print(f"  Grade:     {grade if grade else 'N/A'}")
-    print(f"  Section:   {section if section else 'N/A'}")
-    print("=" * 35)
+    print("\n" + "=" * 40)
+    print("       CONFIRM STUDENT REGISTRATION")
+    print("=" * 40)
+    print(f"  TAMTAP ID:  {tamtap_id}")
+    print(f"  NFC ID:     {nfc_id}")
+    print(f"  Name:       {full_name}")
+    print(f"  Grade:      {grade}")
+    print(f"  Section:    {section}")
+    print("=" * 40)
     
-    confirm = get_input("\n> Save this user? (y/n): ", required=False)
+    confirm = get_input("\n> Save this student? (y/n): ", required=False)
     
     if confirm and confirm.lower() in ['y', 'yes']:
-        # Build user data with new schema
         user_data = {
+            "nfc_id": nfc_id,
             "tamtap_id": tamtap_id,
-            "email": email,
             "first_name": first_name,
             "last_name": last_name,
-            "name": full_name,  # Keep combined name for display
+            "name": full_name,
             "grade": grade,
             "section": section,
             "registered": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         
-        if db.add_user(nfc_id, user_data, role):
-            print(f"\n[SUCCESS] {full_name} registered as {role_upper}!")
-            logger.info("User registered: %s (NFC: %s, Role: %s)", full_name, nfc_id, role)
+        if db.add_user(nfc_id, user_data, "student"):
+            print(f"\n[SUCCESS] {full_name} registered!")
+            print(f"          TAMTAP ID: {tamtap_id}")
+            print(f"          Section: {grade} {section}")
+            logger.info("Student registered: %s (NFC: %s, ID: %s)", full_name, nfc_id, tamtap_id)
         else:
-            print("\n[ERROR] Failed to save user")
+            print("\n[ERROR] Failed to save student")
             return False
     else:
         print("\n[!] Registration cancelled")
@@ -448,68 +453,249 @@ def register_user(role, db, nfc_reader):
     input("\nPress Enter to continue...")
     return True
 
-def list_users(db, nfc_reader):
-    """List all registered users"""
+
+# ========================================
+# BATCH SECTION REGISTRATION
+# ========================================
+def register_batch(db, nfc_reader):
+    """Register multiple students in one section with auto-increment TAMTAP ID"""
     clear_screen()
     print_header(db, nfc_reader)
-    print("\n[REGISTERED USERS]")
+    
+    print("\n[BATCH REGISTRATION - WHOLE SECTION]")
+    print("-" * 45)
+    print("  Register multiple students at once.")
+    print("  All students share the same Grade & Section.")
+    print("  TAMTAP IDs auto-increment from your starting number.")
+    print("-" * 45)
+    
+    # Step 1: Section details (shared for all students)
+    print("\nStep 1: Section Details (shared for all students)")
+    
+    grade = get_input("> Grade (e.g., 11, 12): ")
+    if grade is None:
+        return False
+    
+    section = get_input("> Section (e.g., ICT-A, STEM-B, ACADEMIC 1): ")
+    if section is None:
+        return False
+    
+    # Step 2: How many students?
+    print("\nStep 2: Student Count")
+    student_count = get_int_input("> How many students to register? (1-100): ", min_val=1, max_val=100)
+    if student_count is None:
+        return False
+    
+    # Step 3: Starting TAMTAP ID
+    next_id = db.get_next_tamtap_id()
+    next_id_str = str(next_id).zfill(3)
+    
+    print(f"\nStep 3: Starting TAMTAP ID")
+    print(f"  Next available: {next_id_str}")
+    print(f"  If you choose {next_id_str}, IDs will be: {next_id_str} -> {str(next_id + student_count - 1).zfill(3)}")
+    
+    while True:
+        start_input = get_input(f"> Starting TAMTAP ID (Enter for {next_id_str}): ", required=False)
+        if start_input is None:
+            return False
+        
+        if not start_input:
+            start_tamtap = next_id
+            break
+        else:
+            try:
+                start_tamtap = int(start_input)
+                if start_tamtap < 1:
+                    print("[!] Must be a positive number")
+                    continue
+                
+                # Check if any IDs in the range are taken
+                conflicts = []
+                for i in range(student_count):
+                    tid = str(start_tamtap + i).zfill(3)
+                    if db.tamtap_id_exists(tid):
+                        conflicts.append(tid)
+                
+                if conflicts:
+                    print(f"[!] These TAMTAP IDs are already taken: {', '.join(conflicts)}")
+                    print("[!] Choose a different starting number.")
+                    continue
+                
+                break
+            except ValueError:
+                print("[!] Please enter a valid number")
+                continue
+    
+    end_tamtap = start_tamtap + student_count - 1
+    
+    # Confirm batch setup
+    print("\n" + "=" * 45)
+    print("       BATCH REGISTRATION SETUP")
+    print("=" * 45)
+    print(f"  Grade:        {grade}")
+    print(f"  Section:      {section}")
+    print(f"  Students:     {student_count}")
+    print(f"  TAMTAP IDs:   {str(start_tamtap).zfill(3)} -> {str(end_tamtap).zfill(3)}")
+    print("=" * 45)
+    
+    confirm = get_input("\n> Start batch registration? (y/n): ", required=False)
+    if not confirm or confirm.lower() not in ['y', 'yes']:
+        print("[!] Batch registration cancelled")
+        input("\nPress Enter to continue...")
+        return False
+    
+    # Step 4: Register each student
+    registered = 0
+    skipped = 0
+    
+    for i in range(student_count):
+        current_tamtap = str(start_tamtap + i).zfill(3)
+        current_num = i + 1
+        
+        print(f"\n{'=' * 45}")
+        print(f"  STUDENT {current_num}/{student_count}  |  TAMTAP ID: {current_tamtap}")
+        print(f"  Grade: {grade}  |  Section: {section}")
+        print(f"{'=' * 45}")
+        
+        # Scan NFC
+        print("\n  Scan NFC card (or type 'skip' to skip, 'stop' to stop)")
+        
+        choice = get_input("> Press Enter to scan, 'skip', 'manual', or 'stop': ", required=False)
+        
+        if choice is None or choice.lower() == 'stop':
+            print(f"\n[!] Batch stopped at student {current_num}/{student_count}")
+            break
+        
+        if choice.lower() == 'skip':
+            print(f"[!] Skipped student {current_num}")
+            skipped += 1
+            continue
+        
+        # Scan card
+        if choice.lower() == 'manual':
+            nfc_id = get_input("> Enter NFC ID manually: ")
+            if nfc_id is None:
+                break
+        else:
+            if not nfc_reader.connected:
+                print("[!] Arduino not connected. Type 'manual' to enter ID manually.")
+                skipped += 1
+                continue
+            
+            nfc_id = nfc_reader.scan_blocking()
+            if nfc_id is None:
+                print("[!] No card detected - skipping")
+                skipped += 1
+                continue
+            print(f"[OK] Card: {nfc_id}")
+        
+        # Check duplicate NFC
+        if db.user_exists(nfc_id):
+            user, _ = db.get_user(nfc_id)
+            existing_name = user.get("name", "Unknown") if user else "Unknown"
+            print(f"[!] NFC already registered to: {existing_name}")
+            print("[!] Skipping this card")
+            skipped += 1
+            continue
+        
+        # Get name
+        first_name = get_input("> First Name: ")
+        if first_name is None:
+            break
+        
+        last_name = get_input("> Last Name: ")
+        if last_name is None:
+            break
+        
+        full_name = f"{first_name} {last_name}"
+        
+        # Save student
+        user_data = {
+            "nfc_id": nfc_id,
+            "tamtap_id": current_tamtap,
+            "first_name": first_name,
+            "last_name": last_name,
+            "name": full_name,
+            "grade": grade,
+            "section": section,
+            "registered": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        if db.add_user(nfc_id, user_data, "student"):
+            registered += 1
+            print(f"[OK] #{current_tamtap} {full_name} — SAVED ({registered}/{student_count})")
+            logger.info("Batch registered: %s (NFC: %s, ID: %s)", full_name, nfc_id, current_tamtap)
+        else:
+            print(f"[ERROR] Failed to save {full_name}")
+            skipped += 1
+    
+    # Summary
+    print(f"\n{'=' * 45}")
+    print(f"  BATCH REGISTRATION COMPLETE")
+    print(f"{'=' * 45}")
+    print(f"  Section:     {grade} {section}")
+    print(f"  Registered:  {registered}")
+    print(f"  Skipped:     {skipped}")
+    print(f"  Total:       {student_count}")
+    print(f"{'=' * 45}")
+    
+    logger.info("Batch complete: %d registered, %d skipped for %s %s", registered, skipped, grade, section)
+    
+    input("\nPress Enter to continue...")
+    return True
+
+def list_students(db, nfc_reader):
+    """List all registered students, grouped by section"""
+    clear_screen()
+    print_header(db, nfc_reader)
+    print("\n[REGISTERED STUDENTS]")
     print("-" * 60)
     
-    students, teachers = db.get_all_users()
+    students, _ = db.get_all_users()
     
-    # List students
-    print(f"\nSTUDENTS ({len(students)})")
-    print("-" * 55)
-    if students:
-        for user in students:
+    if not students:
+        print("\n  No students registered yet.")
+        print("\n  Use option 1 or 2 to register students.")
+        print("-" * 60)
+        input("\nPress Enter to continue...")
+        return
+    
+    # Group by section
+    sections = {}
+    for user in students:
+        sec_key = f"{user.get('grade', '?')} {user.get('section', 'Unknown')}"
+        if sec_key not in sections:
+            sections[sec_key] = []
+        sections[sec_key].append(user)
+    
+    print(f"\nTotal Students: {len(students)}  |  Sections: {len(sections)}")
+    
+    for sec_name in sorted(sections.keys()):
+        sec_students = sorted(sections[sec_name], key=lambda s: s.get("tamtap_id", "999"))
+        print(f"\n  [{sec_name}] — {len(sec_students)} student(s)")
+        print("  " + "-" * 50)
+        
+        for user in sec_students:
             tamtap_id = user.get("tamtap_id", "---")
             nfc_id = user.get("nfc_id", "?")
             name = user.get("name", f"{user.get('first_name', '')} {user.get('last_name', '')}".strip())
-            grade = user.get("grade", "")
-            section = user.get("section", "")
-            grade_sec = f"{grade} {section}".strip() if grade or section else "N/A"
-            email = user.get("email", "")
             
-            print(f"  [ID: {tamtap_id}] NFC: {nfc_id}")
-            print(f"    Name:    {name}")
-            print(f"    Grade:   {grade_sec}")
-            if email:
-                print(f"    Email:   {email}")
-            print()
-    else:
-        print("  No students registered\n")
+            print(f"    [{tamtap_id}] {name:<25} NFC: {nfc_id}")
     
-    # List teachers
-    print(f"TEACHERS ({len(teachers)})")
-    print("-" * 55)
-    if teachers:
-        for user in teachers:
-            tamtap_id = user.get("tamtap_id", "---")
-            nfc_id = user.get("nfc_id", "?")
-            name = user.get("name", f"{user.get('first_name', '')} {user.get('last_name', '')}".strip())
-            email = user.get("email", "")
-            
-            print(f"  [ID: {tamtap_id}] NFC: {nfc_id}")
-            print(f"    Name:  {name}")
-            if email:
-                print(f"    Email: {email}")
-            print()
-    else:
-        print("  No teachers registered\n")
-    
-    print("-" * 60)
-    print(f"Total Users: {len(students) + len(teachers)}")
+    print("\n" + "-" * 60)
+    print(f"Total: {len(students)} student(s) across {len(sections)} section(s)")
+    print("\nNOTE: Teachers are managed via Admin Panel (web)")
     
     input("\nPress Enter to continue...")
 
-def delete_user(db, nfc_reader):
-    """Delete a registered user"""
+def delete_student(db, nfc_reader):
+    """Delete a registered student"""
     clear_screen()
     print_header(db, nfc_reader)
-    print("\n[DELETE USER]")
+    print("\n[DELETE STUDENT]")
     print("-" * 30)
     
-    print("\nScan NFC card or enter ID manually")
+    print("\nScan student's NFC card or enter ID manually")
     choice = get_input("\n> Press Enter to scan or type 'manual': ", required=False)
     
     if choice is None:
@@ -532,7 +718,7 @@ def delete_user(db, nfc_reader):
             return False
         print(f"[OK] Card detected: {nfc_id}")
     
-    # Find user
+    # Find student
     user_data, role = db.get_user(nfc_id)
     
     if not user_data:
@@ -540,29 +726,59 @@ def delete_user(db, nfc_reader):
         input("\nPress Enter to continue...")
         return False
     
-    # Get display name
+    if role != "student":
+        print(f"\n[ERROR] This NFC ID belongs to a {role}, not a student.")
+        print("        Teachers are managed via Admin Panel (web).")
+        input("\nPress Enter to continue...")
+        return False
+    
+    # Get display info
     name = user_data.get("name", f"{user_data.get('first_name', '')} {user_data.get('last_name', '')}".strip())
+    tamtap_id = user_data.get("tamtap_id", "---")
+    grade = user_data.get("grade", "")
+    section = user_data.get("section", "")
     
     # Confirm deletion
-    print("\n" + "=" * 30)
-    print("USER FOUND")
-    print("=" * 30)
-    print(f"  NFC ID: {nfc_id}")
-    print(f"  Name:   {name}")
-    print(f"  Role:   {role.upper()}")
-    print("=" * 30)
+    print("\n" + "=" * 35)
+    print("       STUDENT FOUND")
+    print("=" * 35)
+    print(f"  TAMTAP ID:  {tamtap_id}")
+    print(f"  NFC ID:     {nfc_id}")
+    print(f"  Name:       {name}")
+    print(f"  Grade:      {grade}")
+    print(f"  Section:    {section}")
+    print("=" * 35)
     
-    confirm = get_input("\n> DELETE this user? (type 'DELETE' to confirm): ", required=False)
+    print("\n  [1] Archive (can restore later)")
+    print("  [2] Permanent delete (no recovery)")
+    choice = get_input("\n> Choose action (1/2): ", required=False)
     
-    if confirm == 'DELETE':
-        if db.delete_user(nfc_id):
-            print(f"\n[SUCCESS] User deleted!")
-            logger.info("User deleted: NFC %s", nfc_id)
+    if choice == '1':
+        confirm = get_input("\n> ARCHIVE this student? (type 'YES' to confirm): ", required=False)
+        if confirm == 'YES':
+            success, role = db.archive_user(nfc_id)
+            if success:
+                print(f"\n[SUCCESS] Student archived: {name}")
+                logger.info("Student archived: %s (NFC: %s)", name, nfc_id)
+            else:
+                print("\n[ERROR] Failed to archive student")
+                return False
         else:
-            print("\n[ERROR] Failed to delete user")
-            return False
+            print("\n[!] Archive cancelled")
+    elif choice == '2':
+        confirm = get_input("\n> PERMANENTLY DELETE this student? (type 'DELETE' to confirm): ", required=False)
+        if confirm == 'DELETE':
+            success, role = db.delete_user(nfc_id)
+            if success:
+                print(f"\n[SUCCESS] Student permanently deleted: {name}")
+                logger.info("Student permanently deleted: %s (NFC: %s)", name, nfc_id)
+            else:
+                print("\n[ERROR] Failed to delete student")
+                return False
+        else:
+            print("\n[!] Deletion cancelled")
     else:
-        print("\n[!] Deletion cancelled")
+        print("\n[!] Cancelled")
     
     input("\nPress Enter to continue...")
     return True
@@ -620,7 +836,7 @@ def reconnect_arduino(nfc_reader):
 
 def main():
     """Main entry point"""
-    logger.info("Starting TAMTAP v7.0 Registration CLI (Arduino Version)...")
+    logger.info("Starting TAMTAP v8.0 Registration CLI (Arduino Version)...")
     
     # Initialize database (MongoDB with JSON fallback)
     db = Database()
@@ -634,22 +850,29 @@ def main():
             print_header(db, nfc_reader)
             print_menu()
             
-            choice = get_input("\n> Select option (1-6): ", required=False)
+            choice = get_input("\n> Select option (1-7): ", required=False)
             
             if choice is None:
                 continue
             
             if choice == '1':
-                register_user("student", db, nfc_reader)
+                register_single(db, nfc_reader)
             elif choice == '2':
-                register_user("teacher", db, nfc_reader)
+                register_batch(db, nfc_reader)
             elif choice == '3':
-                list_users(db, nfc_reader)
+                list_students(db, nfc_reader)
             elif choice == '4':
-                delete_user(db, nfc_reader)
+                delete_student(db, nfc_reader)
             elif choice == '5':
                 nfc_reader = reconnect_arduino(nfc_reader)
             elif choice == '6':
+                print("\n[*] Forcing database sync...")
+                if db.force_sync():
+                    print("[OK] Sync complete (MongoDB -> JSON)")
+                else:
+                    print("[!] MongoDB not available — nothing to sync")
+                input("\nPress Enter to continue...")
+            elif choice == '7':
                 print("\n[*] Goodbye!")
                 break
             else:

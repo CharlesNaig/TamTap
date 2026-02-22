@@ -556,17 +556,36 @@ def delete_student(db, nfc_reader):
     print(f"  Section:    {section}")
     print("=" * 35)
     
-    confirm = get_input("\n> DELETE this student? (type 'DELETE' to confirm): ", required=False)
+    print("\n  [1] Archive (can restore later)")
+    print("  [2] Permanent delete (no recovery)")
+    choice = get_input("\n> Choose action (1/2): ", required=False)
     
-    if confirm == 'DELETE':
-        if db.delete_user(nfc_id):
-            print(f"\n[SUCCESS] Student deleted: {name}")
-            logger.info("Student deleted: %s (NFC: %s)", name, nfc_id)
+    if choice == '1':
+        confirm = get_input("\n> ARCHIVE this student? (type 'YES' to confirm): ", required=False)
+        if confirm == 'YES':
+            success, role = db.archive_user(nfc_id)
+            if success:
+                print(f"\n[SUCCESS] Student archived: {name}")
+                logger.info("Student archived: %s (NFC: %s)", name, nfc_id)
+            else:
+                print("\n[ERROR] Failed to archive student")
+                return False
         else:
-            print("\n[ERROR] Failed to delete student")
-            return False
+            print("\n[!] Archive cancelled")
+    elif choice == '2':
+        confirm = get_input("\n> PERMANENTLY DELETE this student? (type 'DELETE' to confirm): ", required=False)
+        if confirm == 'DELETE':
+            success, role = db.delete_user(nfc_id)
+            if success:
+                print(f"\n[SUCCESS] Student permanently deleted: {name}")
+                logger.info("Student permanently deleted: %s (NFC: %s)", name, nfc_id)
+            else:
+                print("\n[ERROR] Failed to delete student")
+                return False
+        else:
+            print("\n[!] Deletion cancelled")
     else:
-        print("\n[!] Deletion cancelled")
+        print("\n[!] Cancelled")
     
     input("\nPress Enter to continue...")
     return True

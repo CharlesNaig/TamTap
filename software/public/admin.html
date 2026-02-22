@@ -306,11 +306,40 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Sub-tabs: Active / Archived -->
+                <div class="flex border-b px-3 sm:px-4 gap-4">
+                    <button onclick="showStudentSubTab('active')" id="subtab-active"
+                            class="student-subtab py-2 text-sm font-medium text-feu-green border-b-2 border-feu-green">
+                        <i class="fas fa-users mr-1"></i>Active
+                    </button>
+                    <button onclick="showStudentSubTab('archived')" id="subtab-archived"
+                            class="student-subtab py-2 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent">
+                        <i class="fas fa-archive mr-1"></i>Archived <span id="archived-count-badge" class="hidden bg-red-100 text-red-600 text-xs px-1.5 py-0.5 rounded-full ml-1">0</span>
+                    </button>
+                </div>
+
+                <!-- Batch Actions Bar (hidden until selection) -->
+                <div id="batch-actions-bar" class="hidden bg-feu-green/5 border-b px-3 sm:px-4 py-2 flex items-center justify-between">
+                    <span class="text-sm text-gray-700"><strong id="selected-count">0</strong> selected</span>
+                    <div class="flex gap-2">
+                        <button onclick="batchArchiveSelected()" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
+                            <i class="fas fa-archive mr-1"></i>Archive Selected
+                        </button>
+                        <button onclick="clearStudentSelection()" class="border border-gray-300 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ACTIVE STUDENTS PANEL -->
+                <div id="active-students-panel">
                 <!-- Desktop Table -->
                 <div class="overflow-x-auto hidden sm:block">
                     <table class="w-full">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-2 py-3 text-center w-10"><input type="checkbox" id="select-all-students" onchange="toggleSelectAllStudents(this)" class="rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer" title="Select all"></th>
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">NFC ID</th>
                                 <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
@@ -320,10 +349,10 @@
                             </tr>
                         </thead>
                         <tbody id="students-table-skeleton" class="divide-y divide-gray-200">
-                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-32"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
-                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
-                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-20"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-36"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
-                            <tr><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-2 py-3"></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-32"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-2 py-3"></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-28"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-2 py-3"></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-20"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-36"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
+                            <tr><td class="px-2 py-3"></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-8"></div></td><td class="px-3 lg:px-4 py-3 hidden lg:table-cell"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text w-24"></div></td><td class="px-3 lg:px-4 py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-8"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-14"></div></td><td class="px-3 lg:px-4 py-3"><div class="skeleton skeleton-text-sm w-20"></div></td></tr>
                         </tbody>
                         <tbody id="students-table" class="hidden divide-y divide-gray-200">
                         </tbody>
@@ -337,6 +366,45 @@
                 </div>
                 <div id="students-cards" class="hidden sm:hidden p-3 space-y-3">
                 </div>
+                </div><!-- /active-students-panel -->
+
+                <!-- ARCHIVED STUDENTS PANEL -->
+                <div id="archived-students-panel" class="hidden">
+                    <!-- Archived Batch Actions -->
+                    <div id="archived-batch-bar" class="hidden bg-amber-50 border-b px-3 sm:px-4 py-2 flex items-center justify-between">
+                        <span class="text-sm text-gray-700"><strong id="archived-selected-count">0</strong> selected</span>
+                        <div class="flex gap-2">
+                            <button onclick="batchRestoreSelected()" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
+                                <i class="fas fa-undo mr-1"></i>Restore Selected
+                            </button>
+                            <button onclick="clearArchivedSelection()" class="border border-gray-300 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Archived Desktop Table -->
+                    <div class="overflow-x-auto hidden sm:block">
+                        <table class="w-full">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-2 py-3 text-center w-10"><input type="checkbox" id="select-all-archived" onchange="toggleSelectAllArchived(this)" class="rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer" title="Select all"></th>
+                                    <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                    <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">NFC ID</th>
+                                    <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                    <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Section</th>
+                                    <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Archived</th>
+                                    <th class="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="archived-table" class="divide-y divide-gray-200">
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Archived Mobile Cards -->
+                    <div id="archived-cards" class="sm:hidden p-3 space-y-3">
+                    </div>
+                </div><!-- /archived-students-panel -->
+
             </div>
         </div>
 
@@ -1044,17 +1112,21 @@
                 document.getElementById('students-cards-skeleton').classList.add('hidden');
                 document.getElementById('students-cards').classList.remove('hidden');
                 
+                // Reset selection state
+                clearStudentSelection();
+                
                 const tbody = document.getElementById('students-table');
                 
                 if (!data.success || data.data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">No students found</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400">No students found</td></tr>';
                     document.getElementById('students-cards').innerHTML = '<p class="text-center text-gray-400 py-4">No students found</p>';
                     return;
                 }
                 
-                // Desktop table
+                // Desktop table with checkboxes
                 tbody.innerHTML = data.data.map(s => `
                     <tr class="hover:bg-gray-50">
+                        <td class="px-2 py-3 text-center"><input type="checkbox" class="student-checkbox rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer" value="${s.nfc_id}" onchange="updateStudentSelection()"></td>
                         <td class="px-3 lg:px-4 py-3 text-sm font-medium text-gray-900">${s.tamtap_id}</td>
                         <td class="px-3 lg:px-4 py-3 text-sm text-gray-500 font-mono hidden lg:table-cell">${s.nfc_id}</td>
                         <td class="px-3 lg:px-4 py-3 text-sm text-gray-700">${s.name}</td>
@@ -1063,27 +1135,33 @@
                             <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s.section}</span>
                         </td>
                         <td class="px-3 lg:px-4 py-3 text-sm">
-                            <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                            <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-amber-500 hover:text-amber-700" title="Archive"><i class="fas fa-archive"></i></button>
                         </td>
                     </tr>
                 `).join('');
                 
-                // Mobile cards
+                // Mobile cards with checkboxes
                 document.getElementById('students-cards').innerHTML = data.data.map(s => `
                     <div class="bg-gray-50 rounded-lg p-3 border">
                         <div class="flex justify-between items-start">
-                            <div class="flex-1">
-                                <p class="font-semibold text-gray-900">${s.name}</p>
-                                <p class="text-xs text-gray-500">ID: ${s.tamtap_id}</p>
-                                <p class="text-xs text-gray-400 font-mono mt-1">NFC: ${s.nfc_id}</p>
+                            <div class="flex items-start gap-2 flex-1">
+                                <input type="checkbox" class="student-checkbox-mobile rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer mt-1" value="${s.nfc_id}" onchange="updateStudentSelection()">
+                                <div>
+                                    <p class="font-semibold text-gray-900">${s.name}</p>
+                                    <p class="text-xs text-gray-500">ID: ${s.tamtap_id}</p>
+                                    <p class="text-xs text-gray-400 font-mono mt-1">NFC: ${s.nfc_id}</p>
+                                </div>
                             </div>
                             <div class="flex items-start gap-2">
                                 <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${s.section}</span>
-                                <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800 p-1"><i class="fas fa-trash"></i></button>
+                                <button onclick="deleteStudent('${s.nfc_id}', '${s.name}')" class="text-amber-500 hover:text-amber-700 p-1" title="Archive"><i class="fas fa-archive"></i></button>
                             </div>
                         </div>
                     </div>
                 `).join('');
+                
+                // Also load archived count for badge
+                loadArchivedCount();
             } catch (e) {
                 console.error('Load students error:', e);
             }
@@ -1146,7 +1224,8 @@
             
             // Desktop table
             tbody.innerHTML = allSchedules.map(s => {
-                const adviser = allTeachers.find(t => t._id === s.adviser_id);
+                const sAdvId = s.adviser_id ? String(s.adviser_id) : null;
+                const adviser = sAdvId ? allTeachers.find(t => String(t.id) === sAdvId) : null;
                 const summary = getScheduleSummary(s.weekly_schedule);
                 return `
                     <tr class="hover:bg-gray-50">
@@ -1176,7 +1255,8 @@
             
             // Mobile cards
             mobile.innerHTML = allSchedules.map(s => {
-                const adviser = allTeachers.find(t => t._id === s.adviser_id);
+                const sAdvId = s.adviser_id ? String(s.adviser_id) : null;
+                const adviser = sAdvId ? allTeachers.find(t => String(t.id) === sAdvId) : null;
                 const summary = getScheduleSummary(s.weekly_schedule);
                 return `
                     <div class="border rounded-lg p-3">
@@ -1218,8 +1298,9 @@
 
         function populateAdviserDropdown(elementId, selectedId = '') {
             const select = document.getElementById(elementId);
+            const selId = selectedId ? String(selectedId) : '';
             select.innerHTML = '<option value="">No Adviser</option>' + 
-                allTeachers.map(t => `<option value="${t._id}" ${t._id === selectedId ? 'selected' : ''}>${t.name}</option>`).join('');
+                allTeachers.map(t => `<option value="${t.id}" ${String(t.id) === selId ? 'selected' : ''}>${t.name}</option>`).join('');
         }
 
         function editSchedule(section) {
@@ -1619,15 +1700,19 @@
             }
         });
 
+        // ========================================
+        // STUDENT ARCHIVE / RESTORE SYSTEM
+        // ========================================
+
         async function deleteStudent(nfcId, name) {
             const result = await Swal.fire({
-                title: 'Delete Student?',
-                text: `Remove ${name}?`,
+                title: 'Archive Student?',
+                text: `Move ${name} to archive? You can restore later.`,
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#dc2626',
+                confirmButtonColor: '#d97706',
                 cancelButtonColor: '#6b7280',
-                confirmButtonText: 'Delete'
+                confirmButtonText: '<i class="fas fa-archive"></i> Archive'
             });
             
             if (result.isConfirmed) {
@@ -1638,13 +1723,305 @@
                     });
                     
                     if (res.ok) {
-                        Swal.fire({ icon: 'success', title: 'Deleted', timer: 1500, showConfirmButton: false });
+                        Swal.fire({ icon: 'success', title: 'Archived', text: 'Student moved to archive', timer: 1500, showConfirmButton: false });
                         loadStudents();
                         loadSections();
                     }
                 } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to archive', confirmButtonColor: '#0a8249' });
+                }
+            }
+        }
+
+        // Sub-tab switching (Active / Archived)
+        function showStudentSubTab(tab) {
+            document.querySelectorAll('.student-subtab').forEach(b => {
+                b.classList.remove('text-feu-green', 'border-feu-green');
+                b.classList.add('text-gray-500', 'border-transparent');
+            });
+            document.getElementById(`subtab-${tab}`).classList.remove('text-gray-500', 'border-transparent');
+            document.getElementById(`subtab-${tab}`).classList.add('text-feu-green', 'border-feu-green');
+
+            if (tab === 'active') {
+                document.getElementById('active-students-panel').classList.remove('hidden');
+                document.getElementById('archived-students-panel').classList.add('hidden');
+                document.getElementById('batch-actions-bar').classList.add('hidden');
+            } else {
+                document.getElementById('active-students-panel').classList.add('hidden');
+                document.getElementById('archived-students-panel').classList.remove('hidden');
+                document.getElementById('batch-actions-bar').classList.add('hidden');
+                loadArchivedStudents();
+            }
+        }
+
+        // Selection helpers — Active students
+        function toggleSelectAllStudents(el) {
+            document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = el.checked);
+            document.querySelectorAll('.student-checkbox-mobile').forEach(cb => cb.checked = el.checked);
+            updateStudentSelection();
+        }
+
+        function updateStudentSelection() {
+            const checked = document.querySelectorAll('.student-checkbox:checked');
+            const count = checked.length;
+            const bar = document.getElementById('batch-actions-bar');
+            document.getElementById('selected-count').textContent = count;
+
+            if (count > 0) {
+                bar.classList.remove('hidden');
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        function clearStudentSelection() {
+            document.querySelectorAll('.student-checkbox, .student-checkbox-mobile').forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('select-all-students');
+            if (selectAll) selectAll.checked = false;
+            document.getElementById('batch-actions-bar').classList.add('hidden');
+        }
+
+        function getSelectedStudentNfcIds() {
+            return Array.from(document.querySelectorAll('.student-checkbox:checked')).map(cb => cb.value);
+        }
+
+        // Batch archive
+        async function batchArchiveSelected() {
+            const nfcIds = getSelectedStudentNfcIds();
+            if (nfcIds.length === 0) return;
+
+            const result = await Swal.fire({
+                title: `Archive ${nfcIds.length} student${nfcIds.length > 1 ? 's' : ''}?`,
+                text: 'They will be moved to archive and can be restored later.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d97706',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-archive"></i> Archive All'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch('/api/admin/students/archive-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ nfc_ids: nfcIds })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Archived', text: data.message, timer: 2000, showConfirmButton: false });
+                    loadStudents();
+                    loadSections();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#0a8249' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to batch archive', confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        // Archived student count badge
+        async function loadArchivedCount() {
+            try {
+                const res = await fetch('/api/admin/students/archived', { credentials: 'include' });
+                const data = await res.json();
+                const badge = document.getElementById('archived-count-badge');
+                if (data.success && data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            } catch (e) {
+                // Silent fail
+            }
+        }
+
+        // Load archived students list
+        async function loadArchivedStudents() {
+            try {
+                const res = await fetch('/api/admin/students/archived', { credentials: 'include' });
+                const data = await res.json();
+
+                const tbody = document.getElementById('archived-table');
+                const cards = document.getElementById('archived-cards');
+
+                if (!data.success || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-archive mr-2"></i>No archived students</td></tr>';
+                    cards.innerHTML = '<p class="text-center text-gray-400 py-4"><i class="fas fa-archive mr-2"></i>No archived students</p>';
+                    return;
+                }
+
+                // Desktop table
+                tbody.innerHTML = data.data.map(s => `
+                    <tr class="hover:bg-gray-50 bg-amber-50/30">
+                        <td class="px-2 py-3 text-center"><input type="checkbox" class="archived-checkbox rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer" value="${s.nfc_id}" onchange="updateArchivedSelection()"></td>
+                        <td class="px-3 lg:px-4 py-3 text-sm font-medium text-gray-900">${s.tamtap_id || '-'}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-500 font-mono hidden lg:table-cell">${s.nfc_id}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-700">${s.name}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm">
+                            <span class="bg-gray-100 text-gray-500 px-2 py-0.5 rounded text-xs">${s.section}</span>
+                        </td>
+                        <td class="px-3 lg:px-4 py-3 text-sm text-gray-400 hidden md:table-cell">${new Date(s.archived_at).toLocaleDateString()}</td>
+                        <td class="px-3 lg:px-4 py-3 text-sm flex gap-2">
+                            <button onclick="restoreSingleStudent('${s.nfc_id}', '${s.name}')" class="text-feu-green hover:text-feu-green-dark" title="Restore"><i class="fas fa-undo"></i></button>
+                            <button onclick="permanentDeleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800" title="Delete permanently"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Mobile cards
+                cards.innerHTML = data.data.map(s => `
+                    <div class="bg-amber-50/50 rounded-lg p-3 border border-amber-200">
+                        <div class="flex justify-between items-start">
+                            <div class="flex items-start gap-2 flex-1">
+                                <input type="checkbox" class="archived-checkbox-mobile rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer mt-1" value="${s.nfc_id}" onchange="updateArchivedSelection()">
+                                <div>
+                                    <p class="font-semibold text-gray-900">${s.name}</p>
+                                    <p class="text-xs text-gray-500">${s.section} · Archived ${new Date(s.archived_at).toLocaleDateString()}</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start gap-2">
+                                <button onclick="restoreSingleStudent('${s.nfc_id}', '${s.name}')" class="text-feu-green hover:text-feu-green-dark p-1" title="Restore"><i class="fas fa-undo"></i></button>
+                                <button onclick="permanentDeleteStudent('${s.nfc_id}', '${s.name}')" class="text-red-600 hover:text-red-800 p-1" title="Delete permanently"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Load archived students error:', e);
+            }
+        }
+
+        // Selection helpers — Archived students
+        function toggleSelectAllArchived(el) {
+            document.querySelectorAll('.archived-checkbox').forEach(cb => cb.checked = el.checked);
+            document.querySelectorAll('.archived-checkbox-mobile').forEach(cb => cb.checked = el.checked);
+            updateArchivedSelection();
+        }
+
+        function updateArchivedSelection() {
+            const checked = document.querySelectorAll('.archived-checkbox:checked');
+            const count = checked.length;
+            const bar = document.getElementById('archived-batch-bar');
+            document.getElementById('archived-selected-count').textContent = count;
+            bar.classList.toggle('hidden', count === 0);
+        }
+
+        function clearArchivedSelection() {
+            document.querySelectorAll('.archived-checkbox, .archived-checkbox-mobile').forEach(cb => cb.checked = false);
+            const selectAll = document.getElementById('select-all-archived');
+            if (selectAll) selectAll.checked = false;
+            document.getElementById('archived-batch-bar').classList.add('hidden');
+        }
+
+        // Restore single
+        async function restoreSingleStudent(nfcId, name) {
+            const result = await Swal.fire({
+                title: 'Restore Student?',
+                text: `Restore ${name} back to active students?`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0a8249',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-undo"></i> Restore'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch('/api/admin/students/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ nfc_ids: [nfcId] })
+                });
+                const data = await res.json();
+
+                if (data.success && data.results.restored > 0) {
+                    Swal.fire({ icon: 'success', title: 'Restored', text: `${name} is now active again`, timer: 1500, showConfirmButton: false });
+                    loadArchivedStudents();
+                    loadArchivedCount();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.results?.errors?.[0] || 'Failed to restore', confirmButtonColor: '#0a8249' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to restore student', confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        // Batch restore
+        async function batchRestoreSelected() {
+            const nfcIds = Array.from(document.querySelectorAll('.archived-checkbox:checked')).map(cb => cb.value);
+            if (nfcIds.length === 0) return;
+
+            const result = await Swal.fire({
+                title: `Restore ${nfcIds.length} student${nfcIds.length > 1 ? 's' : ''}?`,
+                text: 'They will be moved back to active students.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0a8249',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-undo"></i> Restore All'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch('/api/admin/students/restore', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ nfc_ids: nfcIds })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Restored', text: data.message, timer: 2000, showConfirmButton: false });
+                    loadArchivedStudents();
+                    loadArchivedCount();
+                    loadStudents();
+                    loadSections();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#0a8249' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to batch restore', confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        // Permanent delete (from archive)
+        async function permanentDeleteStudent(nfcId, name) {
+            const result = await Swal.fire({
+                title: 'Permanently Delete?',
+                html: `<p>This will <strong>permanently remove</strong> ${name}.</p><p class="text-red-600 text-sm mt-2">This action cannot be undone.</p>`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-trash"></i> Delete Forever'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch(`/api/admin/students/archived/${nfcId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                if (res.ok) {
+                    Swal.fire({ icon: 'success', title: 'Deleted', text: 'Student permanently removed', timer: 1500, showConfirmButton: false });
+                    loadArchivedStudents();
+                    loadArchivedCount();
+                } else {
                     Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete', confirmButtonColor: '#0a8249' });
                 }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete', confirmButtonColor: '#0a8249' });
             }
         }
 

@@ -2094,7 +2094,12 @@
 
         function addRecordToTable(record, prepend = false) {
             const tbody = document.getElementById('attendance-table');
+            const cards = document.getElementById('attendance-cards');
             document.getElementById('empty-state').classList.add('hidden');
+            
+            // Ensure table and mobile cards are visible (not hidden by skeleton state)
+            if (tbody) tbody.classList.remove('hidden');
+            if (cards) cards.classList.remove('hidden');
             
             const row = document.createElement('tr');
             row.className = 'clickable-row fade-in';

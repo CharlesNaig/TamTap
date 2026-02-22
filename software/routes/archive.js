@@ -14,11 +14,76 @@
 
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/Logger');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 // All archive routes require admin role
 router.use(requireAuth, requireAdmin);
+
+// ----------------------------------------
+// JSON SYNC HELPER
+// When MongoDB records are archived/cleared, mirror the change to JSON fallback.
+// Online flow: MongoDB → JSON (source of truth is MongoDB)
+// ----------------------------------------
+const JSON_DB_PATH = path.join(__dirname, '..', '..', 'database', 'tamtap_users.json');
+
+/**
+ * Remove matching attendance records from the JSON fallback file.
+ * @param {Object} query - MongoDB-style query used to match records
+ */
+function syncJsonAfterClear(query) {
+    try {
+        if (!fs.existsSync(JSON_DB_PATH)) return;
+
+        const raw = fs.readFileSync(JSON_DB_PATH, 'utf-8');
+        const data = JSON.parse(raw);
+
+        const originalAtt = (data.attendance || []).length;
+        const originalPend = (data.pending_attendance || []).length;
+
+        // Build a filter function from the MongoDB query
+        const matchFn = buildMatchFn(query);
+
+        data.attendance = (data.attendance || []).filter(r => !matchFn(r));
+        data.pending_attendance = (data.pending_attendance || []).filter(r => !matchFn(r));
+
+        const removedAtt = originalAtt - data.attendance.length;
+        const removedPend = originalPend - data.pending_attendance.length;
+
+        if (removedAtt > 0 || removedPend > 0) {
+            fs.writeFileSync(JSON_DB_PATH, JSON.stringify(data, null, 2));
+            logger.info(`JSON sync: removed ${removedAtt} attendance + ${removedPend} pending records`);
+        }
+    } catch (e) {
+        logger.error('JSON sync error:', e.message);
+    }
+}
+
+/**
+ * Build a JS match function from a simple MongoDB-style query.
+ * Supports: exact match, $regex, $in
+ */
+function buildMatchFn(query) {
+    return (record) => {
+        for (const [key, condition] of Object.entries(query)) {
+            const val = record[key] || record[key === 'nfc_id' ? 'uid' : ''] || '';
+            const valStr = String(val);
+
+            if (condition === null || condition === undefined) continue;
+
+            if (typeof condition === 'object' && condition.$regex) {
+                if (!new RegExp(condition.$regex).test(valStr)) return false;
+            } else if (typeof condition === 'object' && condition.$in) {
+                if (!condition.$in.map(String).includes(valStr)) return false;
+            } else {
+                if (valStr !== String(condition)) return false;
+            }
+        }
+        return true;
+    };
+}
 
 // ----------------------------------------
 // HELPERS
@@ -364,6 +429,10 @@ router.post('/clear', async (req, res) => {
         }
 
         const result = await db.collection('attendance').deleteMany(query);
+        
+        // Sync JSON fallback: remove matching records so hardware doesn't see stale data
+        syncJsonAfterClear(query);
+        
         logger.info(`Cleared ${result.deletedCount} records (scope: ${scope}) by ${req.user.username}`);
 
         res.json({

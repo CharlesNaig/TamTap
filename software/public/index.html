@@ -3,27 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAMTAP - Redirecting...</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'feu-green': '#0a8249',
-                        'feu-gold': '#FFD700'
-                    }
-                }
-            }
-        }
-    </script>
+    <title>TAMTAP - NFC-Based Attendance System</title>
+    <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
+    <link rel="apple-touch-icon" href="/assets/TamTap-3D.png">
+    <link rel="stylesheet" href="/css/preloader.css">
+    <script src="/js/preloader.js"></script>
 </head>
-<body class="bg-gradient-to-br from-feu-green/10 to-feu-gold/10 min-h-screen flex items-center justify-center">
-    <div class="text-center">
-        <img src="/assets/animations/tamtap-walk.gif" alt="Loading..." class="w-24 h-24 mx-auto mb-4">
-        <p class="text-feu-green font-semibold text-lg">Loading <span class="text-feu-gold">TAMTAP</span>...</p>
-    </div>
-    
+<body>
     <script>
         // Check authentication and redirect appropriately
         async function checkAndRedirect() {
@@ -32,8 +18,7 @@
                 if (res.ok) {
                     const data = await res.json();
                     if (data.success) {
-                        // Logged in - redirect to dashboard
-                        window.location.href = '/dashboard';
+                        window.location.replace('/dashboard');
                         return;
                     }
                 }
@@ -41,8 +26,7 @@
                 // Error - redirect to login
             }
             
-            // Not logged in - redirect to login
-            window.location.href = '/login';
+            window.location.replace('/login');
         }
         
         checkAndRedirect();

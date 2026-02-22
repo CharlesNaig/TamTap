@@ -232,6 +232,7 @@ const exportRoutes = require('./routes/export');
 const schedulesRoutes = require('./routes/schedules');
 const notificationsRoutes = require('./routes/notifications');
 const logsRoutes = require('./routes/logs');
+const archiveRoutes = require('./routes/archive');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -245,6 +246,7 @@ app.use('/api/calendar', calendarRoutes);
 app.use('/api/schedules', schedulesRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/logs', logsRoutes);
+app.use('/api/archive', archiveRoutes);
 
 // ========================================
 // DEBUG ENDPOINT (Remove in production)

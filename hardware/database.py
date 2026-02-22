@@ -176,7 +176,7 @@ def calculate_attendance_status(section, arrival_time_str=None, schedule_data=No
         schedule_data: Pre-fetched schedule data (optional, to avoid duplicate API call)
     
     Returns:
-        str: 'on_time', 'late', or 'absent'
+        str: 'present', 'late', or 'absent'
     """
     if not arrival_time_str:
         arrival_time_str = datetime.now().strftime("%H:%M:%S")
@@ -201,7 +201,7 @@ def calculate_attendance_status(section, arrival_time_str=None, schedule_data=No
     absent_cutoff = start_minutes + absent_threshold
     
     if arrival_minutes <= late_cutoff:
-        status = "on_time"
+        status = "present"
     elif arrival_minutes <= absent_cutoff:
         status = "late"
     else:

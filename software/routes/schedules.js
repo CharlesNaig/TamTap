@@ -240,11 +240,18 @@ router.post('/', async (req, res) => {
         // Validate adviser_id before ObjectId conversion
         const validAdviserId = adviser_id && ObjectId.isValid(adviser_id) ? new ObjectId(adviser_id) : null;
 
+        // Resolve adviser name from teachers collection
+        let resolvedAdviserName = null;
+        if (validAdviserId) {
+            const adviserDoc = await db.collection('teachers').findOne({ _id: validAdviserId }, { projection: { name: 1 } });
+            resolvedAdviserName = adviserDoc ? adviserDoc.name : (adviser_name || null);
+        }
+
         const newSchedule = {
             section,
             grade: grade || '',
             adviser_id: validAdviserId,
-            adviser_name: validAdviserId ? (adviser_name || null) : null,
+            adviser_name: resolvedAdviserName,
             weekly_schedule: weekly_schedule || DEFAULT_SCHEDULE,
             grace_period_minutes: DEFAULT_GRACE_PERIOD,
             absent_threshold_minutes: DEFAULT_ABSENT_THRESHOLD,
@@ -325,7 +332,14 @@ router.put('/:section', async (req, res) => {
             if (adviser_id !== undefined) {
                 const validAdviserId = adviser_id && ObjectId.isValid(adviser_id) ? new ObjectId(adviser_id) : null;
                 updates.adviser_id = validAdviserId;
-                updates.adviser_name = validAdviserId ? (adviser_name || null) : null;
+
+                // Resolve adviser name from teachers collection
+                if (validAdviserId) {
+                    const adviserDoc = await db.collection('teachers').findOne({ _id: validAdviserId }, { projection: { name: 1 } });
+                    updates.adviser_name = adviserDoc ? adviserDoc.name : (adviser_name || null);
+                } else {
+                    updates.adviser_name = null;
+                }
 
                 // Update new adviser's role_type and advised_section
                 if (validAdviserId) {

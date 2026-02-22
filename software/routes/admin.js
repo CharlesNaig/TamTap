@@ -815,6 +815,54 @@ router.delete('/students/archived/:nfc_id', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/admin/students/delete-batch
+ * Permanently delete multiple archived students (no recovery)
+ * Body: { nfc_ids: string[] }
+ */
+router.post('/students/delete-batch', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { nfc_ids } = req.body;
+        if (!Array.isArray(nfc_ids) || nfc_ids.length === 0) {
+            return res.status(400).json({ success: false, error: 'nfc_ids array is required' });
+        }
+
+        const results = { deleted: 0, failed: 0, errors: [] };
+
+        for (const nfcId of nfc_ids) {
+            try {
+                const result = await db.collection('archived_students').deleteOne({ nfc_id: nfcId });
+                if (result.deletedCount > 0) {
+                    results.deleted++;
+                } else {
+                    results.failed++;
+                    results.errors.push(`${nfcId}: not found in archive`);
+                }
+            } catch (e) {
+                results.failed++;
+                results.errors.push(`${nfcId}: ${e.message}`);
+            }
+        }
+
+        logger.warn(`Batch permanent delete: ${results.deleted} deleted, ${results.failed} failed by ${req.user.username}`);
+
+        res.json({
+            success: true,
+            message: `Deleted ${results.deleted} students permanently, ${results.failed} failed`,
+            results
+        });
+
+    } catch (error) {
+        logger.error('Batch permanent delete error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to batch delete students' });
+    }
+});
+
 // ========================================
 // SECTIONS
 // ========================================

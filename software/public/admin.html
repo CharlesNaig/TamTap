@@ -244,6 +244,10 @@
                         class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
                     <i class="fas fa-terminal mr-1 sm:mr-2"></i>System Logs
                 </button>
+                <button onclick="showTab('archive')" id="tab-archive"
+                        class="tab-btn px-4 sm:px-6 py-3 sm:py-4 font-medium text-sm sm:text-base text-gray-600 hover:text-feu-green border-b-2 border-transparent whitespace-nowrap">
+                    <i class="fas fa-archive mr-1 sm:mr-2"></i>Archive
+                </button>
             </div>
         </div>
 
@@ -376,6 +380,9 @@
                         <div class="flex gap-2">
                             <button onclick="batchRestoreSelected()" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
                                 <i class="fas fa-undo mr-1"></i>Restore Selected
+                            </button>
+                            <button onclick="batchDeleteSelected()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Delete Selected
                             </button>
                             <button onclick="clearArchivedSelection()" class="border border-gray-300 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs sm:text-sm transition-colors">
                                 Cancel
@@ -573,6 +580,293 @@
                 </div>
             </div>
         </div>
+
+        <!-- Archive Tab -->
+        <div id="panel-archive" class="tab-panel hidden">
+
+            <!-- Stats Row -->
+            <div id="archive-stats" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4 sm:mb-6">
+                <div class="bg-white rounded-lg shadow p-3 sm:p-4 text-center">
+                    <div class="text-2xl font-bold text-feu-green" id="astat-total">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Total Records</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-3 sm:p-4 text-center">
+                    <div class="text-2xl font-bold text-blue-600" id="astat-today">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Today</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-3 sm:p-4 text-center">
+                    <div class="text-2xl font-bold text-indigo-600" id="astat-dates">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Unique Dates</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-3 sm:p-4 text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="astat-sections">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Sections</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-3 sm:p-4 text-center">
+                    <div class="text-2xl font-bold text-orange-600" id="astat-students">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Students</div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-3 sm:p-4 text-center">
+                    <div class="text-2xl font-bold text-gray-600" id="astat-archives">-</div>
+                    <div class="text-xs text-gray-500 mt-1">Archives</div>
+                </div>
+            </div>
+
+            <!-- Main Grid: Archive Ops + Clear Ops -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
+
+                <!-- ============ ARCHIVE OPERATIONS ============ -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-3 sm:p-4 border-b">
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-700">
+                            <i class="fas fa-box-archive mr-2 text-feu-green"></i>Archive Operations
+                        </h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Copies records to archive storage. Does not remove them from attendance.</p>
+                    </div>
+                    <div class="p-3 sm:p-4 space-y-3">
+
+                        <!-- Archive Today -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <div>
+                                <div class="font-medium text-sm text-gray-700"><i class="fas fa-calendar-day mr-1.5 text-blue-500"></i>Archive Today</div>
+                                <div class="text-xs text-gray-500">Archive all of today's attendance</div>
+                            </div>
+                            <button onclick="archiveRun('today')" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-archive mr-1"></i>Run
+                            </button>
+                        </div>
+
+                        <!-- Archive All -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <div>
+                                <div class="font-medium text-sm text-gray-700"><i class="fas fa-database mr-1.5 text-indigo-500"></i>Archive All</div>
+                                <div class="text-xs text-gray-500">Archive all records across all dates</div>
+                            </div>
+                            <button onclick="archiveRun('all')" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-archive mr-1"></i>Run
+                            </button>
+                        </div>
+
+                        <!-- Archive by Date -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-calendar mr-1.5 text-purple-500"></i>Archive by Date</div>
+                            <div class="flex gap-2">
+                                <input type="date" id="archive-date" class="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                <button onclick="archiveRun('date')" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                    <i class="fas fa-archive mr-1"></i>Run
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Archive by Student -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-user mr-1.5 text-green-500"></i>Archive by Student</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                                <select id="archive-student" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                    <option value="">Loading students...</option>
+                                </select>
+                                <input type="date" id="archive-student-date" placeholder="Date (optional)" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                            </div>
+                            <button onclick="archiveRun('student')" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-archive mr-1"></i>Run
+                            </button>
+                        </div>
+
+                        <!-- Archive by Section -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-users mr-1.5 text-orange-500"></i>Archive by Section</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                                <select id="archive-section" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                    <option value="">Loading sections...</option>
+                                </select>
+                                <input type="date" id="archive-section-date" placeholder="Date (optional)" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                            </div>
+                            <button onclick="archiveRun('section')" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-archive mr-1"></i>Run
+                            </button>
+                        </div>
+
+                        <!-- Archive Bulk Students -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-users-rectangle mr-1.5 text-teal-500"></i>Archive Bulk Students</div>
+                            <div class="text-xs text-gray-500 mb-2">Hold Ctrl/Cmd to select multiple</div>
+                            <select id="archive-bulk-students" multiple class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green h-28">
+                                <option value="">Loading...</option>
+                            </select>
+                            <div class="mt-2 flex gap-2">
+                                <input type="date" id="archive-bulk-date" class="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                <button onclick="archiveRun('bulk')" class="bg-feu-green hover:bg-feu-green-dark text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                    <i class="fas fa-archive mr-1"></i>Run
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ============ CLEAR OPERATIONS ============ -->
+                <div class="bg-white rounded-lg shadow">
+                    <div class="p-3 sm:p-4 border-b">
+                        <h2 class="text-base sm:text-lg font-semibold text-gray-700">
+                            <i class="fas fa-trash-alt mr-2 text-red-500"></i>Clear Operations
+                        </h2>
+                        <p class="text-xs text-gray-500 mt-0.5">Permanently removes records. Choose whether to archive first.</p>
+                    </div>
+                    <div class="p-3 sm:p-4 space-y-3">
+
+                        <!-- Clear Mode Toggle -->
+                        <div class="flex gap-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="radio" name="clear-mode" value="archive_and_clear" id="clear-mode-archive" checked class="accent-feu-green">
+                                <span class="text-yellow-800 font-medium">Archive then Clear</span>
+                            </label>
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="radio" name="clear-mode" value="clear_only" id="clear-mode-only" class="accent-red-500">
+                                <span class="text-red-800 font-medium">Clear Only (no backup)</span>
+                            </label>
+                        </div>
+
+                        <!-- Clear Today -->
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                            <div>
+                                <div class="font-medium text-sm text-gray-700"><i class="fas fa-calendar-day mr-1.5 text-blue-500"></i>Clear Today</div>
+                                <div class="text-xs text-gray-500">Remove all of today's records</div>
+                            </div>
+                            <button onclick="archiveClear('today')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Clear
+                            </button>
+                        </div>
+
+                        <!-- Clear by Date -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-calendar mr-1.5 text-purple-500"></i>Clear by Date</div>
+                            <div class="flex gap-2">
+                                <input type="date" id="clear-date" class="flex-1 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                <button onclick="archiveClear('date')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                    <i class="fas fa-trash mr-1"></i>Clear
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Clear by Student -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-user mr-1.5 text-green-500"></i>Clear by Student</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                                <select id="clear-student" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                    <option value="">Loading students...</option>
+                                </select>
+                                <input type="date" id="clear-student-date" placeholder="Date (optional)" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                            </div>
+                            <button onclick="archiveClear('student')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Clear
+                            </button>
+                        </div>
+
+                        <!-- Clear by Section -->
+                        <div class="p-3 bg-gray-50 rounded-lg border">
+                            <div class="font-medium text-sm text-gray-700 mb-2"><i class="fas fa-users mr-1.5 text-orange-500"></i>Clear by Section</div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
+                                <select id="clear-section" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                                    <option value="">Loading sections...</option>
+                                </select>
+                                <input type="date" id="clear-section-date" placeholder="Date (optional)" class="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                            </div>
+                            <button onclick="archiveClear('section')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-trash mr-1"></i>Clear
+                            </button>
+                        </div>
+
+                        <!-- Clear All (Nuclear) -->
+                        <div class="p-3 bg-red-50 rounded-lg border border-red-200">
+                            <div class="font-medium text-sm text-red-700 mb-1"><i class="fas fa-radiation mr-1.5"></i>Clear Everything</div>
+                            <div class="text-xs text-red-500 mb-2">Removes ALL attendance records. Use with extreme caution.</div>
+                            <button onclick="archiveClear('all')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded text-xs transition-colors">
+                                <i class="fas fa-bomb mr-1"></i>Nuclear Clear
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ VIEW ATTENDANCE ============ -->
+            <div class="bg-white rounded-lg shadow mb-4 sm:mb-6">
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-700">
+                        <i class="fas fa-table mr-2 text-feu-green"></i>View Current Attendance
+                    </h2>
+                    <button onclick="loadArchiveAttendance()" class="border border-feu-green text-feu-green hover:bg-feu-green hover:text-white px-3 py-1.5 rounded text-sm transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+                <!-- Filters -->
+                <div class="p-3 sm:p-4 border-b bg-gray-50 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="text-xs font-medium text-gray-600 mb-1 block">Filter by Date</label>
+                        <input type="date" id="view-filter-date" onchange="loadArchiveAttendance()" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-600 mb-1 block">Filter by Section</label>
+                        <select id="view-filter-section" onchange="loadArchiveAttendance()" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                            <option value="">All Sections</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-medium text-gray-600 mb-1 block">Search by Name</label>
+                        <input type="text" id="view-filter-name" oninput="filterArchiveTable()" placeholder="Type to filter..." class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-feu-green">
+                    </div>
+                </div>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">#</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Name</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Section</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Date</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Time</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archive-attendance-tbody" class="divide-y divide-gray-100">
+                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">Click Refresh to load records</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="archive-attendance-count" class="px-4 py-2 text-xs text-gray-500 border-t"></div>
+            </div>
+
+            <!-- ============ ARCHIVES LIST ============ -->
+            <div class="bg-white rounded-lg shadow">
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <h2 class="text-base sm:text-lg font-semibold text-gray-700">
+                        <i class="fas fa-folder-open mr-2 text-feu-green"></i>Past Archives
+                    </h2>
+                    <button onclick="loadArchivesList()" class="border border-feu-green text-feu-green hover:bg-feu-green hover:text-white px-3 py-1.5 rounded text-sm transition-colors">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">#</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Archive Name</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Records</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">Archived At</th>
+                                <th class="px-3 sm:px-4 py-2 text-left text-xs font-medium text-gray-500">By</th>
+                            </tr>
+                        </thead>
+                        <tbody id="archives-list-tbody" class="divide-y divide-gray-100">
+                            <tr><td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">Click Refresh to load</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div id="archives-list-count" class="px-4 py-2 text-xs text-gray-500 border-t"></div>
+            </div>
+
+        </div><!-- /panel-archive -->
     </main>
 
     <!-- Add Teacher Modal -->
@@ -1733,8 +2027,12 @@
             }
         }
 
+        // Track current sub-tab
+        let currentStudentSubTab = 'active';
+
         // Sub-tab switching (Active / Archived)
         function showStudentSubTab(tab) {
+            currentStudentSubTab = tab;
             document.querySelectorAll('.student-subtab').forEach(b => {
                 b.classList.remove('text-feu-green', 'border-feu-green');
                 b.classList.add('text-gray-500', 'border-transparent');
@@ -1742,14 +2040,23 @@
             document.getElementById(`subtab-${tab}`).classList.remove('text-gray-500', 'border-transparent');
             document.getElementById(`subtab-${tab}`).classList.add('text-feu-green', 'border-feu-green');
 
+            const filter = document.getElementById('student-section-filter');
+
             if (tab === 'active') {
                 document.getElementById('active-students-panel').classList.remove('hidden');
                 document.getElementById('archived-students-panel').classList.add('hidden');
                 document.getElementById('batch-actions-bar').classList.add('hidden');
+                // Restore active sections in dropdown
+                filter.innerHTML = '<option value="">All Sections</option>' +
+                    allSections.map(s => `<option value="${s.name}">${s.name} (${s.studentCount})</option>`).join('');
+                filter.onchange = () => loadStudents();
+                loadStudents();
             } else {
                 document.getElementById('active-students-panel').classList.add('hidden');
                 document.getElementById('archived-students-panel').classList.remove('hidden');
                 document.getElementById('batch-actions-bar').classList.add('hidden');
+                // Switch dropdown to archived sections
+                filter.onchange = () => loadArchivedStudents();
                 loadArchivedStudents();
             }
         }
@@ -1848,15 +2155,42 @@
 
                 const tbody = document.getElementById('archived-table');
                 const cards = document.getElementById('archived-cards');
+                const filter = document.getElementById('student-section-filter');
+                const selectedSection = filter.value;
 
                 if (!data.success || data.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-archive mr-2"></i>No archived students</td></tr>';
                     cards.innerHTML = '<p class="text-center text-gray-400 py-4"><i class="fas fa-archive mr-2"></i>No archived students</p>';
+                    // Clear dropdown for archived
+                    filter.innerHTML = '<option value="">All Sections</option>';
                     return;
                 }
 
+                // Build archived sections for dropdown
+                const archivedSections = [...new Set(data.data.map(s => s.section).filter(Boolean))].sort();
+                const currentVal = selectedSection;
+                filter.innerHTML = '<option value="">All Sections</option>' +
+                    archivedSections.map(s => {
+                        const count = data.data.filter(st => st.section === s).length;
+                        return `<option value="${s}" ${s === currentVal ? 'selected' : ''}>${s} (${count})</option>`;
+                    }).join('');
+
+                // Filter data by selected section
+                const filtered = selectedSection
+                    ? data.data.filter(s => s.section === selectedSection)
+                    : data.data;
+
+                if (filtered.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="px-4 py-8 text-center text-gray-400"><i class="fas fa-filter mr-2"></i>No archived students in this section</td></tr>';
+                    cards.innerHTML = '<p class="text-center text-gray-400 py-4"><i class="fas fa-filter mr-2"></i>No archived students in this section</p>';
+                    return;
+                }
+
+                // Reset selection state
+                clearArchivedSelection();
+
                 // Desktop table
-                tbody.innerHTML = data.data.map(s => `
+                tbody.innerHTML = filtered.map(s => `
                     <tr class="hover:bg-gray-50 bg-amber-50/30">
                         <td class="px-2 py-3 text-center"><input type="checkbox" class="archived-checkbox rounded border-gray-300 text-feu-green focus:ring-feu-green cursor-pointer" value="${s.nfc_id}" onchange="updateArchivedSelection()"></td>
                         <td class="px-3 lg:px-4 py-3 text-sm font-medium text-gray-900">${s.tamtap_id || '-'}</td>
@@ -1874,7 +2208,7 @@
                 `).join('');
 
                 // Mobile cards
-                cards.innerHTML = data.data.map(s => `
+                cards.innerHTML = filtered.map(s => `
                     <div class="bg-amber-50/50 rounded-lg p-3 border border-amber-200">
                         <div class="flex justify-between items-start">
                             <div class="flex items-start gap-2 flex-1">
@@ -1990,6 +2324,44 @@
                 }
             } catch (e) {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to batch restore', confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        // Batch permanent delete
+        async function batchDeleteSelected() {
+            const nfcIds = Array.from(document.querySelectorAll('.archived-checkbox:checked')).map(cb => cb.value);
+            if (nfcIds.length === 0) return;
+
+            const result = await Swal.fire({
+                title: `Permanently delete ${nfcIds.length} student${nfcIds.length > 1 ? 's' : ''}?`,
+                html: `<p>This will <strong>permanently remove</strong> ${nfcIds.length} archived student${nfcIds.length > 1 ? 's' : ''}.</p><p class="text-red-600 text-sm mt-2">This action cannot be undone.</p>`,
+                icon: 'error',
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: '<i class="fas fa-trash"></i> Delete All Forever'
+            });
+
+            if (!result.isConfirmed) return;
+
+            try {
+                const res = await fetch('/api/admin/students/delete-batch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ nfc_ids: nfcIds })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Deleted', text: data.message, timer: 2000, showConfirmButton: false });
+                    loadArchivedStudents();
+                    loadArchivedCount();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, confirmButtonColor: '#0a8249' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to batch delete', confirmButtonColor: '#0a8249' });
             }
         }
 
@@ -2300,6 +2672,348 @@
         // INIT
         // ========================================
         checkAuth();
+
+        // ========================================
+        // ARCHIVE TAB
+        // ========================================
+        let archiveStudentList  = [];
+        let archiveSectionList  = [];
+        let archiveAttendanceCache = [];
+
+        async function initArchiveTab() {
+            await Promise.all([
+                loadArchiveStats(),
+                loadArchiveDropdowns(),
+                loadArchivesList()
+            ]);
+        }
+
+        // --- Stats ---
+        async function loadArchiveStats() {
+            try {
+                const res  = await fetch('/api/archive/stats', { credentials: 'include' });
+                const data = await res.json();
+                if (!data.success) return;
+                const s = data.stats;
+                document.getElementById('astat-total').textContent    = s.total;
+                document.getElementById('astat-today').textContent    = s.today;
+                document.getElementById('astat-dates').textContent    = s.uniqueDates;
+                document.getElementById('astat-sections').textContent = s.uniqueSections;
+                document.getElementById('astat-students').textContent = s.uniqueStudents;
+                document.getElementById('astat-archives').textContent = s.archives;
+            } catch (e) {
+                console.error('[Archive] stats error:', e);
+            }
+        }
+
+        // --- Populate dropdowns for archive + clear forms ---
+        async function loadArchiveDropdowns() {
+            try {
+                const [studRes, secRes] = await Promise.all([
+                    fetch('/api/archive/students', { credentials: 'include' }),
+                    fetch('/api/archive/sections',  { credentials: 'include' })
+                ]);
+                const studData = await studRes.json();
+                const secData  = await secRes.json();
+
+                archiveStudentList = studData.success ? studData.students : [];
+                archiveSectionList = secData.success  ? secData.sections  : [];
+
+                // Populate student selects
+                const studentOpts = archiveStudentList.length
+                    ? archiveStudentList.map(s => `<option value="${s.nfc_id}">${s.name} (${s.section})</option>`).join('')
+                    : '<option value="">No students in attendance</option>';
+
+                ['archive-student', 'clear-student'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = '<option value="">Select student...</option>' + studentOpts;
+                });
+
+                // Populate bulk multi-select
+                const bulkEl = document.getElementById('archive-bulk-students');
+                if (bulkEl) bulkEl.innerHTML = studentOpts || '<option value="">No students in attendance</option>';
+
+                // Populate section selects
+                const sectionOpts = archiveSectionList.length
+                    ? archiveSectionList.map(s => `<option value="${s.section}">${s.section} (${s.count} records)</option>`).join('')
+                    : '<option value="">No sections in attendance</option>';
+
+                ['archive-section', 'clear-section', 'view-filter-section'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    if (id === 'view-filter-section') {
+                        el.innerHTML = '<option value="">All Sections</option>' + sectionOpts;
+                    } else {
+                        el.innerHTML = '<option value="">Select section...</option>' + sectionOpts;
+                    }
+                });
+
+            } catch (e) {
+                console.error('[Archive] dropdown error:', e);
+            }
+        }
+
+        // --- View Attendance Table ---
+        async function loadArchiveAttendance() {
+            const date    = document.getElementById('view-filter-date').value;
+            const section = document.getElementById('view-filter-section').value;
+
+            const tbody = document.getElementById('archive-attendance-tbody');
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+
+            try {
+                let url = '/api/archive/attendance?limit=200';
+                if (date)    url += `&date=${date}`;
+                if (section) url += `&section=${encodeURIComponent(section)}`;
+
+                const res  = await fetch(url, { credentials: 'include' });
+                const data = await res.json();
+
+                if (!data.success) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-red-400 text-sm">${data.error}</td></tr>`;
+                    return;
+                }
+
+                archiveAttendanceCache = data.records;
+                renderArchiveTable(data.records);
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-red-400 text-sm">Failed to load attendance</td></tr>';
+            }
+        }
+
+        function renderArchiveTable(records) {
+            const tbody = document.getElementById('archive-attendance-tbody');
+            const count = document.getElementById('archive-attendance-count');
+
+            if (!records.length) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400 text-sm">No records found</td></tr>';
+                count.textContent = '';
+                return;
+            }
+
+            tbody.innerHTML = records.map((r, i) => {
+                const statusColor = {
+                    present: 'bg-green-100 text-green-700',
+                    late:    'bg-yellow-100 text-yellow-700',
+                    absent:  'bg-red-100 text-red-700',
+                    excused: 'bg-blue-100 text-blue-700'
+                }[r.status || 'present'] || 'bg-gray-100 text-gray-700';
+
+                const datePart = (r.date || '').split(' ')[0];
+                const timePart = (r.date || r.time || '').split(' ')[1] || r.time || '';
+
+                return `<tr class="hover:bg-gray-50">
+                    <td class="px-3 sm:px-4 py-2 text-gray-500 text-xs">${i + 1}</td>
+                    <td class="px-3 sm:px-4 py-2 font-medium text-gray-800">${r.name || '-'}</td>
+                    <td class="px-3 sm:px-4 py-2 text-gray-600">${r.section || '-'}</td>
+                    <td class="px-3 sm:px-4 py-2 text-gray-600">${datePart}</td>
+                    <td class="px-3 sm:px-4 py-2 text-gray-600">${timePart}</td>
+                    <td class="px-3 sm:px-4 py-2"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${statusColor}">${r.status || 'present'}</span></td>
+                </tr>`;
+            }).join('');
+
+            count.textContent = `Showing ${records.length} record${records.length !== 1 ? 's' : ''}`;
+        }
+
+        function filterArchiveTable() {
+            const name = document.getElementById('view-filter-name').value.toLowerCase();
+            const filtered = name
+                ? archiveAttendanceCache.filter(r => (r.name || '').toLowerCase().includes(name))
+                : archiveAttendanceCache;
+            renderArchiveTable(filtered);
+        }
+
+        // --- Archives List ---
+        async function loadArchivesList() {
+            const tbody = document.getElementById('archives-list-tbody');
+            const count = document.getElementById('archives-list-count');
+            tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-gray-400 text-sm"><i class="fas fa-spinner fa-spin mr-2"></i>Loading...</td></tr>';
+
+            try {
+                const res  = await fetch('/api/archive/list', { credentials: 'include' });
+                const data = await res.json();
+
+                if (!data.success || !data.archives.length) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-400 text-sm">No archives yet</td></tr>';
+                    count.textContent = '';
+                    return;
+                }
+
+                tbody.innerHTML = data.archives.map((a, i) => {
+                    const at = a.archivedAt ? new Date(a.archivedAt).toLocaleString() : '-';
+                    return `<tr class="hover:bg-gray-50">
+                        <td class="px-3 sm:px-4 py-2 text-gray-500 text-xs">${i + 1}</td>
+                        <td class="px-3 sm:px-4 py-2 font-mono text-xs text-gray-700 break-all">${a.name}</td>
+                        <td class="px-3 sm:px-4 py-2 text-center"><span class="px-2 py-0.5 bg-feu-light text-feu-green rounded-full text-xs font-medium">${a.count}</span></td>
+                        <td class="px-3 sm:px-4 py-2 text-gray-600 text-xs">${at}</td>
+                        <td class="px-3 sm:px-4 py-2 text-gray-600 text-xs">${a.archivedBy || '-'}</td>
+                    </tr>`;
+                }).join('');
+
+                count.textContent = `${data.archives.length} archive batch${data.archives.length !== 1 ? 'es' : ''}`;
+            } catch (e) {
+                tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-6 text-center text-red-400 text-sm">Failed to load archives</td></tr>';
+            }
+        }
+
+        // --- Archive Run ---
+        async function archiveRun(scope) {
+            const body = { scope };
+
+            if (scope === 'date') {
+                body.date = document.getElementById('archive-date').value;
+                if (!body.date) {
+                    Swal.fire({ icon: 'warning', title: 'Date required', text: 'Please select a date.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+            if (scope === 'student') {
+                body.nfc_id = document.getElementById('archive-student').value;
+                body.date   = document.getElementById('archive-student-date').value || undefined;
+                if (!body.nfc_id) {
+                    Swal.fire({ icon: 'warning', title: 'Student required', text: 'Please select a student.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+            if (scope === 'section') {
+                body.section = document.getElementById('archive-section').value;
+                body.date    = document.getElementById('archive-section-date').value || undefined;
+                if (!body.section) {
+                    Swal.fire({ icon: 'warning', title: 'Section required', text: 'Please select a section.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+            if (scope === 'bulk') {
+                const sel = document.getElementById('archive-bulk-students');
+                body.nfc_ids = Array.from(sel.selectedOptions).map(o => o.value).filter(Boolean);
+                body.date    = document.getElementById('archive-bulk-date').value || undefined;
+                if (!body.nfc_ids.length) {
+                    Swal.fire({ icon: 'warning', title: 'Students required', text: 'Select at least one student.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+
+            const scopeLabel = { today: "today's", all: 'all', date: `date ${body.date}`, student: 'selected student', section: `section ${body.section}`, bulk: `${(body.nfc_ids||[]).length} students` }[scope];
+
+            const confirm = await Swal.fire({
+                icon: 'question',
+                title: 'Archive Records',
+                text: `Archive attendance for ${scopeLabel}? Records will be copied to archive storage.`,
+                showCancelButton: true,
+                confirmButtonColor: '#0a8249',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'Yes, Archive'
+            });
+            if (!confirm.isConfirmed) return;
+
+            try {
+                const res  = await fetch('/api/archive/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    Swal.fire({ icon: 'error', title: 'Archive Failed', text: data.error, confirmButtonColor: '#0a8249' });
+                    return;
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Archived!',
+                    html: `<b>${data.count}</b> records archived.<br><span class="text-xs text-gray-500">${data.archiveName}</span>`,
+                    confirmButtonColor: '#0a8249'
+                });
+                await loadArchiveStats();
+                await loadArchivesList();
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Archive request failed.', confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        // --- Archive Clear ---
+        async function archiveClear(scope) {
+            const clearMode = document.querySelector('input[name="clear-mode"]:checked').value;
+            const body = { scope, clearMode };
+
+            if (scope === 'date') {
+                body.date = document.getElementById('clear-date').value;
+                if (!body.date) {
+                    Swal.fire({ icon: 'warning', title: 'Date required', text: 'Please select a date.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+            if (scope === 'student') {
+                body.nfc_id = document.getElementById('clear-student').value;
+                body.date   = document.getElementById('clear-student-date').value || undefined;
+                if (!body.nfc_id) {
+                    Swal.fire({ icon: 'warning', title: 'Student required', text: 'Please select a student.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+            if (scope === 'section') {
+                body.section = document.getElementById('clear-section').value;
+                body.date    = document.getElementById('clear-section-date').value || undefined;
+                if (!body.section) {
+                    Swal.fire({ icon: 'warning', title: 'Section required', text: 'Please select a section.', confirmButtonColor: '#0a8249' });
+                    return;
+                }
+            }
+
+            const scopeLabel = { today: "today's", all: 'ALL (everything)', date: `date ${body.date}`, student: 'selected student', section: `section ${body.section}` }[scope];
+            const modeLabel  = clearMode === 'archive_and_clear' ? 'Archive then delete' : 'DELETE with NO backup';
+            const iconType   = scope === 'all' ? 'warning' : 'question';
+
+            const confirm = await Swal.fire({
+                icon: iconType,
+                title: scope === 'all' ? 'Nuclear Clear!' : 'Clear Records',
+                html: `<b>Records for ${scopeLabel}</b> will be permanently removed.<br><span class="text-sm text-gray-600">${modeLabel}</span>`,
+                showCancelButton: true,
+                confirmButtonColor: '#dc2626',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: scope === 'all' ? 'Yes, Delete Everything' : 'Yes, Clear'
+            });
+            if (!confirm.isConfirmed) return;
+
+            try {
+                const res  = await fetch('/api/archive/clear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (!data.success) {
+                    Swal.fire({ icon: 'error', title: 'Clear Failed', text: data.error, confirmButtonColor: '#0a8249' });
+                    return;
+                }
+
+                const archivedNote = data.archived ? ` (${data.archived} backed up)` : '';
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Cleared!',
+                    text: `${data.deleted} records deleted${archivedNote}.`,
+                    confirmButtonColor: '#0a8249'
+                });
+                await loadArchiveStats();
+                await loadArchiveDropdowns();
+                archiveAttendanceCache = [];
+                renderArchiveTable([]);
+                await loadArchivesList();
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Clear request failed.', confirmButtonColor: '#0a8249' });
+            }
+        }
+
+        // Hook archive tab into showTab
+        const _origShowTab = showTab;
+        showTab = function(tabName) {
+            _origShowTab(tabName);
+            if (tabName === 'archive') initArchiveTab();
+        };
     </script>
 </body>
 </html>

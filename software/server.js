@@ -343,6 +343,7 @@ app.post('/api/hardware/attendance', (req, res) => {
             role: record.role,
             date: record.date,
             time: record.time,
+            status: record.status || 'present',
             session: record.session,
             photo: record.photo,
             grade: record.grade || '',

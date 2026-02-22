@@ -1332,22 +1332,33 @@
                 socket.on('attendance:new', (data) => {
                     console.log('[INFO] New attendance:', data);
                     
-                    // Check if matches current section filter
-                    const currentSection = document.getElementById('section-select').value;
-                    const userSections = currentUser.sections_handled || [];
+                    // Only inject into table if viewing today
+                    const isViewingToday = currentDateRange === 'today';
                     
-                    if (!currentSection) {
-                        // "All My Sections" - check if in user's sections
-                        if (userSections.length === 0 || userSections.includes(data.section)) {
+                    if (isViewingToday) {
+                        // Check if matches current section filter
+                        const currentSection = document.getElementById('section-select').value;
+                        const userSections = currentUser.sections_handled || [];
+                        
+                        if (!currentSection) {
+                            // "All My Sections" - check if in user's sections
+                            if (userSections.length === 0 || userSections.includes(data.section)) {
+                                addRecordToTable(data, true);
+                                updateLocalStats();
+                                updateStats();
+                            }
+                        } else if (data.section === currentSection) {
                             addRecordToTable(data, true);
+                            updateLocalStats();
                             updateStats();
                         }
-                    } else if (data.section === currentSection) {
-                        addRecordToTable(data, true);
-                        updateStats();
+                        
+                        // Re-render secondary views if active
+                        if (currentView === 'roster') renderRoster();
+                        else if (currentView === 'not-tapped') renderNotTapped();
                     }
                     
-                    // Show toast notification
+                    // Always show toast notification regardless of view
                     Swal.fire({
                         toast: true,
                         position: 'top-end',

@@ -301,13 +301,14 @@ router.post('/run', async (req, res) => {
         }
 
         const archiveName = generateArchiveName(scope, { nfc_id, section, date });
-        const archiveDocs = records.map(r => ({
-            ...r,
-            _id:         undefined,
-            archive_name: archiveName,
-            archived_at:  new Date().toISOString(),
-            archived_by:  req.user.username
-        }));
+        const archiveDocs = records.map(r => {
+            const doc = { ...r };
+            delete doc._id;
+            doc.archive_name = archiveName;
+            doc.archived_at  = new Date().toISOString();
+            doc.archived_by  = req.user.username;
+            return doc;
+        });
 
         await db.collection('attendance_archives').insertMany(archiveDocs);
 
@@ -349,13 +350,14 @@ router.post('/clear', async (req, res) => {
             const records = await db.collection('attendance').find(query).toArray();
             if (records.length) {
                 archiveName = generateArchiveName(`clear_${scope}`, { nfc_id, section, date });
-                const archiveDocs = records.map(r => ({
-                    ...r,
-                    _id:          undefined,
-                    archive_name: archiveName,
-                    archived_at:  new Date().toISOString(),
-                    archived_by:  req.user.username
-                }));
+                const archiveDocs = records.map(r => {
+                    const doc = { ...r };
+                    delete doc._id;
+                    doc.archive_name = archiveName;
+                    doc.archived_at  = new Date().toISOString();
+                    doc.archived_by  = req.user.username;
+                    return doc;
+                });
                 await db.collection('attendance_archives').insertMany(archiveDocs);
                 archivedCount = records.length;
             }

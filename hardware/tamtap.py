@@ -72,7 +72,7 @@ ENABLE = 0b00000100
 
 # Timing Constants (in seconds) - Optimized for ≤5s total cycle
 CAMERA_CAPTURE_TIME = 1200  # 1.2 seconds for camera capture (ms)
-CAMERA_TIMEOUT = 2.5        # subprocess timeout
+CAMERA_TIMEOUT = 2.0        # subprocess timeout
 NFC_POLL_INTERVAL = 0.1
 FACE_DETECTION_TIMEOUT = 1.0  # Haar cascade timeout
 
@@ -700,9 +700,8 @@ def capture_photo_for_detection(filename, timeout_ms=1000):
                 'rpicam-still',
                 '-t', str(timeout_ms),
                 '--width', '600',
-                '--height', '720',
+                '--height', '800',
                 '--metering', 'spot',
-                '--ev', '0.5',
                 '-o', filename
             ],
             capture_output=True,
@@ -914,10 +913,9 @@ def take_attendance_photo(user_data):
                 [
                     'rpicam-still',
                     '-t', str(CAMERA_CAPTURE_TIME),
-                    '--width', '600',
-                    '--height', '720',
+                    '--width', '1024',
+                    '--height', '768',
                     '--metering', 'spot',
-                    '--ev', '0.5',
                     '-o', filepath
                 ],
                 capture_output=True,

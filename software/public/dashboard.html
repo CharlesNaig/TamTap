@@ -65,6 +65,7 @@
         .status-present { background-color: #22c55e; }
         .status-late { background-color: #eab308; }
         .status-absent { background-color: #ef4444; }
+        .status-excused { background-color: #2664EB; }
         .status-unknown { background-color: #9ca3af; }
         
         /* Clickable Row */
@@ -83,6 +84,62 @@
             pointer-events: none;
         }
         
+        /* Unified Select / Input Styling */
+        .tamtap-select {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 0.375rem 2rem 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            background-color: #fff;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            transition: border-color 0.15s, box-shadow 0.15s;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 12px;
+        }
+        .tamtap-select:focus {
+            outline: none;
+            border-color: #0a8249;
+            box-shadow: 0 0 0 3px rgba(10,130,73,0.15);
+        }
+
+        /* Unified Popup Dropdown */
+        .tamtap-dropdown {
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+            background-color: #fff;
+            overflow: hidden;
+        }
+
+        /* Section Tab Pills */
+        .section-tab {
+            white-space: nowrap;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .section-tab-active {
+            background-color: #0a8249;
+            color: #fff;
+            box-shadow: 0 1px 3px rgba(10,130,73,0.3);
+        }
+        .section-tab-inactive {
+            background-color: #fff;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+        }
+        .section-tab-inactive:hover {
+            background-color: #f3f4f6;
+        }
+
+        /* Hide scrollbar for section tabs */
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+
         /* Dropdown Menu Animation */
         .dropdown-enter {
             animation: dropdownFade 0.15s ease-out;
@@ -203,7 +260,7 @@
                     </button>
                     
                     <!-- Notification Dropdown -->
-                    <div id="notification-dropdown" class="hidden fixed inset-x-3 top-[110px] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-96 bg-white rounded-xl shadow-xl z-50 border dropdown-enter overflow-hidden max-h-[70vh] flex flex-col">
+                    <div id="notification-dropdown" class="hidden fixed inset-x-3 top-[110px] sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 sm:mt-2 w-auto sm:w-96 tamtap-dropdown z-50 dropdown-enter max-h-[70vh] flex flex-col">
                         <div class="p-3 bg-gradient-to-r from-feu-green to-feu-green-dark text-white flex items-center justify-between">
                             <div class="flex items-center gap-2">
                                 <i class="fas fa-bell"></i>
@@ -252,7 +309,7 @@
                     </button>
                     
                     <!-- Settings Dropdown Menu -->
-                    <div id="settings-menu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl z-50 border dropdown-enter overflow-hidden">
+                    <div id="settings-menu" class="hidden absolute right-0 mt-2 w-64 tamtap-dropdown z-50 dropdown-enter">
                         <div class="p-4 bg-gradient-to-r from-feu-green to-feu-green-dark text-white">
                             <p id="menu-user-name" class="font-bold">Teacher Name</p>
                             <p id="menu-user-role" class="text-sm text-white/80 capitalize">Role</p>
@@ -292,17 +349,15 @@
     ======================================== -->
     <div class="bg-gray-50 border-b">
         <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex flex-wrap items-center gap-2 sm:gap-4">
-            <!-- Section Selector -->
-            <div class="flex items-center gap-1.5 sm:gap-2">
-                <label for="section-select" class="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide hidden sm:inline">
+            <!-- Section Tabs -->
+            <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 sm:flex-initial">
+                <span class="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide hidden sm:inline flex-shrink-0">
                     <i class="fas fa-users text-feu-green mr-1"></i> Section
-                </label>
-                <i class="fas fa-users text-feu-green sm:hidden"></i>
-                <select id="section-select" 
-                        onchange="onSectionChange()"
-                        class="border-2 border-gray-200 rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium bg-white focus:ring-2 focus:ring-feu-green focus:border-feu-green transition min-w-[100px] sm:min-w-[140px]">
-                    <option value="">Loading...</option>
-                </select>
+                </span>
+                <i class="fas fa-users text-feu-green sm:hidden flex-shrink-0"></i>
+                <div id="section-tabs" class="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-hide" style="-webkit-overflow-scrolling: touch;">
+                    <!-- Tabs populated by JS -->
+                </div>
             </div>
             
             <!-- View Toggle Tabs -->
@@ -321,6 +376,11 @@
                         id="view-tab-not-tapped"
                         class="view-tab px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md text-gray-600 hover:bg-white/60 font-medium whitespace-nowrap transition-all">
                     <i class="fas fa-user-clock mr-1"></i><span class="hidden sm:inline">Not Yet Tapped</span>
+                </button>
+                <button onclick="setView('schedules')" 
+                        id="view-tab-schedules"
+                        class="view-tab px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm rounded-md text-gray-600 hover:bg-white/60 font-medium whitespace-nowrap transition-all">
+                    <i class="fas fa-calendar-alt mr-1"></i><span class="hidden sm:inline">Schedules</span>
                 </button>
             </div>
             
@@ -352,7 +412,7 @@
             <div id="custom-date-picker" class="hidden items-center gap-2">
                 <input type="date" id="custom-date" 
                        onchange="onCustomDateChange()"
-                       class="border-2 border-gray-200 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-white focus:ring-2 focus:ring-feu-green focus:border-feu-green">
+                       class="tamtap-select text-xs sm:text-sm py-1.5">
             </div>
             
             <!-- Date Display -->
@@ -542,7 +602,7 @@
                             <i class="fas fa-chevron-down text-[10px] ml-1"></i>
                         </button>
                         <!-- Export Menu -->
-                        <div id="export-menu" class="hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl z-50 border dropdown-enter overflow-hidden">
+                        <div id="export-menu" class="hidden absolute right-0 mt-1 w-40 tamtap-dropdown z-50 dropdown-enter">
                             <button onclick="exportXLSX()" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                 <i class="fas fa-file-excel text-green-600 w-5"></i> Excel (.xlsx)
                             </button>
@@ -563,6 +623,7 @@
                 <span><span class="status-dot status-present mr-0.5 sm:mr-1"></span> Present</span>
                 <span><span class="status-dot status-late mr-0.5 sm:mr-1"></span> Late</span>
                 <span><span class="status-dot status-absent mr-0.5 sm:mr-1"></span> Absent</span>
+                <span><span class="status-dot status-excused mr-0.5 sm:mr-1"></span> Excused</span>
             </div>
             
             <!-- Table (Desktop/Tablet) -->
@@ -577,6 +638,7 @@
                             <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Time</th>
                             <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Session</th>
                             <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Section</th>
+                            <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-16">Action</th>
                         </tr>
                     </thead>
                     <tbody id="attendance-table-skeleton" class="divide-y divide-gray-200">
@@ -587,6 +649,7 @@
                             <td class="px-3 lg:px-4 py-2 lg:py-3"><div class="skeleton skeleton-text w-16"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-10"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell"><div class="skeleton skeleton-text-sm w-14"></div></td>
+                            <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-text-sm w-8 mx-auto"></div></td>
                         </tr>
                         <tr>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-circle w-10 h-10 lg:w-12 lg:h-12 mx-auto"></div></td>
@@ -595,6 +658,7 @@
                             <td class="px-3 lg:px-4 py-2 lg:py-3"><div class="skeleton skeleton-text w-16"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-10"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell"><div class="skeleton skeleton-text-sm w-14"></div></td>
+                            <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-text-sm w-8 mx-auto"></div></td>
                         </tr>
                         <tr>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-circle w-10 h-10 lg:w-12 lg:h-12 mx-auto"></div></td>
@@ -603,6 +667,7 @@
                             <td class="px-3 lg:px-4 py-2 lg:py-3"><div class="skeleton skeleton-text w-16"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-10"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell"><div class="skeleton skeleton-text-sm w-14"></div></td>
+                            <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-text-sm w-8 mx-auto"></div></td>
                         </tr>
                         <tr>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-circle w-10 h-10 lg:w-12 lg:h-12 mx-auto"></div></td>
@@ -611,6 +676,7 @@
                             <td class="px-3 lg:px-4 py-2 lg:py-3"><div class="skeleton skeleton-text w-16"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-10"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell"><div class="skeleton skeleton-text-sm w-14"></div></td>
+                            <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-text-sm w-8 mx-auto"></div></td>
                         </tr>
                         <tr>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-circle w-10 h-10 lg:w-12 lg:h-12 mx-auto"></div></td>
@@ -619,6 +685,7 @@
                             <td class="px-3 lg:px-4 py-2 lg:py-3"><div class="skeleton skeleton-text w-16"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden md:table-cell"><div class="skeleton skeleton-text-sm w-10"></div></td>
                             <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell"><div class="skeleton skeleton-text-sm w-14"></div></td>
+                            <td class="px-3 lg:px-4 py-2 lg:py-3 text-center"><div class="skeleton skeleton-text-sm w-8 mx-auto"></div></td>
                         </tr>
                     </tbody>
                     <tbody id="attendance-table" class="hidden divide-y divide-gray-200">
@@ -688,8 +755,7 @@
                 <div class="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 border-b flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-600">
                     <span><span class="status-dot status-present mr-0.5 sm:mr-1"></span> Present</span>
                     <span><span class="status-dot status-late mr-0.5 sm:mr-1"></span> Late</span>
-                    <span><span class="w-2.5 h-2.5 rounded-full bg-gray-300 inline-block mr-0.5 sm:mr-1"></span> No Tap Yet</span>
-                </div>
+                <span><span class="status-dot status-excused mr-0.5 sm:mr-1"></span> Excused</span>
 
                 <!-- Roster Table (Desktop) -->
                 <div class="overflow-x-auto hidden sm:block">
@@ -793,6 +859,76 @@
                 </div>
             </div>
         </div><!-- /view-not-tapped -->
+
+        <!-- ========================================
+             VIEW: SCHEDULES (Teacher)
+             Backend: GET /api/schedules, PUT /api/schedules/:section
+        ======================================== -->
+        <div id="view-schedules" class="hidden">
+            <div class="bg-white rounded-lg sm:rounded-xl shadow overflow-hidden">
+                <!-- Schedules Header -->
+                <div class="p-3 sm:p-4 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                    <h3 class="text-base sm:text-lg font-semibold text-gray-800">
+                        <i class="fas fa-calendar-alt text-feu-green mr-1.5 sm:mr-2"></i> Section Schedules
+                    </h3>
+                    <span id="schedules-count" class="text-xs sm:text-sm text-gray-500">-- schedules</span>
+                </div>
+
+                <!-- Schedules Table (Desktop) -->
+                <div class="overflow-x-auto hidden sm:block">
+                    <table class="w-full">
+                        <caption class="sr-only">Section schedules for your handled sections</caption>
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Section</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Adviser</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase">Mon–Fri</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden md:table-cell">Saturday</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-left text-[10px] lg:text-xs font-medium text-gray-500 uppercase hidden lg:table-cell">Grace</th>
+                                <th class="px-3 lg:px-4 py-2 lg:py-3 text-center text-[10px] lg:text-xs font-medium text-gray-500 uppercase w-20">Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schedules-table" class="divide-y divide-gray-200">
+                            <!-- Skeleton rows -->
+                            <tr><td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-28"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-24"></div></td>
+                                <td class="px-3 py-3 hidden md:table-cell"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                                <td class="px-3 py-3 hidden lg:table-cell"><div class="h-4 bg-gray-200 rounded animate-pulse w-12"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-8 mx-auto"></div></td></tr>
+                            <tr><td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-28"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-24"></div></td>
+                                <td class="px-3 py-3 hidden md:table-cell"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                                <td class="px-3 py-3 hidden lg:table-cell"><div class="h-4 bg-gray-200 rounded animate-pulse w-12"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-8 mx-auto"></div></td></tr>
+                            <tr><td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-28"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-24"></div></td>
+                                <td class="px-3 py-3 hidden md:table-cell"><div class="h-4 bg-gray-200 rounded animate-pulse w-20"></div></td>
+                                <td class="px-3 py-3 hidden lg:table-cell"><div class="h-4 bg-gray-200 rounded animate-pulse w-12"></div></td>
+                                <td class="px-3 py-3"><div class="h-4 bg-gray-200 rounded animate-pulse w-8 mx-auto"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Schedules Mobile Cards -->
+                <div id="schedules-cards" class="sm:hidden divide-y divide-gray-100">
+                    <div class="p-6 text-center text-gray-400">
+                        <i class="fas fa-spinner fa-spin text-2xl"></i>
+                    </div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="schedules-empty" class="hidden p-6 sm:p-8 text-center">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-3">
+                        <i class="fas fa-calendar-times text-3xl text-gray-400"></i>
+                    </div>
+                    <p class="text-base font-semibold text-gray-700">No schedules found</p>
+                    <p class="text-sm text-gray-400 mt-1">No schedules are configured for your sections yet.</p>
+                </div>
+            </div>
+        </div><!-- /view-schedules -->
 
     </main>
 
@@ -1027,10 +1163,12 @@
         let currentRecords = [];
         let currentDateRange = 'today';
         let breakdownAvailable = false; // Track if backend provides status breakdown
-        let currentView = 'attendance';  // 'attendance' | 'roster' | 'not-tapped'
-        let rosterData = null;           // Cached roster from /api/students/section/:section
-        let currentStudentNfcId = null;  // NFC ID of student in detail modal
-        let currentStudentName = null;   // Name of student in detail modal
+        let currentView = 'attendance';  // 'attendance' | 'roster' | 'not-tapped' | 'schedules'
+        let currentSection = '';             // Currently selected section ('' = all)
+        let rosterData = null;               // Cached roster from /api/students/section/:section
+        let schedulesData = null;            // Cached schedules from /api/schedules
+        let currentStudentNfcId = null;      // NFC ID of student in detail modal
+        let currentStudentName = null;       // Name of student in detail modal
         let rosterSort = { field: 'name', dir: 'asc' }; // Roster sort state
 
         // ========================================
@@ -1119,8 +1257,8 @@
         // DASHBOARD INITIALIZATION
         // ========================================
         async function initDashboard() {
-            // Populate section dropdown from user's sections_handled
-            populateSectionDropdown();
+            // Populate section tabs from user's sections_handled
+            populateSectionTabs();
             
             // Set default date display
             updateDateDisplay();
@@ -1136,13 +1274,13 @@
         }
 
         // ========================================
-        // SECTION DROPDOWN
+        // SECTION TABS
         // Backend: Uses sections_handled from GET /api/auth/me
         // ========================================
-        function populateSectionDropdown() {
-            const select = document.getElementById('section-select');
-            if (!select) {
-                console.error('[ERROR] Section select element not found');
+        function populateSectionTabs() {
+            const container = document.getElementById('section-tabs');
+            if (!container) {
+                console.error('[ERROR] Section tabs container not found');
                 return;
             }
             
@@ -1150,29 +1288,45 @@
             console.log('[DEBUG] Sections handled:', sections);
             
             if (sections.length === 0) {
-                // No sections assigned - show empty state
-                select.innerHTML = '<option value="">No sections assigned</option>';
+                container.innerHTML = '<span class="text-xs text-gray-400 px-2">No sections assigned</span>';
                 const display = document.getElementById('current-section-display');
                 if (display) display.textContent = 'No sections';
                 return;
             }
             
-            // Build options
-            let html = '<option value="">All My Sections</option>';
+            // Build tab pills: "All" + each section
+            let html = `<button onclick="selectSection('')" class="section-tab section-tab-active px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium" data-section="">All</button>`;
             sections.forEach(s => {
-                html += `<option value="${s}">${s}</option>`;
+                html += `<button onclick="selectSection('${s}')" class="section-tab section-tab-inactive px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium" data-section="${s}">${s}</button>`;
             });
-            select.innerHTML = html;
+            container.innerHTML = html;
             
             const display = document.getElementById('current-section-display');
             if (display) display.textContent = 'All Sections';
         }
 
-        function onSectionChange() {
-            const section = document.getElementById('section-select').value;
+        function selectSection(section) {
+            currentSection = section;
+            
+            // Update tab styling
+            document.querySelectorAll('.section-tab').forEach(tab => {
+                if (tab.dataset.section === section) {
+                    tab.classList.remove('section-tab-inactive');
+                    tab.classList.add('section-tab-active');
+                } else {
+                    tab.classList.remove('section-tab-active');
+                    tab.classList.add('section-tab-inactive');
+                }
+            });
+            
             document.getElementById('current-section-display').textContent = section || 'All Sections';
             rosterData = null; // Invalidate roster cache on section change
             refreshData();
+        }
+
+        function onSectionChange() {
+            // Legacy compat — redirect to selectSection
+            selectSection(currentSection);
         }
 
         // ========================================
@@ -1337,7 +1491,6 @@
                     
                     if (isViewingToday) {
                         // Check if matches current section filter
-                        const currentSection = document.getElementById('section-select').value;
                         const userSections = currentUser.sections_handled || [];
                         
                         if (!currentSection) {
@@ -1538,8 +1691,7 @@
         async function loadAttendance() {
             console.log('[DEBUG] loadAttendance started');
             try {
-                const sectionSelect = document.getElementById('section-select');
-                const section = sectionSelect ? sectionSelect.value : '';
+                const section = currentSection;
                 const { from, to } = getDateRange();
                 
                 console.log('[DEBUG] Date range:', from, 'to', to, 'Section:', section || 'all');
@@ -1671,13 +1823,13 @@
         }
 
         // ========================================
-        // VIEW SWITCHING (Attendance / Roster / Not-Tapped)
+        // VIEW SWITCHING (Attendance / Roster / Not-Tapped / Schedules)
         // ========================================
         function setView(view) {
             currentView = view;
 
             // Toggle visibility
-            ['attendance', 'roster', 'not-tapped'].forEach(v => {
+            ['attendance', 'roster', 'not-tapped', 'schedules'].forEach(v => {
                 const el = document.getElementById(`view-${v}`);
                 if (el) el.classList.toggle('hidden', v !== view);
             });
@@ -1698,6 +1850,204 @@
                 loadRoster();
             } else if (view === 'not-tapped') {
                 loadRoster().then(() => renderNotTapped());
+            } else if (view === 'schedules') {
+                loadTeacherSchedules();
+            }
+        }
+
+        // ========================================
+        // SCHEDULES: Load + Render + Edit (Teacher)
+        // Backend: GET /api/schedules, PUT /api/schedules/:section
+        // ========================================
+        async function loadTeacherSchedules() {
+            try {
+                const res = await fetch('/api/schedules', { credentials: 'include' });
+                const data = await res.json();
+
+                if (data.success) {
+                    schedulesData = data.data || [];
+                    renderTeacherSchedules();
+                } else {
+                    throw new Error(data.error || 'Failed to load schedules');
+                }
+            } catch (err) {
+                console.error('[ERROR] loadTeacherSchedules:', err.message);
+                const tbody = document.getElementById('schedules-table');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-red-400"><i class="fas fa-exclamation-circle mr-1"></i> Failed to load schedules</td></tr>';
+            }
+        }
+
+        function getScheduleSummary(ws) {
+            if (!ws) return { weekday: '07:00–17:00', sat: 'None' };
+            const mon = ws.monday || { start: '07:00', end: '17:00' };
+            const sat = ws.saturday || {};
+            return {
+                weekday: `${mon.start || '07:00'}–${mon.end || '17:00'}`,
+                sat: sat.start ? `${sat.start}–${sat.end}` : 'None'
+            };
+        }
+
+        function renderTeacherSchedules() {
+            const tbody = document.getElementById('schedules-table');
+            const cards = document.getElementById('schedules-cards');
+            const empty = document.getElementById('schedules-empty');
+            const count = document.getElementById('schedules-count');
+
+            if (!schedulesData || schedulesData.length === 0) {
+                if (tbody) tbody.innerHTML = '';
+                if (cards) cards.innerHTML = '';
+                if (empty) empty.classList.remove('hidden');
+                if (count) count.textContent = '0 schedules';
+                return;
+            }
+
+            if (empty) empty.classList.add('hidden');
+            if (count) count.textContent = `${schedulesData.length} schedule${schedulesData.length !== 1 ? 's' : ''}`;
+
+            // Desktop table
+            if (tbody) {
+                tbody.innerHTML = schedulesData.map(s => {
+                    const summary = getScheduleSummary(s.weekly_schedule);
+                    return `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 lg:px-4 py-3">
+                                <span class="inline-flex items-center gap-1.5">
+                                    <i class="fas fa-users text-feu-green text-xs"></i>
+                                    <span class="font-medium">${escapeHtml(s.section)}</span>
+                                </span>
+                            </td>
+                            <td class="px-3 lg:px-4 py-3 text-gray-600">${s.adviser_name ? escapeHtml(s.adviser_name) : '<span class="text-gray-400">—</span>'}</td>
+                            <td class="px-3 lg:px-4 py-3 font-mono text-sm">${summary.weekday}</td>
+                            <td class="px-3 lg:px-4 py-3 font-mono text-sm hidden md:table-cell ${summary.sat === 'None' ? 'text-gray-400' : 'text-yellow-600'}">${summary.sat}</td>
+                            <td class="px-3 lg:px-4 py-3 hidden lg:table-cell">${s.grace_period_minutes || 20} min</td>
+                            <td class="px-3 lg:px-4 py-3 text-center">
+                                <button onclick="editTeacherSchedule('${escapeHtml(s.section)}')"
+                                        class="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-1.5 rounded-lg transition" title="Edit Schedule">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                }).join('');
+            }
+
+            // Mobile cards
+            if (cards) {
+                cards.innerHTML = schedulesData.map(s => {
+                    const summary = getScheduleSummary(s.weekly_schedule);
+                    return `
+                        <div class="p-3 hover:bg-gray-50">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <h4 class="font-semibold text-gray-800 text-sm">${escapeHtml(s.section)}</h4>
+                                    <p class="text-xs text-gray-500">${s.adviser_name ? escapeHtml(s.adviser_name) : 'No adviser'}</p>
+                                </div>
+                                <button onclick="editTeacherSchedule('${escapeHtml(s.section)}')"
+                                        class="text-blue-600 hover:bg-blue-50 p-1.5 rounded-lg transition" title="Edit">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2 text-xs text-gray-600">
+                                <div><span class="text-gray-400">M–F:</span> ${summary.weekday}</div>
+                                <div><span class="text-gray-400">Sat:</span> ${summary.sat}</div>
+                                <div><span class="text-gray-400">Grace:</span> ${s.grace_period_minutes || 20}m</div>
+                            </div>
+                        </div>`;
+                }).join('');
+            }
+        }
+
+        async function editTeacherSchedule(section) {
+            const schedule = schedulesData?.find(s => s.section === section);
+            if (!schedule) return;
+
+            const ws = schedule.weekly_schedule || {};
+            const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+            const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+            // Build the schedule edit form HTML
+            let formHtml = '<div class="text-left space-y-3">';
+            formHtml += '<p class="text-xs text-gray-500 mb-2">Edit arrival and dismissal times for each day.</p>';
+            formHtml += '<div class="grid grid-cols-[auto_1fr_1fr] gap-x-3 gap-y-2 items-center text-sm">';
+            formHtml += '<span class="font-medium text-gray-500 text-xs">Day</span><span class="font-medium text-gray-500 text-xs text-center">Start</span><span class="font-medium text-gray-500 text-xs text-center">End</span>';
+
+            days.forEach((day, i) => {
+                const d = ws[day] || {};
+                const startVal = d.start || (day === 'saturday' ? '' : '07:00');
+                const endVal = d.end || (day === 'saturday' ? '' : '17:00');
+                formHtml += `
+                    <span class="text-gray-700 font-medium">${dayLabels[i]}</span>
+                    <input type="time" id="swal-${day}-start" value="${startVal}" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-feu-green/30 focus:border-feu-green outline-none">
+                    <input type="time" id="swal-${day}-end" value="${endVal}" class="border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-feu-green/30 focus:border-feu-green outline-none">`;
+            });
+            formHtml += '</div>';
+
+            // Grace period and absent threshold
+            formHtml += `
+                <div class="grid grid-cols-2 gap-3 pt-2 border-t">
+                    <div>
+                        <label class="text-xs text-gray-500 block mb-1">Grace Period (min)</label>
+                        <input type="number" id="swal-grace" value="${schedule.grace_period_minutes || 20}" min="0" max="120"
+                               class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-feu-green/30 focus:border-feu-green outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs text-gray-500 block mb-1">Absent After (min)</label>
+                        <input type="number" id="swal-absent" value="${schedule.absent_threshold_minutes || 60}" min="0" max="240"
+                               class="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:ring-2 focus:ring-feu-green/30 focus:border-feu-green outline-none">
+                    </div>
+                </div>`;
+            formHtml += '</div>';
+
+            const result = await Swal.fire({
+                title: `Edit: ${section}`,
+                html: formHtml,
+                width: 420,
+                showCancelButton: true,
+                confirmButtonText: 'Save Changes',
+                confirmButtonColor: '#0a8249',
+                preConfirm: () => {
+                    const weekly_schedule = {};
+                    days.forEach(day => {
+                        const start = document.getElementById(`swal-${day}-start`).value || null;
+                        const end = document.getElementById(`swal-${day}-end`).value || null;
+                        weekly_schedule[day] = { start, end };
+                    });
+                    const grace_period_minutes = parseInt(document.getElementById('swal-grace').value) || 20;
+                    const absent_threshold_minutes = parseInt(document.getElementById('swal-absent').value) || 60;
+                    return { weekly_schedule, grace_period_minutes, absent_threshold_minutes };
+                }
+            });
+
+            if (!result.isConfirmed || !result.value) return;
+
+            try {
+                const res = await fetch(`/api/schedules/${encodeURIComponent(section)}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(result.value)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Schedule Updated',
+                        text: `${section} schedule has been saved`,
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    schedulesData = null; // Clear cache
+                    loadTeacherSchedules(); // Reload
+                } else {
+                    throw new Error(data.error || 'Failed to save');
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Save Failed',
+                    text: err.message,
+                    confirmButtonColor: '#0a8249'
+                });
             }
         }
 
@@ -1712,8 +2062,7 @@
                 return;
             }
 
-            const sectionSelect = document.getElementById('section-select');
-            const section = sectionSelect ? sectionSelect.value : '';
+            const section = currentSection;
 
             // Build sections string (comma-separated)
             let sections = section;
@@ -2027,6 +2376,13 @@
                     <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell">
                         <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
                     </td>
+                    <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
+                        ${(r.status === 'present' || r.status === 'late') ? `
+                            <button onclick="event.stopPropagation(); markExcused('${r.nfc_id}', '${escapeHtml(r.name)}')"
+                                    class="text-[#2664EB] hover:bg-blue-50 p-1.5 rounded-lg transition" title="Mark Excused">
+                                <i class="fas fa-calendar-check text-xs"></i>
+                            </button>` : ''}
+                    </td>
                 </tr>
             `).join('');
         }
@@ -2084,8 +2440,13 @@
                                 <span class="px-1.5 py-0.5 rounded text-[10px] ${r.session === 'AM' ? 'bg-yellow-100 text-yellow-700' : 'bg-indigo-100 text-indigo-700'}">${r.session || '--'}</span>
                             </div>
                         </div>
-                        <div class="flex-shrink-0">
+                        <div class="flex-shrink-0 flex items-center gap-1.5">
                             <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
+                            ${(r.status === 'present' || r.status === 'late') ? `
+                                <button onclick="event.stopPropagation(); markExcused('${r.nfc_id}', '${escapeHtml(r.name)}')"
+                                        class="text-[#2664EB] hover:bg-blue-50 p-1.5 rounded-lg transition" title="Mark Excused">
+                                    <i class="fas fa-calendar-check text-xs"></i>
+                                </button>` : ''}
                         </div>
                     </div>
                 </div>`;
@@ -2121,6 +2482,13 @@
                 <td class="px-3 lg:px-4 py-2 lg:py-3 hidden lg:table-cell">
                     <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${record.section || '--'}</span>
                 </td>
+                <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
+                    ${(record.status === 'present' || record.status === 'late') ? `
+                        <button onclick="event.stopPropagation(); markExcused('${record.nfc_id}', '${escapeHtml(record.name)}')"
+                                class="text-[#2664EB] hover:bg-blue-50 p-1.5 rounded-lg transition" title="Mark Excused">
+                            <i class="fas fa-calendar-check text-xs"></i>
+                        </button>` : ''}
+                </td>
             `;
             
             if (prepend) {
@@ -2146,6 +2514,7 @@
                 case 'present': return 'status-present';
                 case 'late': return 'status-late';
                 case 'absent': return 'status-absent';
+                case 'excused': return 'status-excused';
                 default: return 'status-unknown'; // Unknown or missing status
             }
         }
@@ -2160,8 +2529,7 @@
             console.log('[DEBUG] loadStats started');
             try {
                 // Get current filters
-                const sectionSelect = document.getElementById('section-select');
-                const section = sectionSelect ? sectionSelect.value : '';
+                const section = currentSection;
                 const today = getPhilippineDate();
                 
                 // Build summary URL with filters
@@ -2396,7 +2764,7 @@
                 case 'present': return 'bg-green-100 text-green-700';
                 case 'late': return 'bg-yellow-100 text-yellow-700';
                 case 'absent': return 'bg-gray-200 text-gray-700';
-                case 'excused': return 'bg-blue-100 text-blue-700';
+                case 'excused': return 'bg-blue-100 text-[#2664EB]';
                 default: return 'bg-gray-100 text-gray-600';
             }
         }
@@ -2833,7 +3201,7 @@
                 return;
             }
             
-            const section = document.getElementById('section-select').value || 'all';
+            const section = currentSection || 'all';
             const today = getPhilippineDate();
             
             const headers = ['Name', 'Section', 'Date', 'Time', 'Session', 'Status'];
@@ -2885,7 +3253,7 @@
         async function exportXLSX() {
             closeExportMenu();
             
-            const section = document.getElementById('section-select').value;
+            const section = currentSection;
             const { from, to } = getDateRange();
             
             Swal.fire({
@@ -2939,7 +3307,7 @@
         async function exportPDF() {
             closeExportMenu();
             
-            const section = document.getElementById('section-select').value;
+            const section = currentSection;
             const { from, to } = getDateRange();
             
             Swal.fire({

@@ -300,12 +300,13 @@ router.put('/:section', async (req, res) => {
         const user = req.session?.user;
         const section = decodeURIComponent(req.params.section);
 
-        // Check permissions
+        // Check permissions: admin, adviser of section, or teacher with section in sections_handled
         if (!user) {
             return res.status(401).json({ error: 'Authentication required' });
         }
 
-        if (user.role !== 'admin' && user.advised_section !== section) {
+        const isSectionHandler = Array.isArray(user.sections_handled) && user.sections_handled.includes(section);
+        if (user.role !== 'admin' && user.advised_section !== section && !isSectionHandler) {
             return res.status(403).json({ error: 'Not authorized to edit this section' });
         }
 

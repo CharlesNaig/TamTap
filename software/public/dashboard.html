@@ -115,30 +115,7 @@
             overflow: hidden;
         }
 
-        /* Section Tab Pills */
-        .section-tab {
-            white-space: nowrap;
-            flex-shrink: 0;
-            cursor: pointer;
-            transition: all 0.15s ease;
-        }
-        .section-tab-active {
-            background-color: #0a8249;
-            color: #fff;
-            box-shadow: 0 1px 3px rgba(10,130,73,0.3);
-        }
-        .section-tab-inactive {
-            background-color: #fff;
-            color: #4b5563;
-            border: 1px solid #e5e7eb;
-        }
-        .section-tab-inactive:hover {
-            background-color: #f3f4f6;
-        }
-
-        /* Hide scrollbar for section tabs */
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        /* (Section dropdown uses .tamtap-select class) */
 
         /* Dropdown Menu Animation */
         .dropdown-enter {
@@ -349,15 +326,15 @@
     ======================================== -->
     <div class="bg-gray-50 border-b">
         <div class="w-full max-w-[1920px] mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-2 sm:py-3 flex flex-wrap items-center gap-2 sm:gap-4">
-            <!-- Section Tabs -->
+            <!-- Section Dropdown -->
             <div class="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 sm:flex-initial">
                 <span class="text-xs sm:text-sm font-semibold text-gray-600 uppercase tracking-wide hidden sm:inline flex-shrink-0">
                     <i class="fas fa-users text-feu-green mr-1"></i> Section
                 </span>
                 <i class="fas fa-users text-feu-green sm:hidden flex-shrink-0"></i>
-                <div id="section-tabs" class="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-hide" style="-webkit-overflow-scrolling: touch;">
-                    <!-- Tabs populated by JS -->
-                </div>
+                <select id="section-select" onchange="onSectionChange()" class="tamtap-select text-xs sm:text-sm py-1 sm:py-1.5 min-w-[120px]">
+                    <option value="">All Sections</option>
+                </select>
             </div>
             
             <!-- View Toggle Tabs -->
@@ -755,7 +732,8 @@
                 <div class="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-50 border-b flex flex-wrap gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-600">
                     <span><span class="status-dot status-present mr-0.5 sm:mr-1"></span> Present</span>
                     <span><span class="status-dot status-late mr-0.5 sm:mr-1"></span> Late</span>
-                <span><span class="status-dot status-excused mr-0.5 sm:mr-1"></span> Excused</span>
+                    <span><span class="status-dot status-excused mr-0.5 sm:mr-1"></span> Excused</span>
+                </div>
 
                 <!-- Roster Table (Desktop) -->
                 <div class="overflow-x-auto hidden sm:block">
@@ -1257,8 +1235,8 @@
         // DASHBOARD INITIALIZATION
         // ========================================
         async function initDashboard() {
-            // Populate section tabs from user's sections_handled
-            populateSectionTabs();
+            // Populate section dropdown from user's sections_handled
+            populateSectionDropdown();
             
             // Set default date display
             updateDateDisplay();
@@ -1274,59 +1252,35 @@
         }
 
         // ========================================
-        // SECTION TABS
+        // SECTION DROPDOWN
         // Backend: Uses sections_handled from GET /api/auth/me
         // ========================================
-        function populateSectionTabs() {
-            const container = document.getElementById('section-tabs');
-            if (!container) {
-                console.error('[ERROR] Section tabs container not found');
+        function populateSectionDropdown() {
+            const select = document.getElementById('section-select');
+            if (!select) {
+                console.error('[ERROR] Section select not found');
                 return;
             }
             
             const sections = currentUser?.sections_handled || [];
             console.log('[DEBUG] Sections handled:', sections);
             
-            if (sections.length === 0) {
-                container.innerHTML = '<span class="text-xs text-gray-400 px-2">No sections assigned</span>';
-                const display = document.getElementById('current-section-display');
-                if (display) display.textContent = 'No sections';
-                return;
-            }
-            
-            // Build tab pills: "All" + each section
-            let html = `<button onclick="selectSection('')" class="section-tab section-tab-active px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium" data-section="">All</button>`;
+            select.innerHTML = '<option value="">All Sections</option>';
             sections.forEach(s => {
-                html += `<button onclick="selectSection('${s}')" class="section-tab section-tab-inactive px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium" data-section="${s}">${s}</button>`;
+                select.innerHTML += `<option value="${s}">${s}</option>`;
             });
-            container.innerHTML = html;
             
             const display = document.getElementById('current-section-display');
             if (display) display.textContent = 'All Sections';
         }
 
-        function selectSection(section) {
-            currentSection = section;
+        function onSectionChange() {
+            const select = document.getElementById('section-select');
+            currentSection = select ? select.value : '';
             
-            // Update tab styling
-            document.querySelectorAll('.section-tab').forEach(tab => {
-                if (tab.dataset.section === section) {
-                    tab.classList.remove('section-tab-inactive');
-                    tab.classList.add('section-tab-active');
-                } else {
-                    tab.classList.remove('section-tab-active');
-                    tab.classList.add('section-tab-inactive');
-                }
-            });
-            
-            document.getElementById('current-section-display').textContent = section || 'All Sections';
+            document.getElementById('current-section-display').textContent = currentSection || 'All Sections';
             rosterData = null; // Invalidate roster cache on section change
             refreshData();
-        }
-
-        function onSectionChange() {
-            // Legacy compat — redirect to selectSection
-            selectSection(currentSection);
         }
 
         // ========================================

@@ -655,7 +655,7 @@ router.get('/pdf', async (req, res) => {
                    { align: 'center', width: pageWidth }
                )
                .text(
-                   `Page ${i + 1} of ${totalPages} | Capstone by group 5 of Grade 12 ICT B
+                   `Page ${i + 1} of ${totalPages} | Capstone By Group 5 of Grade 12 ICT B
  S.Y. 2025-2026`,
                    40, doc.page.height - 28,
                    { align: 'center', width: pageWidth }
@@ -1027,7 +1027,7 @@ router.get('/student/:nfcId/pdf', async (req, res) => {
             doc.fontSize(8).fillColor('#999999')
                .text('TAMTAP Attendance System | NFC-Based Attendance | FEU Roosevelt Marikina',
                    40, doc.page.height - 40, { align: 'center', width: pageWidth })
-               .text(`Page ${i + 1} of ${totalPages} | Capstone by group 5 of Grade 12 ICT B
+               .text(`Page ${i + 1} of ${totalPages} | Capstone By Group 5 of Grade 12 ICT B
  S.Y. 2025-2026`,
                    40, doc.page.height - 28, { align: 'center', width: pageWidth });
         }

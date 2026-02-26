@@ -1,6 +1,6 @@
 # 🧰 TAMTAP – Raspberry Pi Necessary Commands Cheat Sheet
 
-**FEU Roosevelt Marikina | Capstone by group 5 of Grade 12 ICT B
+**FEU Roosevelt Marikina | Capstone By Group 5 of Grade 12 ICT B
 **  
 **Purpose:** WiFi management, IP discovery, Python environment setup, and auto-start configuration for TAMTAP.
 

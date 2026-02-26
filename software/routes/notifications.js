@@ -242,10 +242,11 @@ router.post('/mark-excused', async (req, res) => {
             return res.status(404).json({ error: 'Student not found' });
         }
 
-        // Check permissions - admin can mark any, adviser only their section
+        // Check permissions - admin can mark any, teacher only their sections
         if (user.role !== 'admin') {
             const userSections = [];
             if (user.advised_section) userSections.push(user.advised_section);
+            if (user.sections_handled) userSections.push(...user.sections_handled);
             if (!userSections.includes(student.section)) {
                 return res.status(403).json({ error: 'Not authorized to mark this student' });
             }
@@ -362,6 +363,7 @@ router.post('/mark-absent', async (req, res) => {
         if (user.role !== 'admin') {
             const userSections = [];
             if (user.advised_section) userSections.push(user.advised_section);
+            if (user.sections_handled) userSections.push(...user.sections_handled);
             if (!userSections.includes(student.section)) {
                 return res.status(403).json({ error: 'Not authorized to mark this student' });
             }

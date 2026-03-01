@@ -13,6 +13,7 @@
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/Logger');
 const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
@@ -123,7 +124,7 @@ router.get('/', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get schedules error:', error.message);
+        logger.error('Get schedules error:', error.message);
         res.status(500).json({ error: 'Failed to fetch schedules' });
     }
 });
@@ -204,7 +205,7 @@ router.get('/:section', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get schedule error:', error.message);
+        logger.error('Get schedule error:', error.message);
         res.status(500).json({ error: 'Failed to fetch schedule' });
     }
 });
@@ -281,7 +282,7 @@ router.post('/', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Create schedule error:', error.message);
+        logger.error('Create schedule error:', error.message);
         res.status(500).json({ error: 'Failed to create schedule' });
     }
 });
@@ -366,7 +367,7 @@ router.put('/:section', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Update schedule error:', error.message);
+        logger.error('Update schedule error:', error.message);
         res.status(500).json({ error: 'Failed to update schedule' });
     }
 });
@@ -412,7 +413,7 @@ router.delete('/:section', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Delete schedule error:', error.message);
+        logger.error('Delete schedule error:', error.message);
         res.status(500).json({ error: 'Failed to delete schedule' });
     }
 });
@@ -545,7 +546,7 @@ router.post('/import', upload.single('file'), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Import schedules error:', error.message);
+        logger.error('Import schedules error:', error.message);
         res.status(500).json({ error: 'Failed to import schedules: ' + error.message });
     }
 });
@@ -625,7 +626,7 @@ router.get('/today/:section', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get today schedule error:', error.message);
+        logger.error('Get today schedule error:', error.message);
         res.status(500).json({ error: 'Failed to fetch schedule' });
     }
 });

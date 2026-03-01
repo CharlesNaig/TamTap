@@ -14,6 +14,7 @@
 const express = require('express');
 const http = require('http');
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
@@ -36,7 +37,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session middleware (before routes)
-app.use(session(config.session));
+// Uses connect-mongo to persist sessions in MongoDB instead of default MemoryStore
+// MemoryStore leaks memory and loses sessions on restart
+app.use(session({
+    ...config.session,
+    store: MongoStore.create({
+        mongoUrl: `${config.mongodb.uri}${config.mongodb.database}`,
+        ttl: Math.floor(config.session.cookie.maxAge / 1000), // 8 hours in seconds
+        touchAfter: 3600, // Only update session once per hour if unchanged
+        crypto: {
+            secret: config.session.secret
+        }
+    })
+}));
 
 // Request logging
 app.use((req, res, next) => {
@@ -376,7 +389,6 @@ app.post('/api/hardware/fail', (req, res) => {
             'NO_FACE_DETECTED': 'No face detected',
             'EYES_NOT_VISIBLE': 'Eyes not visible in photo',
             'FACE_PARTIALLY_VISIBLE': 'Face partially visible',
-            'MULTIPLE_FACES_DETECTED': 'Multiple faces detected',
             'DETECTION_TIMEOUT': 'Face detection timed out'
         };
         

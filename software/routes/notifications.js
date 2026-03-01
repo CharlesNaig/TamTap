@@ -12,6 +12,7 @@
 const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
+const logger = require('../utils/Logger');
 
 // Excuse reasons
 const EXCUSE_REASONS = [
@@ -123,7 +124,7 @@ router.get('/pending', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get pending absences error:', error.message);
+        logger.error('Get pending absences error:', error.message);
         res.status(500).json({ error: 'Failed to fetch pending absences' });
     }
 });
@@ -184,7 +185,7 @@ router.get('/count', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Get notification count error:', error.message);
+        logger.error('Get notification count error:', error.message);
         res.status(500).json({ error: 'Failed to fetch count' });
     }
 });
@@ -319,7 +320,7 @@ router.post('/mark-excused', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Mark excused error:', error.message);
+        logger.error('Mark excused error:', error.message);
         res.status(500).json({ error: 'Failed to mark student as excused' });
     }
 });
@@ -415,7 +416,7 @@ router.post('/mark-absent', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Mark absent error:', error.message);
+        logger.error('Mark absent error:', error.message);
         res.status(500).json({ error: 'Failed to mark student as absent' });
     }
 });
@@ -496,7 +497,7 @@ router.post('/bulk-absent', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Bulk absent error:', error.message);
+        logger.error('Bulk absent error:', error.message);
         res.status(500).json({ error: 'Failed to mark students as absent' });
     }
 });

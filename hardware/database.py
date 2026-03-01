@@ -18,6 +18,7 @@ Usage:
 import json
 import os
 import logging
+import queue
 import threading
 import time
 import urllib.request
@@ -53,6 +54,10 @@ DEFAULT_DB_FILE = os.path.join(_PROJECT_ROOT, "database", "tamtap_users.json")
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
 MONGODB_NAME = os.getenv("MONGODB_NAME", "tamtap")
 MONGODB_TIMEOUT = 3000  # 3 seconds connection timeout
+
+# Remote (cloud) MongoDB for async backup sync
+MONGODB_REMOTE_URI = os.getenv("MONGODB_REMOTE_URI", "")
+MONGODB_REMOTE_TIMEOUT = 5000  # 5 seconds (cloud latency tolerance)
 
 # API Server URL for schedule fetch
 API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
@@ -218,10 +223,10 @@ def calculate_attendance_status(section, arrival_time_str=None, schedule_data=No
 
 class Database:
     """
-    Database handler with MongoDB primary and JSON fallback/cache.
+    Database handler with MongoDB primary, remote cloud backup, and JSON fallback.
     
-    Priority: MongoDB → JSON fallback
-    Sync: Bidirectional (push pending, pull latest)
+    Priority: Local MongoDB → Remote MongoDB (async) → JSON fallback
+    Sync: Local writes are synchronous, remote sync is fire-and-forget background.
     """
     
     def __init__(self, json_file=None, enable_background_reconnect=True):
@@ -237,19 +242,30 @@ class Database:
         # Thread safety for JSON file access
         self._json_lock = threading.Lock()
         
-        # Event-driven sync
+        # Event-driven sync (JSON → local MongoDB)
         self._sync_event = threading.Event()
         self._stop_sync = threading.Event()
         self._sync_thread = None
         
+        # Remote (cloud) MongoDB async backup
+        self.remote_client = None
+        self.remote_db = None
+        self.use_remote = False
+        self._remote_queue = queue.Queue()  # Thread-safe queue for remote sync
+        self._stop_remote_sync = threading.Event()
+        self._remote_sync_thread = None
+        
         # Initialize
         self._ensure_json_exists()
         self._connect_mongodb()
+        self._connect_remote_mongodb()
         
         # Start background threads
         if enable_background_reconnect:
             self._start_reconnect_thread()
             self._start_sync_thread()
+            if MONGODB_REMOTE_URI:
+                self._start_remote_sync_thread()
     
     # ========================================
     # INITIALIZATION
@@ -319,6 +335,30 @@ class Database:
             self.mongo_db.attendance.create_index("date")
         except Exception as e:
             logger.debug("Index creation note: %s", e)
+    
+    def _connect_remote_mongodb(self):
+        """Connect to remote (cloud) MongoDB for async backup sync"""
+        if not MONGODB_AVAILABLE or not MONGODB_REMOTE_URI:
+            return False
+        
+        try:
+            self.remote_client = MongoClient(
+                MONGODB_REMOTE_URI,
+                serverSelectionTimeoutMS=MONGODB_REMOTE_TIMEOUT
+            )
+            self.remote_client.admin.command('ping')
+            self.remote_db = self.remote_client[MONGODB_NAME]
+            self.use_remote = True
+            logger.info("Remote MongoDB connected for backup sync")
+            return True
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            logger.warning("Remote MongoDB unavailable: %s - backup disabled", e)
+            self.use_remote = False
+            return False
+        except Exception as e:
+            logger.warning("Remote MongoDB init error: %s - backup disabled", e)
+            self.use_remote = False
+            return False
     
     def _check_mongodb(self):
         """Check if MongoDB is available, attempt reconnect if needed"""
@@ -1005,6 +1045,11 @@ class Database:
                 data["pending_attendance"] = data["pending_attendance"][synced_count:]
                 self._save_json(data)
                 logger.info("Synced %d/%d records to MongoDB", synced_count, len(pending))
+                
+                # Queue confirmed records for remote (cloud) backup sync
+                if MONGODB_REMOTE_URI:
+                    for record in confirmed:
+                        self._remote_queue.put(record)
     
     def stop_sync(self):
         """Stop the background sync thread"""
@@ -1015,6 +1060,104 @@ class Database:
             logger.info("Background sync thread stopped")
     
     # ========================================
+    # REMOTE (CLOUD) ASYNC BACKUP SYNC
+    # ========================================
+    def _start_remote_sync_thread(self):
+        """Start background thread for async remote MongoDB backup"""
+        if self._remote_sync_thread and self._remote_sync_thread.is_alive():
+            return
+        
+        self._stop_remote_sync.clear()
+        self._remote_sync_thread = threading.Thread(
+            target=self._remote_sync_loop,
+            daemon=True,
+            name="MongoDB-Remote-Sync"
+        )
+        self._remote_sync_thread.start()
+        logger.info("Remote backup sync thread started")
+    
+    def _remote_sync_loop(self):
+        """
+        Background loop: async sync of attendance records to remote (cloud) MongoDB.
+        Fire-and-forget — does NOT block the 3.5s NFC cycle.
+        Retries failed records on next cycle.
+        """
+        retry_batch = []
+        
+        while not self._stop_remote_sync.is_set():
+            # Collect records: retry batch + new from queue
+            records = list(retry_batch)
+            retry_batch.clear()
+            
+            # Block up to 15s waiting for new records (or shorter if retries pending)
+            timeout = 5 if records else 15
+            try:
+                while True:
+                    record = self._remote_queue.get(timeout=timeout if not records else 0.1)
+                    records.append(record)
+                    timeout = 0.1  # Don't block long once we have something
+            except queue.Empty:
+                pass
+            
+            if self._stop_remote_sync.is_set():
+                # Drain remaining on shutdown (log count, don't lose silently)
+                remaining = len(records)
+                while not self._remote_queue.empty():
+                    try:
+                        records.append(self._remote_queue.get_nowait())
+                        remaining += 1
+                    except queue.Empty:
+                        break
+                if remaining > 0:
+                    logger.warning("Remote sync stopping with %d unsynced records", remaining)
+                break
+            
+            if not records:
+                continue
+            
+            # Ensure remote connection
+            if not self.use_remote:
+                if not self._connect_remote_mongodb():
+                    # Can't connect — retry everything next cycle
+                    retry_batch.extend(records)
+                    continue
+            
+            # Push records to remote one-by-one
+            synced = 0
+            for record in records:
+                nfc_id = str(record.get("nfc_id", ""))
+                date_str = record.get("date", "")[:10]
+                
+                try:
+                    existing = self.remote_db.attendance.find_one({
+                        "nfc_id": nfc_id,
+                        "date": {"$regex": f"^{date_str}"}
+                    })
+                    
+                    if not existing:
+                        clean = {k: v for k, v in record.items() if k != "_id"}
+                        self.remote_db.attendance.insert_one(clean)
+                    
+                    synced += 1
+                except Exception as e:
+                    logger.error("Remote sync error for %s: %s", nfc_id, e)
+                    # Connection likely lost — retry this + remaining records
+                    retry_batch.append(record)
+                    retry_batch.extend(records[records.index(record) + 1:])
+                    self.use_remote = False
+                    break
+            
+            if synced > 0:
+                logger.info("Remote synced %d/%d records to cloud", synced, len(records))
+    
+    def stop_remote_sync(self):
+        """Stop the remote backup sync thread"""
+        self._stop_remote_sync.set()
+        if self._remote_sync_thread and self._remote_sync_thread.is_alive():
+            self._remote_sync_thread.join(timeout=5)
+            logger.info("Remote backup sync thread stopped")
+    
+    # ========================================
     # STATUS & UTILITIES
     # ========================================
     def get_status(self):
@@ -1023,6 +1166,8 @@ class Database:
         
         return {
             "mongodb_connected": self._check_mongodb(),
+            "remote_connected": self.use_remote,
+            "remote_queue_size": self._remote_queue.qsize(),
             "last_sync": self.last_sync,
             "pending_count": len(data.get("pending_attendance", [])),
             "json_file": self.json_file
@@ -1040,13 +1185,22 @@ class Database:
         # Stop sync thread first (flush pending if possible)
         self.stop_sync()
         
+        # Stop remote sync thread
+        self.stop_remote_sync()
+        
         # Stop reconnect thread
         self.stop_reconnect()
         
-        # Close MongoDB connection
+        # Close MongoDB connections
         if self.mongo_client:
             try:
                 self.mongo_client.close()
+            except Exception:
+                pass
+        
+        if self.remote_client:
+            try:
+                self.remote_client.close()
             except Exception:
                 pass
         

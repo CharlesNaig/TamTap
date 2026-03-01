@@ -8,6 +8,7 @@
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 /**
  * DEFAULT LATE THRESHOLD CONFIGURATION (fallback if no section schedule)
@@ -267,7 +268,7 @@ router.get('/summary', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get summary stats error:', error.message);
+        logger.error('Get summary stats error:', error.message);
         res.status(500).json({ error: 'Failed to fetch summary statistics' });
     }
 });
@@ -334,7 +335,7 @@ router.get('/', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get stats error:', error.message);
+        logger.error('Get stats error:', error.message);
         res.status(500).json({ error: 'Failed to fetch statistics' });
     }
 });
@@ -393,7 +394,7 @@ router.get('/daily', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get daily stats error:', error.message);
+        logger.error('Get daily stats error:', error.message);
         res.status(500).json({ error: 'Failed to fetch daily statistics' });
     }
 });
@@ -449,7 +450,7 @@ router.get('/sections', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get section stats error:', error.message);
+        logger.error('Get section stats error:', error.message);
         res.status(500).json({ error: 'Failed to fetch section statistics' });
     }
 });
@@ -505,7 +506,7 @@ router.get('/grades', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get grade stats error:', error.message);
+        logger.error('Get grade stats error:', error.message);
         res.status(500).json({ error: 'Failed to fetch grade statistics' });
     }
 });

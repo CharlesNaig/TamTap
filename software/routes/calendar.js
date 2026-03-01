@@ -11,6 +11,7 @@
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 // ========================================
 // DAY STATUS TYPES
@@ -182,7 +183,7 @@ router.get('/status', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get calendar status error:', error.message);
+        logger.error('Get calendar status error:', error.message);
         res.status(500).json({ error: 'Failed to get calendar status' });
     }
 });
@@ -209,7 +210,7 @@ router.get('/saturday-status', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get Saturday status error:', error.message);
+        logger.error('Get Saturday status error:', error.message);
         res.status(500).json({ error: 'Failed to get Saturday status' });
     }
 });
@@ -249,7 +250,7 @@ router.get('/suspensions', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get suspensions error:', error.message);
+        logger.error('Get suspensions error:', error.message);
         res.status(500).json({ error: 'Failed to get suspensions' });
     }
 });
@@ -311,7 +312,7 @@ router.post('/suspension', async (req, res) => {
         
         const result = await db.collection('calendar').insertOne(record);
         
-        console.log(`[INFO] Suspension created by ${req.session.user.username}: ${date || `${startDate} to ${endDate}`}`);
+        logger.info(`Suspension created by ${req.session.user.username}: ${date || `${startDate} to ${endDate}`}`);
         
         res.json({
             success: true,
@@ -321,7 +322,7 @@ router.post('/suspension', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Create suspension error:', error.message);
+        logger.error('Create suspension error:', error.message);
         res.status(500).json({ error: 'Failed to create suspension' });
     }
 });
@@ -361,7 +362,7 @@ router.delete('/suspension/:id', async (req, res) => {
             return res.status(404).json({ error: 'Suspension not found' });
         }
         
-        console.log(`[INFO] Suspension ${id} deleted by ${req.session.user.username}`);
+        logger.info(`Suspension ${id} deleted by ${req.session.user.username}`);
         
         res.json({
             success: true,
@@ -369,7 +370,7 @@ router.delete('/suspension/:id', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Delete suspension error:', error.message);
+        logger.error('Delete suspension error:', error.message);
         res.status(500).json({ error: 'Failed to delete suspension' });
     }
 });
@@ -411,7 +412,7 @@ router.get('/no-class', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get no-class sessions error:', error.message);
+        logger.error('Get no-class sessions error:', error.message);
         res.status(500).json({ error: 'Failed to get no-class sessions' });
     }
 });
@@ -480,7 +481,7 @@ router.post('/no-class', async (req, res) => {
         
         const result = await db.collection('calendar').insertOne(record);
         
-        console.log(`[INFO] No-class declared by ${user.username}: ${section} on ${date}`);
+        logger.info(`No-class declared by ${user.username}: ${section} on ${date}`);
         
         res.json({
             success: true,
@@ -490,7 +491,7 @@ router.post('/no-class', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Create no-class session error:', error.message);
+        logger.error('Create no-class session error:', error.message);
         res.status(500).json({ error: 'Failed to create no-class session' });
     }
 });
@@ -539,7 +540,7 @@ router.delete('/no-class/:id', async (req, res) => {
         
         await db.collection('calendar').deleteOne({ _id: objectId });
         
-        console.log(`[INFO] No-class ${id} deleted by ${user.username}`);
+        logger.info(`No-class ${id} deleted by ${user.username}`);
         
         res.json({
             success: true,
@@ -547,7 +548,7 @@ router.delete('/no-class/:id', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Delete no-class session error:', error.message);
+        logger.error('Delete no-class session error:', error.message);
         res.status(500).json({ error: 'Failed to delete no-class session' });
     }
 });
@@ -575,7 +576,7 @@ router.get('/saturday-makeups', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get saturday makeups error:', error.message);
+        logger.error('Get saturday makeups error:', error.message);
         res.status(500).json({ error: 'Failed to get saturday makeups' });
     }
 });
@@ -638,7 +639,7 @@ router.post('/saturday-makeup', async (req, res) => {
         
         const result = await db.collection('calendar').insertOne(record);
         
-        console.log(`[INFO] Saturday make-up enabled by ${req.session.user.username}: ${date}`);
+        logger.info(`Saturday make-up enabled by ${req.session.user.username}: ${date}`);
         
         res.json({
             success: true,
@@ -648,7 +649,7 @@ router.post('/saturday-makeup', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Create saturday makeup error:', error.message);
+        logger.error('Create saturday makeup error:', error.message);
         res.status(500).json({ error: 'Failed to create saturday makeup' });
     }
 });
@@ -688,7 +689,7 @@ router.delete('/saturday-makeup/:id', async (req, res) => {
             return res.status(404).json({ error: 'Saturday make-up not found' });
         }
         
-        console.log(`[INFO] Saturday make-up ${id} deleted by ${req.session.user.username}`);
+        logger.info(`Saturday make-up ${id} deleted by ${req.session.user.username}`);
         
         res.json({
             success: true,
@@ -696,7 +697,7 @@ router.delete('/saturday-makeup/:id', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Delete saturday makeup error:', error.message);
+        logger.error('Delete saturday makeup error:', error.message);
         res.status(500).json({ error: 'Failed to delete saturday makeup' });
     }
 });
@@ -763,7 +764,7 @@ router.get('/range', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get calendar range error:', error.message);
+        logger.error('Get calendar range error:', error.message);
         res.status(500).json({ error: 'Failed to get calendar range' });
     }
 });

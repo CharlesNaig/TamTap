@@ -7,6 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 /**
  * Determine collection based on route path
@@ -51,7 +52,7 @@ router.get('/', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get users error:', error.message);
+        logger.error('Get users error:', error.message);
         res.status(500).json({ error: 'Failed to fetch users' });
     }
 });
@@ -93,7 +94,7 @@ router.get('/:nfc_id', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get user error:', error.message);
+        logger.error('Get user error:', error.message);
         res.status(500).json({ error: 'Failed to fetch user' });
     }
 });
@@ -130,7 +131,7 @@ router.get('/grade/:grade', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get students by grade error:', error.message);
+        logger.error('Get students by grade error:', error.message);
         res.status(500).json({ error: 'Failed to fetch students' });
     }
 });
@@ -178,7 +179,7 @@ router.get('/section/:section', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get students by section error:', error.message);
+        logger.error('Get students by section error:', error.message);
         res.status(500).json({ error: 'Failed to fetch students' });
     }
 });

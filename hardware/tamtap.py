@@ -87,7 +87,6 @@ class FaceValidationError:
     NO_FACE_DETECTED = "NO_FACE_DETECTED"
     EYES_NOT_VISIBLE = "EYES_NOT_VISIBLE"
     FACE_PARTIALLY_VISIBLE = "FACE_PARTIALLY_VISIBLE"
-    MULTIPLE_FACES_DETECTED = "MULTIPLE_FACES_DETECTED"
     DETECTION_TIMEOUT = "DETECTION_TIMEOUT"
 
 # File Paths
@@ -777,10 +776,9 @@ def detect_face_in_image(image_path):
             return False, 0, FaceValidationError.NO_FACE_DETECTED
         
         if num_faces > 1:
-            logger.warning("Multiple faces detected (%d), rejecting", num_faces)
-            return False, num_faces, FaceValidationError.MULTIPLE_FACES_DETECTED
+            logger.info("Multiple faces detected (%d), using first face", num_faces)
         
-        # Exactly one face found - validate eyes
+        # At least one face found - validate eyes
         if eye_cascade is None:
             # Skip eye detection if cascade not loaded, accept face only
             logger.warning("Eye cascade not loaded, skipping eye validation")
@@ -967,9 +965,6 @@ def no_face_state(failure_reason=None):
     elif failure_reason == FaceValidationError.FACE_PARTIALLY_VISIBLE:
         line1 = "FACE PARTIAL"
         line2 = "CENTER YOURSELF"
-    elif failure_reason == FaceValidationError.MULTIPLE_FACES_DETECTED:
-        line1 = "MULTIPLE FACES"
-        line2 = "ONE PERSON ONLY"
     elif failure_reason == FaceValidationError.DETECTION_TIMEOUT:
         line1 = "DETECTION SLOW"
         line2 = "TRY AGAIN"

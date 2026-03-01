@@ -7,6 +7,7 @@
 
 const express = require('express');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 /**
  * GET /api/attendance
@@ -66,7 +67,7 @@ router.get('/', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get attendance error:', error.message);
+        logger.error('Get attendance error:', error.message);
         res.status(500).json({ error: 'Failed to fetch attendance' });
     }
 });
@@ -83,7 +84,7 @@ router.get('/:date', async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
-            console.log('[WARN] Database not available for attendance query');
+            logger.warn('Database not available for attendance query');
             return res.status(503).json({ error: 'Database not available' });
         }
         
@@ -110,14 +111,14 @@ router.get('/:date', async (req, res) => {
             }
         }
         
-        console.log('[DEBUG] Attendance query:', JSON.stringify(query));
+        logger.debug('Attendance query:', JSON.stringify(query));
         
         const records = await db.collection('attendance')
             .find(query)
             .sort({ time: 1 })
             .toArray();
         
-        console.log('[DEBUG] Found', records.length, 'attendance records');
+        logger.debug('Found', records.length, 'attendance records');
         
         res.json({
             success: true,
@@ -140,7 +141,7 @@ router.get('/:date', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get attendance by date error:', error.message);
+        logger.error('Get attendance by date error:', error.message);
         res.status(500).json({ error: 'Failed to fetch attendance' });
     }
 });
@@ -213,7 +214,7 @@ router.get('/range/query', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get attendance range error:', error.message);
+        logger.error('Get attendance range error:', error.message);
         res.status(500).json({ error: 'Failed to fetch attendance' });
     }
 });
@@ -247,7 +248,7 @@ router.get('/student/:nfc_id', async (req, res) => {
         if (user && user.role !== 'admin') {
             const teacherSections = user.sections_handled || [];
             if (!teacherSections.includes(student.section)) {
-                console.warn(`[WARN] Unauthorized access attempt: ${user.username} tried to access student in section ${student.section}`);
+                logger.warn(`Unauthorized access attempt: ${user.username} tried to access student in section ${student.section}`);
                 return res.status(403).json({ 
                     success: false, 
                     error: 'Access denied: You are not assigned to this student\'s section' 
@@ -316,7 +317,7 @@ router.get('/student/:nfc_id', async (req, res) => {
         });
         
     } catch (error) {
-        console.error('[ERROR] Get student attendance error:', error.message);
+        logger.error('Get student attendance error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to fetch attendance' });
     }
 });

@@ -12,6 +12,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 const { requireAuth } = require('../middleware/auth');
 
@@ -63,7 +64,7 @@ router.post('/login', async (req, res) => {
         }
 
         if (!user) {
-            console.log(`[WARN] Login failed: user not found - ${username}`);
+            logger.warn(`Login failed: user not found - ${username}`);
             return res.status(401).json({ 
                 success: false, 
                 error: 'Invalid username or password' 
@@ -73,7 +74,7 @@ router.post('/login', async (req, res) => {
         // Verify password
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
-            console.log(`[WARN] Login failed: invalid password - ${username}`);
+            logger.warn(`Login failed: invalid password - ${username}`);
             return res.status(401).json({ 
                 success: false, 
                 error: 'Invalid username or password' 
@@ -105,7 +106,7 @@ router.post('/login', async (req, res) => {
             forcePasswordChange: forcePasswordChange
         };
 
-        console.log(`[INFO] Login successful: ${username} (${role}/${role_type})${forcePasswordChange ? ' [password change required]' : ''}`);
+        logger.info(`Login successful: ${username} (${role}/${role_type})${forcePasswordChange ? ' [password change required]' : ''}`);
 
         res.json({
             success: true,
@@ -121,7 +122,7 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[ERROR] Login error:', error.message);
+        logger.error('Login error:', error.message);
         res.status(500).json({ 
             success: false, 
             error: 'Login failed' 
@@ -138,14 +139,14 @@ router.post('/logout', (req, res) => {
     
     req.session.destroy((err) => {
         if (err) {
-            console.error('[ERROR] Logout error:', err.message);
+            logger.error('Logout error:', err.message);
             return res.status(500).json({ 
                 success: false, 
                 error: 'Logout failed' 
             });
         }
         
-        console.log(`[INFO] Logout: ${username}`);
+        logger.info(`Logout: ${username}`);
         res.json({ success: true });
     });
 });
@@ -238,12 +239,12 @@ router.post('/change-password', requireAuth, async (req, res) => {
         // Update session
         req.session.user.forcePasswordChange = false;
 
-        console.log(`[INFO] Password changed: ${req.user.username}`);
+        logger.info(`Password changed: ${req.user.username}`);
 
         res.json({ success: true, message: 'Password changed successfully' });
 
     } catch (error) {
-        console.error('[ERROR] Change password error:', error.message);
+        logger.error('Change password error:', error.message);
         res.status(500).json({ success: false, error: 'Failed to change password' });
     }
 });

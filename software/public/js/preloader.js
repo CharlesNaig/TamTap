@@ -7,7 +7,7 @@
 (function() {
     'use strict';
 
-    // Minimum preloader display time: random between 3-5 seconds
+    // Minimum preloader display time: random between 1-2 seconds
     const MIN_PRELOADER_TIME = 1000 + Math.random() * 1000;
     let preloaderStartTime = Date.now();
 

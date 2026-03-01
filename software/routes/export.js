@@ -18,6 +18,7 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const router = express.Router();
+const logger = require('../utils/Logger');
 
 const { requireAuth } = require('../middleware/auth');
 
@@ -56,14 +57,14 @@ async function getAttendanceForExport(db, options = {}) {
         query.section = { $in: sections };
     }
     
-    console.log('[DEBUG] Export query:', JSON.stringify(query));
+    logger.debug('Export query:', JSON.stringify(query));
     
     const records = await db.collection('attendance')
         .find(query)
         .sort({ section: 1, date: -1, name: 1 }) // Sort by section first for grouping
         .toArray();
     
-    console.log(`[DEBUG] Found ${records.length} records`);
+    logger.debug(`Found ${records.length} records`);
     return records;
 }
 
@@ -108,7 +109,7 @@ router.get('/xlsx', async (req, res) => {
         }
         
         const { section, from, to, date } = req.query;
-        console.log(`[INFO] XLSX export: section=${section || 'All'}, from=${from}, to=${to}`);
+        logger.info(`XLSX export: section=${section || 'All'}, from=${from}, to=${to}`);
         
         // Get user's sections if teacher
         let sections = null;
@@ -178,10 +179,10 @@ router.get('/xlsx', async (req, res) => {
         await workbook.xlsx.write(res);
         res.end();
         
-        console.log(`[INFO] XLSX export complete: ${records.length} records by ${req.user.username}`);
+        logger.info(`XLSX export complete: ${records.length} records by ${req.user.username}`);
         
     } catch (error) {
-        console.error('[ERROR] XLSX export:', error.message, error.stack);
+        logger.error('XLSX export:', error.message, error.stack);
         if (!res.headersSent) {
             res.status(500).json({ error: 'Export failed', details: error.message });
         }
@@ -415,7 +416,7 @@ router.get('/pdf', async (req, res) => {
         }
         
         const { section, from, to, date } = req.query;
-        console.log(`[INFO] PDF export: section=${section || 'All'}, from=${from}, to=${to}`);
+        logger.info(`PDF export: section=${section || 'All'}, from=${from}, to=${to}`);
         
         // Get user's sections if teacher
         let sections = null;
@@ -663,10 +664,10 @@ router.get('/pdf', async (req, res) => {
         }
         
         doc.end();
-        console.log(`[INFO] PDF export complete: ${records.length} records by ${req.user.username}`);
+        logger.info(`PDF export complete: ${records.length} records by ${req.user.username}`);
         
     } catch (error) {
-        console.error('[ERROR] PDF export:', error.message, error.stack);
+        logger.error('PDF export:', error.message, error.stack);
         if (!res.headersSent) {
             res.status(500).json({ error: 'Export failed', details: error.message });
         }
@@ -718,7 +719,7 @@ router.get('/student/:nfcId/xlsx', async (req, res) => {
 
         if (!student) return res.status(404).json({ error: 'Student not found' });
 
-        console.log(`[INFO] Student XLSX export: ${student.name} (${nfcId}), ${records.length} records by ${req.user.username}`);
+        logger.info(`Student XLSX export: ${student.name} (${nfcId}), ${records.length} records by ${req.user.username}`);
 
         const summary = computeStudentSummary(records);
 
@@ -854,7 +855,7 @@ router.get('/student/:nfcId/xlsx', async (req, res) => {
         res.end();
 
     } catch (error) {
-        console.error('[ERROR] Student XLSX export:', error.message, error.stack);
+        logger.error('Student XLSX export:', error.message, error.stack);
         if (!res.headersSent) res.status(500).json({ error: 'Export failed', details: error.message });
     }
 });
@@ -878,7 +879,7 @@ router.get('/student/:nfcId/pdf', async (req, res) => {
 
         if (!student) return res.status(404).json({ error: 'Student not found' });
 
-        console.log(`[INFO] Student PDF export: ${student.name} (${nfcId}), ${records.length} records by ${req.user.username}`);
+        logger.info(`Student PDF export: ${student.name} (${nfcId}), ${records.length} records by ${req.user.username}`);
 
         const summary = computeStudentSummary(records);
 
@@ -1034,7 +1035,7 @@ router.get('/student/:nfcId/pdf', async (req, res) => {
 
         doc.end();
     } catch (error) {
-        console.error('[ERROR] Student PDF export:', error.message, error.stack);
+        logger.error('Student PDF export:', error.message, error.stack);
         if (!res.headersSent) res.status(500).json({ error: 'Export failed', details: error.message });
     }
 });

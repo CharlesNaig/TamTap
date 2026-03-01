@@ -1,0 +1,127 @@
+/* Della Respira Brand Font */
+@font-face {
+  font-family: "Della Respira";
+  src: url("/assets/fonts/DellaRespira-Regular.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+.font-brand {
+  font-family: "Della Respira", Georgia, serif;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.tab-active {
+  border-bottom: 3px solid #0a8249;
+  color: #0a8249;
+}
+
+/* Dropdown Menu Animation */
+.dropdown-enter {
+  animation: dropdownFade 0.2s ease-out;
+}
+@keyframes dropdownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Active Nav Link */
+.nav-active {
+  position: relative;
+  color: #0a8249;
+}
+.nav-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0a8249, #0eb063);
+  border-radius: 3px 3px 0 0;
+}
+
+/* Skeleton Loading */
+.skeleton {
+  background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+.skeleton-text {
+  border-radius: 4px;
+  height: 1rem;
+}
+.skeleton-text-sm {
+  border-radius: 3px;
+  height: 0.75rem;
+}
+.skeleton-circle {
+  border-radius: 50%;
+}
+
+/* Auth Protection - Hide until verified */
+.auth-loading {
+  visibility: hidden;
+}
+
+/* Console Output Styling */
+.console-output {
+  -ms-overflow-style: thin;
+}
+@supports (scrollbar-width: thin) {
+  .console-output {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 #1f2937;
+  }
+}
+.console-output::-webkit-scrollbar {
+  width: 6px;
+}
+.console-output::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+.console-output::-webkit-scrollbar-thumb {
+  background: #4b5563;
+  border-radius: 3px;
+}
+.console-output::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Pulse animation for live indicator */
+@keyframes pulse-live {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.animate-pulse {
+  animation: pulse-live 1.5s ease-in-out infinite;
+}

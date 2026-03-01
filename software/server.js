@@ -14,7 +14,7 @@
 const express = require('express');
 const http = require('http');
 const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const MongoStore = require('connect-mongo').default;
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');

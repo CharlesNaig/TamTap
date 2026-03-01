@@ -23,6 +23,14 @@ const config = require('./config');
 const logger = require('./utils/Logger');
 
 // ========================================
+// GLOBAL ERROR HANDLERS
+// ========================================
+// Prevent unhandled MongoDB auth errors from crashing the server
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Promise Rejection:', reason?.message || reason);
+});
+
+// ========================================
 // EXPRESS APP SETUP
 // ========================================
 const app = express();
@@ -42,7 +50,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(session({
     ...config.session,
     store: MongoStore.create({
-        mongoUrl: `${config.mongodb.uri}${config.mongodb.database}`,
+        mongoUrl: config.mongodb.uri,
+        dbName: config.mongodb.database,
         ttl: Math.floor(config.session.cookie.maxAge / 1000), // 8 hours in seconds
         touchAfter: 3600, // Only update session once per hour if unchanged
         crypto: {
@@ -68,11 +77,14 @@ async function connectMongoDB() {
         logger.database('Connecting to MongoDB:', config.mongodb.uri.replace(/:[^:@]+@/, ':****@'));
         logger.database('Database name:', config.mongodb.database);
         
-        mongoClient = new MongoClient(config.mongodb.uri, config.mongodb.options);
+        mongoClient = new MongoClient(config.mongodb.uri, {
+            ...config.mongodb.options,
+            authSource: 'admin'  // Explicit auth database
+        });
         await mongoClient.connect();
         db = mongoClient.db(config.mongodb.database);
         
-        // Test connection
+        // Test connection with auth
         await db.command({ ping: 1 });
         logger.success('MongoDB connected successfully');
         
@@ -82,6 +94,12 @@ async function connectMongoDB() {
         return true;
     } catch (error) {
         logger.error('MongoDB connection failed:', error.message);
+        // Clean up failed connection
+        if (mongoClient) {
+            try { await mongoClient.close(); } catch (_) { /* ignore */ }
+            mongoClient = null;
+        }
+        db = null;
         return false;
     }
 }

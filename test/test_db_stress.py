@@ -38,7 +38,7 @@ CLOUD_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_NAME", "tamtap")
 
 # Local MongoDB (Pi LAN)
-LOCAL_URI = "mongodb://tamtapAdmin:tamtap2026@tamtap.local:27017/"
+LOCAL_URI = "mongodb://tamtapAdmin:tamtap2026@tamtap.local:27017/tamtap?authSource=admin"
 
 # JSON test file
 JSON_FILE = os.path.join(PROJECT_ROOT, "test", "test_stress_output.json")
@@ -47,7 +47,7 @@ JSON_FILE = os.path.join(PROJECT_ROOT, "test", "test_stress_output.json")
 TEST_COLLECTION = "stress_test"
 
 # How many records to write per test
-WRITE_COUNT = 50
+WRITE_COUNT = 1500
 
 # ============================================================================
 # FAKE DATA GENERATOR

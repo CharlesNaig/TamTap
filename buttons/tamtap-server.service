@@ -1,11 +1,13 @@
 [Unit]
 Description=TAMTAP Node.js Backend Server
 Documentation=https://github.com/CharlesNaig/TamTap
-After=network.target mongod.service
+After=network.target docker.service
+Requires=docker.service
 
 [Service]
 Type=simple
 WorkingDirectory=/home/charles/TamTap/software
+ExecStartPre=/bin/bash /home/charles/TamTap/wait-for-mongodb.sh
 ExecStart=/home/charles/.nvm/versions/node/v24.13.0/bin/node /home/charles/TamTap/software/server.js
 Restart=on-failure
 RestartSec=5

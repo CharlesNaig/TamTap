@@ -1,7 +1,8 @@
 [Unit]
 Description=TAMTAP GPIO Button Controller
 Documentation=https://github.com/CharlesNaig/TamTap
-After=multi-user.target
+After=tamtap.service
+Requires=tamtap.service
 
 [Service]
 Type=simple

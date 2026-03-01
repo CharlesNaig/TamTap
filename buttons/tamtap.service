@@ -1,7 +1,8 @@
 [Unit]
 Description=TAMTAP NFC Hardware Service
 Documentation=https://github.com/CharlesNaig/TamTap
-After=network.target mongod.service tamtap-server.service
+After=network.target tamtap-server.service
+Requires=tamtap-server.service
 
 [Service]
 Type=simple

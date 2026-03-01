@@ -17,8 +17,8 @@
 set -e
 
 CONTAINER_NAME="tamtap-mongodb"
-MAX_WAIT=60
-POLL_INTERVAL=2
+MAX_WAIT=20
+POLL_INTERVAL=5
 
 echo "[TAMTAP] Waiting for MongoDB container '${CONTAINER_NAME}' to be ready..."
 

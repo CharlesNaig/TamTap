@@ -6,7 +6,7 @@ Requires=tamtap-server.service
 
 [Service]
 Type=simple
-ExecStart=/home/charles/TamTap/startup.sh
+ExecStart=/bin/bash /home/charles/TamTap/startup.sh
 Restart=always
 RestartSec=5
 User=root

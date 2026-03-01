@@ -33,12 +33,20 @@ except ImportError:
 # CONFIG
 # ============================================================================
 
-# From .env
+# From .env — same credentials for both local and cloud
 CLOUD_URI = os.getenv("MONGODB_URI")
 DB_NAME = os.getenv("MONGODB_NAME", "tamtap")
 
-# Local MongoDB (direct localhost, no auth)
-LOCAL_URI = "mongodb://tamtap.local:27017/"
+# Build local URI: reuse credentials from CLOUD_URI, swap host to localhost
+# CLOUD_URI format: mongodb://user:pass@host:port/
+def _build_local_uri(cloud_uri):
+    """Extract credentials from cloud URI and point to localhost."""
+    if not cloud_uri or "@" not in cloud_uri:
+        return "mongodb://localhost:27017/"
+    prefix = cloud_uri.split("@")[0]  # mongodb://user:pass
+    return f"{prefix}@localhost:27017/"
+
+LOCAL_URI = _build_local_uri(CLOUD_URI)
 
 # JSON test file
 JSON_FILE = os.path.join(PROJECT_ROOT, "test", "test_stress_output.json")

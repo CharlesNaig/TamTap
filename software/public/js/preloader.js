@@ -8,7 +8,7 @@
     'use strict';
 
     // Minimum preloader display time: random between 3-5 seconds
-    const MIN_PRELOADER_TIME = 3000 + Math.random() * 2000;
+    const MIN_PRELOADER_TIME = 1000 + Math.random() * 1000;
     let preloaderStartTime = Date.now();
 
     // Immediately cover the screen via CSS (no body needed)

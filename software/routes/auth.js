@@ -11,17 +11,27 @@
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const logger = require('../utils/Logger');
 
 const { requireAuth } = require('../middleware/auth');
+
+// Rate limit login: 5 attempts per minute per IP
+const loginLimiter = rateLimit({
+    windowMs: 60 * 1000,  // 1 minute
+    max: 5,               // 5 attempts
+    message: { success: false, error: 'Too many login attempts. Try again in 1 minute.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
 
 /**
  * POST /api/auth/login
  * Authenticate admin or teacher
  * Body: { username, password }
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {

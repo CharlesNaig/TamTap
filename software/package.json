@@ -1,6 +1,6 @@
 {
   "name": "tamtap-server",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "TAMTAP Attendance System - Express.js API Server with Auth",
   "main": "server.js",
   "scripts": {
@@ -15,6 +15,7 @@
     "dotenv": "^16.3.1",
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.2.1",
     "express-session": "^1.18.0",
     "mongodb": "^6.3.0",
     "multer": "^2.0.2",

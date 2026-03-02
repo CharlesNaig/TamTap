@@ -56,8 +56,13 @@ node server.js                 # Alternative direct start
 
 - Express.js API server
 - Socket.IO for real-time dashboard updates
-- Routes: `/routes/attendance.js`, `/routes/stats.js`, `/routes/students.js`
-- Dashboard: `/public/index.html`
+- Routes (10):  
+  `admin.js` · `archive.js` · `attendance.js` · `auth.js` · `calendar.js`  
+  `export.js` · `logs.js` · `notifications.js` · `schedules.js` · `stats.js` · `students.js`
+- Middleware: `auth.js` (session), `hardwareAuth.js` (Pi API key)
+- Utilities: `Logger.js`, `dateUtils.js`, `filenameSanitizer.js`, `sanitize.js`
+- Dashboard: `/public/dashboard.html`
+- Admin Panel: `/public/admin.html`
 
 ---
 

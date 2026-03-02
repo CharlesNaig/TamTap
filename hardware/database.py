@@ -34,7 +34,7 @@ load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 # MongoDB support (optional - fallback to JSON if unavailable)
 try:
     from pymongo import MongoClient
-    from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError
+    from pymongo.errors import ConnectionFailure, ServerSelectionTimeoutError, DuplicateKeyError
     MONGODB_AVAILABLE = True
 except ImportError:
     MONGODB_AVAILABLE = False
@@ -62,6 +62,7 @@ MONGODB_REMOTE_TIMEOUT = 5000  # 5 seconds (cloud latency tolerance)
 # API Server URL for schedule fetch
 API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
 API_TIMEOUT = 2  # seconds
+HARDWARE_SECRET = os.getenv("HARDWARE_SECRET", "")
 
 # Default schedule thresholds (used if API unavailable)
 DEFAULT_START_TIME = "07:00"
@@ -97,23 +98,41 @@ def get_day_name():
     return days[datetime.now().weekday()]
 
 
+# Simple schedule cache: { "section:YYYY-MM-DD": (timestamp, data) }
+_schedule_cache = {}
+_SCHEDULE_CACHE_TTL = 60  # seconds
+
+
 def fetch_section_schedule(section):
     """
     Fetch today's schedule for a section from the API.
+    Uses a short-lived cache to avoid duplicate HTTP calls within the same minute.
     Returns: dict with schedule (start/end), grace_period_minutes, absent_threshold_minutes
     """
     if not section:
         return None
     
+    today = datetime.now().strftime("%Y-%m-%d")
+    cache_key = f"{section}:{today}"
+    
+    # Check cache
+    cached = _schedule_cache.get(cache_key)
+    if cached:
+        ts, data = cached
+        if (datetime.now().timestamp() - ts) < _SCHEDULE_CACHE_TTL:
+            return data
+    
     try:
         url = f"{API_SERVER_URL}/api/schedules/today/{urllib.parse.quote(section)}"
         req = urllib.request.Request(url, method='GET')
+        req.add_header('X-Hardware-Key', HARDWARE_SECRET)
         
         with urllib.request.urlopen(req, timeout=API_TIMEOUT) as response:
             if response.status == 200:
                 data = json.loads(response.read().decode('utf-8'))
                 if data.get('success'):
                     logger.debug("Fetched schedule for %s: %s", section, data)
+                    _schedule_cache[cache_key] = (datetime.now().timestamp(), data)
                     return data
     except Exception as e:
         logger.debug("Failed to fetch schedule for %s: %s", section, e)
@@ -331,7 +350,7 @@ class Database:
             self.mongo_db.students.create_index("tamtap_id")
             self.mongo_db.teachers.create_index("nfc_id", unique=True)
             self.mongo_db.teachers.create_index("tamtap_id")
-            self.mongo_db.attendance.create_index([("nfc_id", 1), ("date", 1)])
+            self.mongo_db.attendance.create_index([("nfc_id", 1), ("date", 1)], unique=True)
             self.mongo_db.attendance.create_index("date")
         except Exception as e:
             logger.debug("Index creation note: %s", e)
@@ -361,7 +380,7 @@ class Database:
             return False
     
     def _check_mongodb(self):
-        """Check if MongoDB is available, attempt reconnect if needed"""
+        """Check if MongoDB is available (non-blocking, reconnect handled by background thread)"""
         if not MONGODB_AVAILABLE:
             return False
         
@@ -372,12 +391,8 @@ class Database:
             except Exception:
                 logger.warning("MongoDB connection lost - switching to JSON fallback")
                 self.use_mongodb = False
-        else:
-            # Try to reconnect periodically
-            if self._connect_mongodb():
-                logger.info("MongoDB reconnected - syncing data")
-                return True
         
+        # Don't attempt inline reconnect — background _reconnect_loop handles it
         return False
     
     # ========================================
@@ -815,7 +830,7 @@ class Database:
         
         return False
     
-    def save_attendance(self, nfc_id, name, role, photo_path=None, user_data=None):
+    def save_attendance(self, nfc_id, name, role, photo_path=None, user_data=None, schedule_data=None):
         """
         Save attendance record (Write-First, Sync-Later).
         Always writes to JSON first (~5ms), then signals background sync thread.
@@ -832,8 +847,8 @@ class Database:
         # Get section for status calculation
         section = user_data.get("section", "") if user_data else ""
         
-        # Calculate status based on section schedule
-        status = calculate_attendance_status(section, time_str)
+        # Calculate status using pre-fetched schedule (avoids duplicate API call)
+        status = calculate_attendance_status(section, time_str, schedule_data=schedule_data)
         
         # Build record
         record = {
@@ -1031,6 +1046,10 @@ class Database:
                             self.mongo_db.attendance.insert_one(clean)
                         
                         synced_count += 1
+                    except DuplicateKeyError:
+                        # Record already exists (unique index), count as synced
+                        logger.debug("Duplicate record skipped for %s on %s", nfc_id, date_str)
+                        synced_count += 1
                     except Exception as e:
                         logger.error("Sync insert error for %s: %s", nfc_id, e)
                         break  # Stop on first error, retry rest next cycle
@@ -1039,12 +1058,29 @@ class Database:
             
             # Move successfully synced to confirmed, keep failures in pending
             if synced_count > 0:
-                confirmed = pending[:synced_count]
+                synced_records = pending[:synced_count]
+                # Build a set of (nfc_id, date[:10]) keys for synced records
+                synced_keys = set()
+                for rec in synced_records:
+                    key = (str(rec.get("nfc_id", "")), rec.get("date", "")[:10])
+                    synced_keys.add(key)
+                
                 data = self._load_json()
+                # Remove synced records from pending by matching nfc_id+date (not position)
+                remaining_pending = []
+                confirmed = []
+                for rec in data.get("pending_attendance", []):
+                    key = (str(rec.get("nfc_id", "")), rec.get("date", "")[:10])
+                    if key in synced_keys:
+                        confirmed.append(rec)
+                        synced_keys.discard(key)  # Only remove once per key
+                    else:
+                        remaining_pending.append(rec)
+                
                 data["attendance"].extend(confirmed)
-                data["pending_attendance"] = data["pending_attendance"][synced_count:]
+                data["pending_attendance"] = remaining_pending
                 self._save_json(data)
-                logger.info("Synced %d/%d records to MongoDB", synced_count, len(pending))
+                logger.info("Synced %d/%d records to MongoDB", len(confirmed), len(pending))
                 
                 # Queue confirmed records for remote (cloud) backup sync
                 if MONGODB_REMOTE_URI:
@@ -1124,7 +1160,7 @@ class Database:
             
             # Push records to remote one-by-one
             synced = 0
-            for record in records:
+            for idx, record in enumerate(records):
                 nfc_id = str(record.get("nfc_id", ""))
                 date_str = record.get("date", "")[:10]
                 
@@ -1139,11 +1175,13 @@ class Database:
                         self.remote_db.attendance.insert_one(clean)
                     
                     synced += 1
+                except DuplicateKeyError:
+                    # Record already exists on remote, count as synced
+                    synced += 1
                 except Exception as e:
                     logger.error("Remote sync error for %s: %s", nfc_id, e)
                     # Connection likely lost — retry this + remaining records
-                    retry_batch.append(record)
-                    retry_batch.extend(records[records.index(record) + 1:])
+                    retry_batch.extend(records[idx:])
                     self.use_remote = False
                     break
             

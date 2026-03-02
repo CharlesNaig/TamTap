@@ -73,6 +73,52 @@ router.get('/teachers', async (req, res) => {
 });
 
 /**
+ * GET /api/admin/teachers/:id
+ * Get single teacher by ID
+ */
+router.get('/teachers/:id', async (req, res) => {
+    try {
+        const db = req.db;
+        if (!db) {
+            return res.status(503).json({ success: false, error: 'Database not available' });
+        }
+
+        const { ObjectId } = require('mongodb');
+        let objectId;
+        try {
+            objectId = new ObjectId(req.params.id);
+        } catch (e) {
+            return res.status(400).json({ success: false, error: 'Invalid teacher ID format' });
+        }
+
+        const teacher = await db.collection('teachers').findOne(
+            { _id: objectId },
+            { projection: { password: 0 } }
+        );
+
+        if (!teacher) {
+            return res.status(404).json({ success: false, error: 'Teacher not found' });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                id: teacher._id,
+                username: teacher.username,
+                name: teacher.name,
+                email: teacher.email || '',
+                sections_handled: teacher.sections_handled || [],
+                created: teacher.created || ''
+            }
+        });
+
+    } catch (error) {
+        logger.error('Get teacher error:', error.message);
+        res.status(500).json({ success: false, error: 'Failed to fetch teacher' });
+    }
+});
+
+/**
  * POST /api/admin/teachers
  * Register new teacher account
  * Body: { username, password, name, email?, sections_handled? }
@@ -159,6 +205,13 @@ router.put('/teachers/:id', async (req, res) => {
         const teacherId = req.params.id;
         const { name, email, sections_handled, password } = req.body;
 
+        let objectId;
+        try {
+            objectId = new ObjectId(teacherId);
+        } catch (e) {
+            return res.status(400).json({ success: false, error: 'Invalid teacher ID format' });
+        }
+
         const updateData = {};
         if (name) updateData.name = name;
         if (email !== undefined) updateData.email = email;
@@ -174,7 +227,7 @@ router.put('/teachers/:id', async (req, res) => {
         updateData.updated = new Date().toISOString();
 
         const result = await db.collection('teachers').updateOne(
-            { _id: new ObjectId(teacherId) },
+            { _id: objectId },
             { $set: updateData }
         );
 
@@ -206,8 +259,15 @@ router.delete('/teachers/:id', async (req, res) => {
         const { ObjectId } = require('mongodb');
         const teacherId = req.params.id;
 
+        let objectId;
+        try {
+            objectId = new ObjectId(teacherId);
+        } catch (e) {
+            return res.status(400).json({ success: false, error: 'Invalid teacher ID format' });
+        }
+
         const result = await db.collection('teachers').deleteOne({
-            _id: new ObjectId(teacherId)
+            _id: objectId
         });
 
         if (result.deletedCount === 0) {
@@ -246,9 +306,16 @@ router.post('/teachers/:id/reset-password', async (req, res) => {
         const teacherId = req.params.id;
         const { useDefault, newPassword, forceChange } = req.body;
 
+        let objectId;
+        try {
+            objectId = new ObjectId(teacherId);
+        } catch (e) {
+            return res.status(400).json({ success: false, error: 'Invalid teacher ID format' });
+        }
+
         // Find teacher first
         const teacher = await db.collection('teachers').findOne({
-            _id: new ObjectId(teacherId)
+            _id: objectId
         });
 
         if (!teacher) {
@@ -294,7 +361,7 @@ router.post('/teachers/:id/reset-password', async (req, res) => {
         }
 
         await db.collection('teachers').updateOne(
-            { _id: new ObjectId(teacherId) },
+            { _id: objectId },
             { $set: updateData }
         );
 
@@ -319,10 +386,9 @@ router.post('/teachers/:id/reset-password', async (req, res) => {
             forceChange: !!forceChange
         };
 
-        // Only include the default password in response if it was used
-        // (so admin can tell the teacher)
+        // Signal that a default password was used — frontend knows the pattern
         if (isDefaultPassword) {
-            response.defaultPassword = passwordToSet;
+            response.isDefaultPassword = true;
         }
 
         res.json(response);
@@ -401,8 +467,11 @@ router.post('/students', async (req, res) => {
             });
         }
 
+        // Normalize nfc_id to String for consistent storage
+        const normalizedNfcId = String(nfc_id);
+
         // Check if NFC ID exists
-        const existing = await db.collection('students').findOne({ nfc_id: nfc_id });
+        const existing = await db.collection('students').findOne({ nfc_id: normalizedNfcId });
         if (existing) {
             return res.status(409).json({ 
                 success: false, 
@@ -410,24 +479,20 @@ router.post('/students', async (req, res) => {
             });
         }
 
-        // Generate tamtap_id
-        const lastStudent = await db.collection('students')
-            .find({})
-            .sort({ tamtap_id: -1 })
-            .limit(1)
-            .toArray();
-        
-        const nextId = lastStudent.length > 0 
-            ? (parseInt(lastStudent[0].tamtap_id) || 0) + 1 
-            : 1;
-        const tamtap_id = String(nextId).padStart(3, '0');
+        // Generate tamtap_id atomically using counters collection
+        const counter = await db.collection('counters').findOneAndUpdate(
+            { _id: 'tamtap_id' },
+            { $inc: { seq: 1 } },
+            { upsert: true, returnDocument: 'after' }
+        );
+        const tamtap_id = String(counter.seq).padStart(3, '0');
 
         // Build student name
         const studentName = name || `${first_name || ''} ${last_name || ''}`.trim();
 
         // Insert student
         const result = await db.collection('students').insertOne({
-            nfc_id: nfc_id,
+            nfc_id: normalizedNfcId,
             tamtap_id: tamtap_id,
             name: studentName,
             first_name: first_name || '',
@@ -443,7 +508,7 @@ router.post('/students', async (req, res) => {
             success: true,
             message: 'Student registered successfully',
             data: {
-                nfc_id: nfc_id,
+                nfc_id: normalizedNfcId,
                 tamtap_id: tamtap_id,
                 name: studentName,
                 section: section
@@ -477,17 +542,6 @@ router.post('/students/bulk', async (req, res) => {
             });
         }
 
-        // Get starting tamtap_id
-        const lastStudent = await db.collection('students')
-            .find({})
-            .sort({ tamtap_id: -1 })
-            .limit(1)
-            .toArray();
-        
-        let nextId = lastStudent.length > 0 
-            ? (parseInt(lastStudent[0].tamtap_id) || 0) + 1 
-            : 1;
-
         const results = { success: 0, failed: 0, errors: [] };
 
         for (const student of students) {
@@ -498,19 +552,28 @@ router.post('/students/bulk', async (req, res) => {
                     continue;
                 }
 
+                // Normalize nfc_id to String
+                const normalizedNfcId = String(student.nfc_id);
+
                 // Check duplicate
-                const existing = await db.collection('students').findOne({ nfc_id: student.nfc_id });
+                const existing = await db.collection('students').findOne({ nfc_id: normalizedNfcId });
                 if (existing) {
                     results.failed++;
-                    results.errors.push(`NFC ID already exists: ${student.nfc_id}`);
+                    results.errors.push(`NFC ID already exists: ${normalizedNfcId}`);
                     continue;
                 }
 
-                const tamtap_id = String(nextId++).padStart(3, '0');
+                // Generate tamtap_id atomically
+                const counter = await db.collection('counters').findOneAndUpdate(
+                    { _id: 'tamtap_id' },
+                    { $inc: { seq: 1 } },
+                    { upsert: true, returnDocument: 'after' }
+                );
+                const tamtap_id = String(counter.seq).padStart(3, '0');
                 const studentName = student.name || `${student.first_name || ''} ${student.last_name || ''}`.trim();
 
                 await db.collection('students').insertOne({
-                    nfc_id: student.nfc_id,
+                    nfc_id: normalizedNfcId,
                     tamtap_id: tamtap_id,
                     name: studentName,
                     first_name: student.first_name || '',
@@ -607,13 +670,20 @@ router.delete('/students/:nfc_id', async (req, res) => {
             return res.status(404).json({ success: false, error: 'Student not found' });
         }
 
-        // Move to archived_students
+        // Move to archived_students — archive first (safe), then delete
         const archiveDoc = { ...student };
         delete archiveDoc._id;
         archiveDoc.archived_at = new Date().toISOString();
         archiveDoc.archived_by = req.user.username;
 
-        await db.collection('archived_students').insertOne(archiveDoc);
+        try {
+            await db.collection('archived_students').insertOne(archiveDoc);
+        } catch (archiveErr) {
+            logger.error('Archive insert failed for %s: %s', nfcId, archiveErr.message);
+            return res.status(500).json({ success: false, error: 'Failed to archive student record' });
+        }
+
+        // Archive succeeded — safe to delete original
         await db.collection('students').deleteOne({ nfc_id: nfcId });
 
         logger.warn(`Student archived: ${nfcId} by ${req.user.username}`);
@@ -659,6 +729,7 @@ router.post('/students/archive-batch', async (req, res) => {
                 archiveDoc.archived_at = new Date().toISOString();
                 archiveDoc.archived_by = req.user.username;
 
+                // Archive first (recoverable duplicate) then delete (data loss risk)
                 await db.collection('archived_students').insertOne(archiveDoc);
                 await db.collection('students').deleteOne({ nfc_id: nfcId });
                 results.archived++;

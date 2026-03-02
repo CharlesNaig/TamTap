@@ -53,25 +53,39 @@ class NFCReader:
             logger.error("NFC reader init failed: %s", e)
     
     def scan_blocking(self, timeout=30):
-        """Blocking NFC scan with timeout message"""
+        """Blocking NFC scan with enforced timeout via threading"""
         if not self.reader:
             return None
         
         print(f"\n[*] Tap NFC card now... (waiting {timeout}s)")
         print("[*] Press Ctrl+C to cancel\n")
         
+        import threading
+        result = [None]
+        
+        def _read():
+            try:
+                nfc_id, text = self.reader.read()
+                if nfc_id:
+                    result[0] = str(nfc_id)
+            except Exception as e:
+                logger.error("NFC scan error: %s", e)
+        
         try:
-            nfc_id, text = self.reader.read()
-            if nfc_id:
-                logger.info("NFC scanned: %s", nfc_id)
-                return str(nfc_id)
+            t = threading.Thread(target=_read, daemon=True)
+            t.start()
+            t.join(timeout=timeout)
+            
+            if result[0]:
+                logger.info("NFC scanned: %s", result[0])
+                return result[0]
+            else:
+                if t.is_alive():
+                    print("[!] Scan timed out")
+                return None
         except KeyboardInterrupt:
             print("\n[!] Scan cancelled")
             return None
-        except Exception as e:
-            logger.error("NFC scan error: %s", e)
-        
-        return None
 
 # ========================================
 # CLI HELPERS

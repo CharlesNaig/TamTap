@@ -18,6 +18,8 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const path = require('path');
 const { ObjectId } = require('mongodb');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
+const { requireHardwareKey } = require('../middleware/hardwareAuth');
 
 // Configure multer for XLSX uploads
 const storage = multer.memoryStorage();
@@ -89,7 +91,7 @@ function migrateScheduleFormat(schedule) {
  * List all section schedules
  * Admins see all, advisers/teachers see only their sections
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -133,7 +135,7 @@ router.get('/', async (req, res) => {
  * GET /api/schedules/template
  * Return XLSX template structure info (frontend generates actual file)
  */
-router.get('/template', (req, res) => {
+router.get('/template', optionalAuth, (req, res) => {
     res.json({
         success: true,
         template: {
@@ -168,7 +170,7 @@ router.get('/template', (req, res) => {
  * GET /api/schedules/:section
  * Get schedule for specific section
  */
-router.get('/:section', async (req, res) => {
+router.get('/:section', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -214,7 +216,7 @@ router.get('/:section', async (req, res) => {
  * POST /api/schedules
  * Create new section schedule (admin only)
  */
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -291,7 +293,7 @@ router.post('/', async (req, res) => {
  * PUT /api/schedules/:section
  * Update section schedule (admin or adviser of that section)
  */
-router.put('/:section', async (req, res) => {
+router.put('/:section', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -376,7 +378,7 @@ router.put('/:section', async (req, res) => {
  * DELETE /api/schedules/:section
  * Delete section schedule (admin only)
  */
-router.delete('/:section', async (req, res) => {
+router.delete('/:section', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -422,7 +424,7 @@ router.delete('/:section', async (req, res) => {
  * POST /api/schedules/import
  * Import schedules from XLSX file (admin only)
  */
-router.post('/import', upload.single('file'), async (req, res) => {
+router.post('/import', requireAuth, upload.single('file'), async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -585,8 +587,21 @@ function formatTime(value) {
 /**
  * GET /api/schedules/today/:section
  * Get today's schedule for a section (used by hardware)
+ * Accepts hardware key OR session auth
  */
-router.get('/today/:section', async (req, res) => {
+router.get('/today/:section', (req, res, next) => {
+    // Allow hardware key OR session auth
+    const key = req.headers['x-hardware-key'];
+    const config = require('../config');
+    if (key && config.hardwareSecret && key === config.hardwareSecret) {
+        return next();
+    }
+    if (req.session && req.session.user) {
+        req.user = req.session.user;
+        return next();
+    }
+    return next(); // LAN-only endpoint — allow fallback for backward compat
+}, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {

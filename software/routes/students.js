@@ -8,6 +8,10 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/Logger');
+const { requireAuthOrHardwareKey } = require('../middleware/hardwareAuth');
+
+// All student/teacher routes require auth or hardware key
+router.use(requireAuthOrHardwareKey);
 
 /**
  * Determine collection based on route path

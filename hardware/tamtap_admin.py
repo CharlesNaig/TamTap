@@ -700,15 +700,18 @@ def export_data_menu(db):
         print(f"\n[SUCCESS] Exported {len(records)} records to {filename}")
     
     elif choice == '2':
+        import csv
         records = db.get_attendance(today)
         filename = f"{ARCHIVE_DIR}/attendance_{today.replace('-', '')}_{timestamp}.csv"
-        with open(filename, 'w') as f:
-            f.write("TAMTAP_ID,NFC_ID,Name,Role,Date,Time,Session,Grade,Section\n")
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["TAMTAP_ID", "NFC_ID", "Name", "Role", "Date", "Time", "Session", "Grade", "Section"])
             for r in records:
-                line = f"{r.get('tamtap_id', '')},{r.get('nfc_id', '')},{r.get('name', '')},"
-                line += f"{r.get('role', '')},{r.get('date', '')[:10]},{r.get('time', '')},"
-                line += f"{r.get('session', '')},{r.get('grade', '')},{r.get('section', '')}\n"
-                f.write(line)
+                writer.writerow([
+                    r.get('tamtap_id', ''), r.get('nfc_id', ''), r.get('name', ''),
+                    r.get('role', ''), r.get('date', '')[:10], r.get('time', ''),
+                    r.get('session', ''), r.get('grade', ''), r.get('section', '')
+                ])
         print(f"\n[SUCCESS] Exported {len(records)} records to {filename}")
     
     elif choice == '3':
@@ -720,20 +723,24 @@ def export_data_menu(db):
         print(f"\n[SUCCESS] Exported {len(students)} students, {len(teachers)} teachers to {filename}")
     
     elif choice == '4':
+        import csv
         students, teachers = db.get_all_users()
         filename = f"{ARCHIVE_DIR}/users_{timestamp}.csv"
-        with open(filename, 'w') as f:
-            f.write("TAMTAP_ID,NFC_ID,Role,Name,Email,Grade,Section,Registered\n")
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(["TAMTAP_ID", "NFC_ID", "Role", "Name", "Email", "Grade", "Section", "Registered"])
             for s in students:
-                line = f"{s.get('tamtap_id', '')},{s.get('nfc_id', '')},student,"
-                line += f"{s.get('name', '')},{s.get('email', '')},{s.get('grade', '')},"
-                line += f"{s.get('section', '')},{s.get('registered', '')}\n"
-                f.write(line)
+                writer.writerow([
+                    s.get('tamtap_id', ''), s.get('nfc_id', ''), 'student',
+                    s.get('name', ''), s.get('email', ''), s.get('grade', ''),
+                    s.get('section', ''), s.get('registered', '')
+                ])
             for t in teachers:
-                line = f"{t.get('tamtap_id', '')},{t.get('nfc_id', '')},teacher,"
-                line += f"{t.get('name', '')},{t.get('email', '')},,,"
-                line += f"{t.get('registered', '')}\n"
-                f.write(line)
+                writer.writerow([
+                    t.get('tamtap_id', ''), t.get('nfc_id', ''), 'teacher',
+                    t.get('name', ''), t.get('email', ''), '', '',
+                    t.get('registered', '')
+                ])
         print(f"\n[SUCCESS] Exported {len(students) + len(teachers)} users to {filename}")
     
     elif choice == '5':
@@ -792,18 +799,34 @@ def clean_old_photos():
         days_int = 30
     
     cutoff = datetime.now() - timedelta(days=days_int)
+    cutoff_date_str = cutoff.strftime("%Y-%m-%d")
     deleted = 0
+    removed_dirs = 0
     
     if os.path.exists(PHOTO_DIR):
-        for filename in os.listdir(PHOTO_DIR):
-            filepath = os.path.join(PHOTO_DIR, filename)
-            if os.path.isfile(filepath):
-                file_time = datetime.fromtimestamp(os.path.getmtime(filepath))
+        # Photos stored in date subdirectories: PHOTO_DIR/YYYY-MM-DD/*.jpg (H-12)
+        for entry in os.listdir(PHOTO_DIR):
+            entry_path = os.path.join(PHOTO_DIR, entry)
+            
+            if os.path.isdir(entry_path):
+                # Date-named directory — compare directory name
+                if entry <= cutoff_date_str:
+                    # Entire date folder is old — delete it
+                    for f in os.listdir(entry_path):
+                        fpath = os.path.join(entry_path, f)
+                        if os.path.isfile(fpath):
+                            os.remove(fpath)
+                            deleted += 1
+                    os.rmdir(entry_path)
+                    removed_dirs += 1
+            elif os.path.isfile(entry_path):
+                # Legacy flat file — check by mtime
+                file_time = datetime.fromtimestamp(os.path.getmtime(entry_path))
                 if file_time < cutoff:
-                    os.remove(filepath)
+                    os.remove(entry_path)
                     deleted += 1
     
-    print(f"\n[SUCCESS] Deleted {deleted} old photos")
+    print(f"\n[SUCCESS] Deleted {deleted} old photos, removed {removed_dirs} date folders")
 
 
 def compact_json(db):
@@ -819,7 +842,9 @@ def compact_json(db):
     
     db._save_json(json_data)
     
-    file_size = os.path.getsize(DB_FILE) if os.path.exists(DB_FILE) else 0
+    # Use the db's own json_file path (C-9: DB_FILE was undefined)
+    json_path = db.json_file
+    file_size = os.path.getsize(json_path) if os.path.exists(json_path) else 0
     print(f"\n[SUCCESS] Database compacted ({file_size} bytes)")
 
 
@@ -842,7 +867,16 @@ def sync_to_mongodb(db):
     synced = 0
     for record in pending:
         try:
-            db.mongo_db.attendance.insert_one(record)
+            # Dedup check before insert (same pattern as _sync_loop)
+            nfc_id = str(record.get("nfc_id", ""))
+            date_str = record.get("date", "")[:10]
+            existing = db.mongo_db.attendance.find_one({
+                "nfc_id": nfc_id,
+                "date": {"$regex": f"^{date_str}"}
+            })
+            if not existing:
+                clean = {k: v for k, v in record.items() if k != "_id"}
+                db.mongo_db.attendance.insert_one(clean)
             synced += 1
         except Exception:
             pass
@@ -969,9 +1003,11 @@ def view_statistics(db):
 # ========================================
 def main():
     """Main entry point"""
+    global _db_ref
     logger.info("Starting TAMTAP Admin CLI...")
     
     db = Database()
+    _db_ref = db
     
     try:
         while True:
@@ -1017,9 +1053,16 @@ def main():
 # ========================================
 # SIGNAL HANDLER
 # ========================================
+_db_ref = None  # Module-level ref set by main() for clean shutdown
+
 def signal_handler(sig, frame):
-    """Handle shutdown signals"""
+    """Handle shutdown signals and close DB connection"""
     print("\n\n[*] Shutdown signal received")
+    if _db_ref is not None:
+        try:
+            _db_ref.close()
+        except Exception:
+            pass
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)

@@ -127,8 +127,8 @@ async function createIndexes() {
         await db.collection('teachers').createIndex({ tamtap_id: 1 });
         await db.collection('teachers').createIndex({ username: 1 }, { unique: true });
         
-        // Attendance indexes
-        await db.collection('attendance').createIndex({ nfc_id: 1, date: 1 });
+        // Attendance indexes — unique prevents duplicate attendance per student per day
+        await db.collection('attendance').createIndex({ nfc_id: 1, date: 1 }, { unique: true });
         await db.collection('attendance').createIndex({ date: -1 });
         
         // Calendar indexes (for academic calendar logic)
@@ -142,6 +142,21 @@ async function createIndexes() {
         // Schedules indexes (section schedules with adviser assignments)
         await db.collection('schedules').createIndex({ section: 1 }, { unique: true });
         await db.collection('schedules').createIndex({ adviser_id: 1 });
+        
+        // Initialize tamtap_id counter if not exists
+        const existingCounter = await db.collection('counters').findOne({ _id: 'tamtap_id' });
+        if (!existingCounter) {
+            // Seed from max existing tamtap_id across students and teachers
+            const [maxStudent, maxTeacher] = await Promise.all([
+                db.collection('students').find({}).sort({ tamtap_id: -1 }).limit(1).toArray(),
+                db.collection('teachers').find({}).sort({ tamtap_id: -1 }).limit(1).toArray()
+            ]);
+            const maxStudentId = maxStudent.length > 0 ? (parseInt(maxStudent[0].tamtap_id) || 0) : 0;
+            const maxTeacherId = maxTeacher.length > 0 ? (parseInt(maxTeacher[0].tamtap_id) || 0) : 0;
+            const seedValue = Math.max(maxStudentId, maxTeacherId);
+            await db.collection('counters').insertOne({ _id: 'tamtap_id', seq: seedValue });
+            logger.info(`Initialized tamtap_id counter at ${seedValue}`);
+        }
         
         // Clean up: Remove nfc_id field from teachers where it's null (prevents sparse index issues)
         await db.collection('teachers').updateMany(
@@ -264,6 +279,7 @@ const schedulesRoutes = require('./routes/schedules');
 const notificationsRoutes = require('./routes/notifications');
 const logsRoutes = require('./routes/logs');
 const archiveRoutes = require('./routes/archive');
+const { requireHardwareKey } = require('./middleware/hardwareAuth');
 
 // Mount routes
 app.use('/api/auth', authRoutes);
@@ -278,32 +294,6 @@ app.use('/api/schedules', schedulesRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/archive', archiveRoutes);
-
-// ========================================
-// DEBUG ENDPOINT (Remove in production)
-// ========================================
-app.get('/api/debug/attendance', async (req, res) => {
-    try {
-        if (!db) {
-            return res.json({ error: 'Database not connected' });
-        }
-        
-        const count = await db.collection('attendance').countDocuments();
-        const latest = await db.collection('attendance')
-            .find({})
-            .sort({ date: -1 })
-            .limit(5)
-            .toArray();
-        
-        res.json({
-            mongodb_connected: true,
-            total_records: count,
-            latest_5: latest
-        });
-    } catch (e) {
-        res.json({ error: e.message });
-    }
-});
 
 // ========================================
 // PUBLIC GALLERY ENDPOINT (for Login Page)
@@ -322,9 +312,10 @@ app.get('/api/gallery/recent', async (req, res) => {
         
         const limit = Math.min(parseInt(req.query.limit) || 20, 50);
         
-        // Get recent attendance records with photos
+        // Get recent attendance records with photos — project only needed fields
         const records = await db.collection('attendance')
-            .find({ photo: { $exists: true, $ne: null, $ne: '' } })
+            .find({ photo: { $exists: true, $nin: [null, ''] } })
+            .project({ photo: 1, date: 1, time: 1 })
             .sort({ date: -1, time: -1 })
             .limit(limit)
             .toArray();
@@ -333,9 +324,7 @@ app.get('/api/gallery/recent', async (req, res) => {
             const dateOnly = r.date ? r.date.split(' ')[0] : '';
             return {
                 url: `/photos/${dateOnly}/${r.photo}`,
-                name: r.name?.split(' ')[0] || 'Student',
-                time: r.time || '',
-                section: r.section || ''
+                time: r.time || ''
             };
         });
         
@@ -355,8 +344,9 @@ app.get('/api/gallery/recent', async (req, res) => {
  * POST /api/hardware/attendance
  * Called by tamtap.py when attendance is recorded
  * Broadcasts to all connected Socket.IO clients
+ * Protected by hardware API key
  */
-app.post('/api/hardware/attendance', (req, res) => {
+app.post('/api/hardware/attendance', requireHardwareKey, (req, res) => {
     try {
         const record = req.body;
         
@@ -392,8 +382,9 @@ app.post('/api/hardware/attendance', (req, res) => {
 /**
  * POST /api/hardware/fail
  * Called by tamtap.py when attendance fails (no face detected or schedule declined)
+ * Protected by hardware API key
  */
-app.post('/api/hardware/fail', (req, res) => {
+app.post('/api/hardware/fail', requireHardwareKey, (req, res) => {
     try {
         const data = req.body;
         const reason = data.reason || 'unknown';
@@ -434,8 +425,9 @@ app.post('/api/hardware/fail', (req, res) => {
 /**
  * POST /api/hardware/status
  * Called by tamtap.py for system status updates
+ * Protected by hardware API key
  */
-app.post('/api/hardware/status', (req, res) => {
+app.post('/api/hardware/status', requireHardwareKey, (req, res) => {
     try {
         const status = req.body;
         

@@ -3,18 +3,6 @@
    Extracted from dashboard.html <style> block
    =========================================== */
 
-/* Della Respira Brand Font */
-@font-face {
-  font-family: "Della Respira";
-  src: url("/assets/fonts/DellaRespira-Regular.ttf") format("truetype");
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-.font-brand {
-  font-family: "Della Respira", Georgia, serif;
-}
-
 /* Animations */
 .fade-in {
   animation: fadeIn 0.3s ease-in;

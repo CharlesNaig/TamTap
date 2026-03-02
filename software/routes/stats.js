@@ -8,7 +8,13 @@
 
 const express = require('express');
 const router = express.Router();
+const { getPhilippineDate } = require('../utils/dateUtils');
 const logger = require('../utils/Logger');
+const { requireAuthOrHardwareKey } = require('../middleware/hardwareAuth');
+const { sanitizeDate } = require('../utils/sanitize');
+
+// All stats routes require auth or hardware key
+router.use(requireAuthOrHardwareKey);
 
 /**
  * DEFAULT LATE THRESHOLD CONFIGURATION (fallback if no section schedule)
@@ -130,7 +136,7 @@ router.get('/summary', async (req, res) => {
         
         loadCalendarHelper();
         
-        const dateParam = req.query.date || new Date().toISOString().split('T')[0];
+        const dateParam = sanitizeDate(req.query.date) || getPhilippineDate();
         const section = req.query.section;
         const sections = req.query.sections;
         
@@ -284,7 +290,7 @@ router.get('/', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = getPhilippineDate();
         
         // Get counts
         const [studentCount, teacherCount, todayAttendance, totalAttendance] = await Promise.all([
@@ -358,31 +364,46 @@ router.get('/daily', async (req, res) => {
         const days = parseInt(req.query.days) || 7;
         const section = req.query.section;
         const sections = req.query.sections;
-        const dailyStats = [];
         
-        for (let i = 0; i < days; i++) {
-            const date = new Date();
-            date.setDate(date.getDate() - i);
-            const dateStr = date.toISOString().split('T')[0];
-            
-            // Build query with optional section filter
-            const query = { date: { $regex: `^${dateStr}` } };
-            
-            if (section) {
-                query.section = section;
-            } else if (sections) {
-                const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
-                if (sectionList.length > 0) {
-                    query.section = { $in: sectionList };
-                }
+        // Build date range for aggregation (M-2: single query instead of N+1)
+        const { getPhilippineDateObj } = require('../utils/dateUtils');
+        const endDate = getPhilippineDateObj();
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - (days - 1));
+        const startStr = startDate.toISOString().split('T')[0];
+        const endStr = endDate.toISOString().split('T')[0];
+        
+        // Build match filter
+        const matchFilter = { date: { $gte: startStr, $lte: endStr + '\uffff' } };
+        if (section) {
+            matchFilter.section = section;
+        } else if (sections) {
+            const sectionList = sections.split(',').map(s => s.trim()).filter(Boolean);
+            if (sectionList.length > 0) {
+                matchFilter.section = { $in: sectionList };
             }
-            
-            const count = await db.collection('attendance').countDocuments(query);
-            
+        }
+        
+        const pipeline = [
+            { $match: matchFilter },
+            { $group: { _id: { $substr: ['$date', 0, 10] }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ];
+        
+        const aggResults = await db.collection('attendance').aggregate(pipeline).toArray();
+        const countMap = {};
+        for (const r of aggResults) countMap[r._id] = r.count;
+        
+        // Fill all days (including zero-count days)
+        const dailyStats = [];
+        for (let i = days - 1; i >= 0; i--) {
+            const d = new Date(endDate);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
             dailyStats.push({
                 date: dateStr,
-                day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                count: count
+                day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                count: countMap[dateStr] || 0
             });
         }
         
@@ -390,7 +411,7 @@ router.get('/daily', async (req, res) => {
             success: true,
             days: days,
             section: section || sections || 'all',
-            data: dailyStats.reverse()  // Oldest first
+            data: dailyStats
         });
         
     } catch (error) {
@@ -410,35 +431,34 @@ router.get('/sections', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = getPhilippineDate();
         
-        // Get all sections from students
-        const sections = await db.collection('students').distinct('section');
+        // Single aggregation instead of N+1 queries per section (M-3)
+        const [studentsBySection, attendanceBySection] = await Promise.all([
+            db.collection('students').aggregate([
+                { $match: { section: { $exists: true, $ne: null } } },
+                { $group: { _id: '$section', total: { $sum: 1 } } }
+            ]).toArray(),
+            db.collection('attendance').aggregate([
+                { $match: { date: { $regex: `^${today}` }, section: { $exists: true, $ne: null } } },
+                { $group: { _id: '$section', present: { $sum: 1 } } }
+            ]).toArray()
+        ]);
         
-        const sectionStats = [];
+        const attendanceMap = {};
+        for (const a of attendanceBySection) attendanceMap[a._id] = a.present;
         
-        for (const section of sections) {
-            if (!section) continue;
-            
-            // Count students in section
-            const totalInSection = await db.collection('students').countDocuments({ section });
-            
-            // Count attendance today for this section
-            const presentToday = await db.collection('attendance').countDocuments({
-                date: { $regex: `^${today}` },
-                section: section
-            });
-            
-            sectionStats.push({
-                section: section,
-                total: totalInSection,
-                present: presentToday,
-                absent: totalInSection - presentToday,
-                rate: totalInSection > 0 
-                    ? Math.round((presentToday / totalInSection) * 100) 
-                    : 0
-            });
-        }
+        const sectionStats = studentsBySection.map(s => {
+            const total = s.total;
+            const present = attendanceMap[s._id] || 0;
+            return {
+                section: s._id,
+                total,
+                present,
+                absent: total - present,
+                rate: total > 0 ? Math.round((present / total) * 100) : 0
+            };
+        });
         
         // Sort by section name
         sectionStats.sort((a, b) => a.section.localeCompare(b.section));
@@ -466,35 +486,34 @@ router.get('/grades', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const today = new Date().toISOString().split('T')[0];
+        const today = getPhilippineDate();
         
-        // Get all grades from students
-        const grades = await db.collection('students').distinct('grade');
+        // Single aggregation instead of N+1 queries per grade (M-3)
+        const [studentsByGrade, attendanceByGrade] = await Promise.all([
+            db.collection('students').aggregate([
+                { $match: { grade: { $exists: true, $ne: null } } },
+                { $group: { _id: '$grade', total: { $sum: 1 } } }
+            ]).toArray(),
+            db.collection('attendance').aggregate([
+                { $match: { date: { $regex: `^${today}` }, grade: { $exists: true, $ne: null } } },
+                { $group: { _id: '$grade', present: { $sum: 1 } } }
+            ]).toArray()
+        ]);
         
-        const gradeStats = [];
+        const gradeAttMap = {};
+        for (const a of attendanceByGrade) gradeAttMap[a._id] = a.present;
         
-        for (const grade of grades) {
-            if (!grade) continue;
-            
-            // Count students in grade
-            const totalInGrade = await db.collection('students').countDocuments({ grade });
-            
-            // Count attendance today for this grade
-            const presentToday = await db.collection('attendance').countDocuments({
-                date: { $regex: `^${today}` },
-                grade: grade
-            });
-            
-            gradeStats.push({
-                grade: grade,
-                total: totalInGrade,
-                present: presentToday,
-                absent: totalInGrade - presentToday,
-                rate: totalInGrade > 0 
-                    ? Math.round((presentToday / totalInGrade) * 100) 
-                    : 0
-            });
-        }
+        const gradeStats = studentsByGrade.map(g => {
+            const total = g.total;
+            const present = gradeAttMap[g._id] || 0;
+            return {
+                grade: g._id,
+                total,
+                present,
+                absent: total - present,
+                rate: total > 0 ? Math.round((present / total) * 100) : 0
+            };
+        });
         
         // Sort by grade
         gradeStats.sort((a, b) => a.grade.localeCompare(b.grade));

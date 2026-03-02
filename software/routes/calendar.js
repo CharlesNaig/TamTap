@@ -12,6 +12,8 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/Logger');
+const { getPhilippineDate } = require('../utils/dateUtils');
+const { requireAuth, optionalAuth } = require('../middleware/auth');
 
 // ========================================
 // DAY STATUS TYPES
@@ -158,14 +160,14 @@ async function getDayStatus(db, dateStr, section = null) {
 // @query date - YYYY-MM-DD (default: today)
 // @query section - Optional section filter
 // ========================================
-router.get('/status', async (req, res) => {
+router.get('/status', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const dateStr = req.query.date || new Date().toISOString().split('T')[0];
+        const dateStr = req.query.date || getPhilippineDate();
         const section = req.query.section || null;
         
         // Validate date format
@@ -192,7 +194,7 @@ router.get('/status', async (req, res) => {
 // GET /api/calendar/saturday-status
 // Get Saturday class setting (public)
 // ========================================
-router.get('/saturday-status', async (req, res) => {
+router.get('/saturday-status', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -221,7 +223,7 @@ router.get('/saturday-status', async (req, res) => {
 // @query from - Start date filter
 // @query to - End date filter
 // ========================================
-router.get('/suspensions', async (req, res) => {
+router.get('/suspensions', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -263,7 +265,7 @@ router.get('/suspensions', async (req, res) => {
 // @body endDate - Range end (YYYY-MM-DD)
 // @body reason - Required reason
 // ========================================
-router.post('/suspension', async (req, res) => {
+router.post('/suspension', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -331,7 +333,7 @@ router.post('/suspension', async (req, res) => {
 // DELETE /api/calendar/suspension/:id
 // Remove suspension (Admin only)
 // ========================================
-router.delete('/suspension/:id', async (req, res) => {
+router.delete('/suspension/:id', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -382,7 +384,7 @@ router.delete('/suspension/:id', async (req, res) => {
 // @query from - Start date filter
 // @query to - End date filter
 // ========================================
-router.get('/no-class', async (req, res) => {
+router.get('/no-class', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -424,7 +426,7 @@ router.get('/no-class', async (req, res) => {
 // @body section - Section (must be in teacher's sections_handled)
 // @body reason - Required reason
 // ========================================
-router.post('/no-class', async (req, res) => {
+router.post('/no-class', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -500,7 +502,7 @@ router.post('/no-class', async (req, res) => {
 // DELETE /api/calendar/no-class/:id
 // Remove no-class session (Teacher/Admin)
 // ========================================
-router.delete('/no-class/:id', async (req, res) => {
+router.delete('/no-class/:id', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -557,7 +559,7 @@ router.delete('/no-class/:id', async (req, res) => {
 // GET /api/calendar/saturday-makeups
 // List Saturday make-up days
 // ========================================
-router.get('/saturday-makeups', async (req, res) => {
+router.get('/saturday-makeups', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -587,7 +589,7 @@ router.get('/saturday-makeups', async (req, res) => {
 // @body date - Saturday date (YYYY-MM-DD)
 // @body reason - Optional reason
 // ========================================
-router.post('/saturday-makeup', async (req, res) => {
+router.post('/saturday-makeup', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -658,7 +660,7 @@ router.post('/saturday-makeup', async (req, res) => {
 // DELETE /api/calendar/saturday-makeup/:id
 // Remove Saturday make-up day (Admin only)
 // ========================================
-router.delete('/saturday-makeup/:id', async (req, res) => {
+router.delete('/saturday-makeup/:id', requireAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -709,7 +711,7 @@ router.delete('/saturday-makeup/:id', async (req, res) => {
 // @query to - End date (YYYY-MM-DD)
 // @query section - Optional section filter
 // ========================================
-router.get('/range', async (req, res) => {
+router.get('/range', optionalAuth, async (req, res) => {
     try {
         const db = req.db;
         if (!db) {
@@ -725,6 +727,17 @@ router.get('/range', async (req, res) => {
         // Validate date formats
         if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
             return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD' });
+        }
+        
+        // Cap range to 366 days max to prevent DoS (M-7)
+        const fromDate = new Date(from + 'T00:00:00');
+        const toDate = new Date(to + 'T00:00:00');
+        const diffDays = Math.ceil((toDate - fromDate) / (1000 * 60 * 60 * 24));
+        if (diffDays < 0) {
+            return res.status(400).json({ error: '"from" must be before "to"' });
+        }
+        if (diffDays > 366) {
+            return res.status(400).json({ error: 'Date range cannot exceed 366 days' });
         }
         
         // Generate dates in range

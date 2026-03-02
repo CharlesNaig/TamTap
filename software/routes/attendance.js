@@ -8,6 +8,12 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/Logger');
+const { getPhilippineDate } = require('../utils/dateUtils');
+const { requireAuth } = require('../middleware/auth');
+const { requireAuthOrHardwareKey } = require('../middleware/hardwareAuth');
+
+// All attendance routes require auth (session) or hardware key
+router.use(requireAuthOrHardwareKey);
 
 /**
  * GET /api/attendance
@@ -23,7 +29,7 @@ router.get('/', async (req, res) => {
             return res.status(503).json({ error: 'Database not available' });
         }
         
-        const today = new Date().toISOString().split('T')[0];  // YYYY-MM-DD
+        const today = getPhilippineDate();  // YYYY-MM-DD
         const section = req.query.section;
         const sections = req.query.sections; // comma-separated list
         

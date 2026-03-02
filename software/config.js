@@ -32,6 +32,7 @@ const config = {
         cookie: {
             httpOnly: true,
             secure: false,  // Set true if using HTTPS
+            sameSite: 'Strict',  // CSRF protection for LAN-only deployment
             maxAge: 8 * 60 * 60 * 1000  // 8 hours
         }
     },
@@ -52,6 +53,9 @@ const config = {
         pingTimeout: 60000,
         pingInterval: 25000
     },
+
+    // Hardware Secret (shared with Raspberry Pi)
+    hardwareSecret: process.env.HARDWARE_SECRET || '',
 
     // API Configuration
     api: {

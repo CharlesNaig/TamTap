@@ -103,6 +103,7 @@ _use_external_storage = False
 # API Server Configuration (from .env)
 API_SERVER_URL = os.getenv("TAMTAP_API_URL", "http://localhost:3000")
 API_TIMEOUT = 2  # seconds
+HARDWARE_SECRET = os.getenv("HARDWARE_SECRET", "")
 
 # ========================================
 # 🔁 STATE MACHINE
@@ -281,17 +282,17 @@ def init_photo_storage():
             os.remove(test_file)
             
             _use_external_storage = True
-            logging.info(f"[STORAGE] Using external SD card: {EXTERNAL_PHOTO_DIR}")
+            logging.info("[STORAGE] Using external SD card: %s", EXTERNAL_PHOTO_DIR)
             return EXTERNAL_PHOTO_DIR, True
             
         except (IOError, OSError, PermissionError) as e:
-            logging.warning(f"[STORAGE] External SD not writable: {e}")
+            logging.warning("[STORAGE] External SD not writable: %s", e)
     else:
-        logging.info(f"[STORAGE] External SD not mounted at {EXTERNAL_PHOTO_DIR}")
+        logging.info("[STORAGE] External SD not mounted at %s", EXTERNAL_PHOTO_DIR)
     
     # Fallback to internal storage
     _use_external_storage = False
-    logging.info(f"[STORAGE] Using internal storage: {PHOTO_BASE_DIR}")
+    logging.info("[STORAGE] Using internal storage: %s", PHOTO_BASE_DIR)
     return PHOTO_BASE_DIR, False
 
 def get_active_photo_dir():
@@ -412,6 +413,7 @@ class LCD:
         self.address = address
         self.bus = None
         self.initialized = False
+        self._backlight = LCD_BACKLIGHT  # Instance-level backlight state (H-14)
         self._init_lcd()
     
     def _init_lcd(self):
@@ -452,7 +454,7 @@ class LCD:
         if not self.bus:
             return
         try:
-            byte = (data & 0xF0) | LCD_BACKLIGHT
+            byte = (data & 0xF0) | self._backlight
             self.bus.write_byte(self.address, byte)
             self._pulse_enable(byte)
         except Exception:
@@ -475,12 +477,12 @@ class LCD:
             return
         try:
             # High nibble
-            high = mode | (bits & 0xF0) | LCD_BACKLIGHT
+            high = mode | (bits & 0xF0) | self._backlight
             self.bus.write_byte(self.address, high)
             self._pulse_enable(high)
             
             # Low nibble
-            low = mode | ((bits << 4) & 0xF0) | LCD_BACKLIGHT
+            low = mode | ((bits << 4) & 0xF0) | self._backlight
             self.bus.write_byte(self.address, low)
             self._pulse_enable(low)
         except Exception:
@@ -507,11 +509,10 @@ class LCD:
     
     def backlight(self, on=True):
         """Control backlight"""
-        global LCD_BACKLIGHT
-        LCD_BACKLIGHT = 0x08 if on else 0x00
+        self._backlight = 0x08 if on else 0x00
         if self.bus:
             try:
-                self.bus.write_byte(self.address, LCD_BACKLIGHT)
+                self.bus.write_byte(self.address, self._backlight)
             except Exception:
                 pass
     
@@ -545,7 +546,7 @@ lcd = LCD()
 # 🔊 FEEDBACK FUNCTIONS
 # ========================================
 def beep(count=1, duration=0.1, pause=0.1):
-    """Non-blocking buzzer beeps"""
+    """Blocking buzzer beeps — total time = count * duration + (count-1) * pause"""
     for i in range(count):
         GPIO.output(GPIO_BUZZER, GPIO.HIGH)
         time.sleep(duration)
@@ -595,9 +596,9 @@ class Database(SharedDatabase):
         
         return None, None, None
     
-    def save_attendance_record(self, nfc_id, name, role, photo_path, user_data=None):
+    def save_attendance_record(self, nfc_id, name, role, photo_path, user_data=None, schedule_data=None):
         """Save attendance record - wrapper for save_attendance"""
-        return self.save_attendance(nfc_id, name, role, photo_path, user_data)
+        return self.save_attendance(nfc_id, name, role, photo_path, user_data, schedule_data=schedule_data)
 
 # Initialize database
 db = Database()
@@ -624,7 +625,10 @@ def notify_api_server(endpoint, data):
         req = urllib.request.Request(
             url,
             data=json_data,
-            headers={'Content-Type': 'application/json'},
+            headers={
+                'Content-Type': 'application/json',
+                'X-Hardware-Key': HARDWARE_SECRET
+            },
             method='POST'
         )
         
@@ -975,7 +979,7 @@ def no_face_state(failure_reason=None):
     lcd.show(line1, line2)
     led_on(GPIO_RED_LED)
     beep(count=3, duration=0.1, pause=0.1)
-    time.sleep(1.0)
+    time.sleep(0.6)  # M-15: Reduced from 1.0s
     led_off(GPIO_RED_LED)
 
 def success_state(name):
@@ -985,7 +989,7 @@ def success_state(name):
     lcd.show("WELCOME", display_name)
     led_on(GPIO_GREEN_LED)
     beep(count=2, duration=0.1, pause=0.1)
-    time.sleep(1.0)
+    time.sleep(0.6)  # M-14: Reduced from 1.0s
     led_off(GPIO_GREEN_LED)
 
 def shutdown_state():
@@ -1093,9 +1097,12 @@ def process_card(nfc_id):
         current_state = State.IDLE
         return False
     
-    # Take attendance photo (required for dashboard) - pass user_data for naming
-    lcd.show("TAKING PHOTO", "SMILE!")
-    photo_path = take_attendance_photo(user_data)
+    # Reuse detection photo as attendance photo (C-6: avoids redundant camera capture)
+    photo_path = detection_photo
+    if not photo_path or not os.path.exists(photo_path):
+        # Fallback: take a new photo only if detection photo unavailable
+        lcd.show("TAKING PHOTO", "SMILE!")
+        photo_path = take_attendance_photo(user_data)
     
     if not photo_path:
         logger.warning("Photo capture failed for %s", name)
@@ -1112,7 +1119,7 @@ def process_card(nfc_id):
         return False
     
     # Save attendance record with photo
-    if db.save_attendance_record(nfc_id, name, role, photo_path, user_data):
+    if db.save_attendance_record(nfc_id, name, role, photo_path, user_data, schedule_data=schedule_data):
         # === STATE: SUCCESS ===
         current_state = State.SUCCESS
         success_state(name)
@@ -1139,16 +1146,16 @@ def process_card(nfc_id):
 # ========================================
 # SIGNAL HANDLERS
 # ========================================
-shutdown_in_progress = False
+shutdown_event = threading.Event()
 
 def signal_handler(sig, frame):
     """Handle shutdown signals gracefully"""
-    global current_state, shutdown_in_progress
+    global current_state
     
-    if shutdown_in_progress:
+    if shutdown_event.is_set():
         return
     
-    shutdown_in_progress = True
+    shutdown_event.set()
     logger.info("Shutdown signal received")
     current_state = State.SHUTDOWN
     
@@ -1257,7 +1264,7 @@ def main():
                     
                     # Debounce delay - wait for card to be removed
                     # This prevents duplicate reads of the same card
-                    time.sleep(2.0)
+                    time.sleep(1.5)  # M-16: Reduced from 2.0s
                     
                     # Reset reader after successful read cycle
                     rfid_manager._cleanup_after_read()
@@ -1265,7 +1272,7 @@ def main():
                 time.sleep(NFC_POLL_INTERVAL)
                 
             except Exception as e:
-                if not shutdown_in_progress:
+                if not shutdown_event.is_set():
                     logger.error("Main loop error: %s", e)
                     # Reset reader on error
                     rfid_manager.reset_reader()
@@ -1274,7 +1281,7 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
-        if not shutdown_in_progress:
+        if not shutdown_event.is_set():
             try:
                 shutdown_state()
                 time.sleep(0.5)

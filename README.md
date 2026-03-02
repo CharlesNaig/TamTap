@@ -8,7 +8,7 @@
 
 **Grade 12 ICT B Group 5 Capstone | FEU Roosevelt Marikina | S.Y. 2025–2026**
 
-![Version](https://img.shields.io/badge/version-2.1.0-green)
+![Version](https://img.shields.io/badge/version-2.2.0-green)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)
 ![Python](https://img.shields.io/badge/python-3.11-blue)
@@ -213,6 +213,8 @@ I2C SCL ─── LCD SCL
 | `mongodb` | MongoDB native driver |
 | `socket.io` | Real-time WebSocket events |
 | `express-session` | Session-based authentication |
+| `connect-mongo` | MongoDB-backed session store |
+| `express-rate-limit` | Rate limiting (login, API) |
 | `bcryptjs` | Password hashing |
 | `cors` | Cross-origin requests (LAN) |
 | `multer` | File upload handling (XLSX import) |
@@ -281,9 +283,11 @@ TamTap/
 │   ├── config.js                 # Server configuration
 │   ├── package.json              # Node.js dependencies
 │   ├── middleware/
-│   │   └── auth.js               # Session auth middleware (requireAuth, requireAdmin)
+│   │   ├── auth.js               # Session auth middleware (requireAuth, requireAdmin)
+│   │   └── hardwareAuth.js       # Hardware API key auth (Pi → Server)
 │   ├── routes/
 │   │   ├── admin.js              # Teacher/student CRUD (admin only)
+│   │   ├── archive.js            # Attendance archival management
 │   │   ├── attendance.js         # Attendance queries (today, by date, range)
 │   │   ├── auth.js               # Login/logout/session
 │   │   ├── calendar.js           # Academic calendar management
@@ -296,16 +300,34 @@ TamTap/
 │   ├── scripts/
 │   │   └── bootstrap-admin.js    # Initial admin account creation
 │   ├── utils/
-│   │   └── Logger.js             # Signale-based structured logging
+│   │   ├── Logger.js             # Signale-based structured logging
+│   │   ├── dateUtils.js          # Philippine timezone date utilities
+│   │   ├── filenameSanitizer.js  # Photo filename sanitization
+│   │   └── sanitize.js           # Input sanitization (NoSQL injection guard)
 │   └── public/
 │       ├── index.html            # Landing page
 │       ├── login.html            # Login page
 │       ├── dashboard.html        # Main dashboard
 │       ├── admin.html            # Admin panel
+│       ├── 404.html              # Custom 404 error page
+│       ├── privacy.html          # Privacy policy page
+│       ├── terms.html            # Terms of use page
+│       ├── researchers.html      # Research team page
 │       ├── css/
-│       │   └── preloader.css     # Loading animation styles
+│       │   ├── fonts.css         # Shared @font-face definitions
+│       │   ├── preloader.css     # Loading animation styles
+│       │   ├── dashboard.css     # Dashboard page styles
+│       │   ├── admin.css         # Admin panel styles
+│       │   ├── login.css         # Login page styles
+│       │   ├── researchers.css   # Researchers page styles
+│       │   └── 404.css           # 404 page styles
 │       └── js/
-│           └── preloader.js      # Loading animation logic
+│           ├── preloader.js      # Loading animation logic
+│           ├── tailwind-config.js # Shared Tailwind CSS configuration
+│           ├── utils.js          # Shared utilities (XSS escape, etc.)
+│           ├── dashboard.js      # Dashboard page logic
+│           ├── admin.js          # Admin panel logic
+│           └── login.js          # Login page logic
 │
 └── test/
     ├── test_rfid.py              # RFID reader test
@@ -380,7 +402,9 @@ SESSION_SECRET=your-random-secret-here
 
 # Hardware → Server communication
 TAMTAP_API_URL=http://localhost:3000
-API_URL=http://localhost:3000
+
+# Hardware API Key (shared secret between Pi and server, prevents forged attendance)
+HARDWARE_SECRET=your-hardware-secret-here
 ```
 
 ### 3. Setup Python Virtual Environment
@@ -519,15 +543,30 @@ Base URL: `http://<host>:3000/api`
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
+| **Teachers** | | | |
 | `GET` | `/api/admin/teachers` | Admin | List teachers with sections |
+| `GET` | `/api/admin/teachers/:id` | Admin | Get teacher by ID |
 | `POST` | `/api/admin/teachers` | Admin | Register new teacher |
 | `PUT` | `/api/admin/teachers/:id` | Admin | Update teacher |
 | `DELETE` | `/api/admin/teachers/:id` | Admin | Delete teacher |
+| `POST` | `/api/admin/teachers/:id/reset-password` | Admin | Reset teacher password |
+| **Students** | | | |
+| `GET` | `/api/admin/students` | Admin | List students (paginated, filterable) |
 | `POST` | `/api/admin/students` | Admin | Register new student |
 | `POST` | `/api/admin/students/bulk` | Admin | Bulk register (CSV) |
 | `PUT` | `/api/admin/students/:nfc_id` | Admin | Update student |
 | `DELETE` | `/api/admin/students/:nfc_id` | Admin | Delete student |
+| `POST` | `/api/admin/students/archive-batch` | Admin | Archive multiple students |
+| `GET` | `/api/admin/students/archived` | Admin | List archived students |
+| `POST` | `/api/admin/students/restore` | Admin | Restore archived student |
+| `DELETE` | `/api/admin/students/archived/:nfc_id` | Admin | Permanently delete archived |
+| `POST` | `/api/admin/students/delete-batch` | Admin | Permanently delete batch |
+| **Sections & Settings** | | | |
 | `GET` | `/api/admin/sections` | Admin | List all sections |
+| `GET` | `/api/admin/settings` | Admin | Get all settings |
+| `GET` | `/api/admin/settings/:key` | Admin | Get setting by key |
+| `PUT` | `/api/admin/settings/:key` | Admin | Update setting value |
+| `POST` | `/api/admin/settings/saturday-toggle` | Admin | Toggle Saturday classes |
 
 ### Attendance
 
@@ -590,13 +629,13 @@ Base URL: `http://<host>:3000/api`
 | `GET` | `/api/logs` | Admin | All service logs |
 | `GET` | `/api/logs/:service` | Admin | Logs by service (`buttons`, `server`, `hardware`) |
 
-### Hardware Bridge (Internal)
+### Hardware Bridge (API Key Protected)
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/hardware/attendance` | Internal | Record from tamtap.py |
-| `POST` | `/api/hardware/fail` | Internal | Failure from tamtap.py |
-| `POST` | `/api/hardware/status` | Internal | Status update from tamtap.py |
+| `POST` | `/api/hardware/attendance` | Hardware Key | Record from tamtap.py |
+| `POST` | `/api/hardware/fail` | Hardware Key | Failure from tamtap.py |
+| `POST` | `/api/hardware/status` | Hardware Key | Status update from tamtap.py |
 
 ### Health Check
 
@@ -757,12 +796,23 @@ schedules.createIndex({ adviser_id: 1 });
 
 Only these events are emitted (contract-enforced):
 
+### Attendance Events (hardware → dashboard)
+
 | Event | Direction | Payload | Description |
 |---|---|---|---|
 | `attendance:new` | Server → Client | `{ nfc_id, name, role, date, time, session, photo, section }` | New attendance recorded |
 | `attendance:fail` | Server → Client | `{ nfc_id, name, reason, decline_code }` | Attendance failed |
 | `camera:snapshot` | Server → Client | `{ photo_url }` | Camera snapshot taken |
 | `system:status` | Server → Client | `{ status, mongodb, clients, hardware }` | System health update |
+
+### Log Streaming Events (admin panel ↔ server)
+
+| Event | Direction | Payload | Description |
+|---|---|---|---|
+| `logs:subscribe` | Client → Server | `{ service }` | Client requests real-time log stream |
+| `logs:entry` | Server → Client | `{ timestamp, message, service }` | Server pushes a log entry |
+| `logs:error` | Server → Client | `{ error }` | Server reports log stream error |
+| `logs:unsubscribe` | Client → Server | `{ service }` | Client stops log stream |
 
 **⚠️ No custom events may be added without updating the contract.**
 
@@ -826,18 +876,23 @@ Each attendance cycle **must** complete within **≤ 3.5 seconds**:
 
 | Page | Path | Description |
 |---|---|---|
-| Landing | `/index.html` | Public landing page |
+| Landing | `/index.html` | Public landing page with hero slideshow |
 | Login | `/login.html` | Username/password login (session) |
 | Dashboard | `/dashboard.html` | Real-time attendance feed + charts |
 | Admin | `/admin.html` | Student/teacher management, schedules, calendar, logs |
+| Privacy | `/privacy.html` | Privacy policy (Data Privacy Act compliance) |
+| Terms | `/terms.html` | Terms of use |
+| Researchers | `/researchers.html` | Research team profiles |
+| 404 | `/404.html` | Custom error page |
 
-### Frontend Rules
+### Frontend Architecture
 
 - **Multi-page HTML** — no SPA frameworks
-- **One JS file per page** — no bundling
+- **One JS file per page** — extracted to `public/js/` (no inline `<script>` blocks)
+- **Shared utilities** — `utils.js` (XSS escape), `tailwind-config.js`, `fonts.css`
 - **Fetch API only** — no Axios
 - **WebSocket** only for live updates — not for data fetching
-- **Tailwind CSS** via CDN or compiled CSS
+- **Tailwind CSS** via CDN with shared config (`tailwind-config.js`)
 - **Role-based UI** via JS logic: `admin` / `adviser` / `teacher`
 
 ---

@@ -34,6 +34,9 @@ Don't sugar coat my prompt tell me stright and clear what to do. plus give your 
 
 * Python 3.11
 * Libraries: `RPi.GPIO`, `mfrc522`, `smbus`, `subprocess`
+* Database: `pymongo` (MongoDB driver)
+* Face detection: `opencv-python-headless` (Haar cascade only)
+* Config: `python-dotenv`
 * Camera: `rpicam-still` (snapshot only)
 
 ### Backend
@@ -107,10 +110,17 @@ attendance.createIndex({ uid: 1, date: 1 }, { unique: true });
 
 Copilot may emit **ONLY** these events:
 
+### Attendance Events (hardware → dashboard)
 * `attendance:new`
 * `attendance:fail`
 * `camera:snapshot`
 * `system:status`
+
+### Log Streaming Events (admin panel ↔ server)
+* `logs:subscribe` — client requests real-time log stream
+* `logs:entry` — server pushes a log entry to subscribed client
+* `logs:error` — server reports log stream error to client
+* `logs:unsubscribe` — client stops log stream
 
 Do not invent new event names.
 

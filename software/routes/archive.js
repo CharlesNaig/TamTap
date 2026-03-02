@@ -13,11 +13,14 @@
  */
 
 const express = require('express');
+const { getPhilippineDate } = require('../utils/dateUtils');
 const router = express.Router();
 const fs = require('fs');
+const fsPromises = require('fs').promises;
 const path = require('path');
 const logger = require('../utils/Logger');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { sanitizeDate } = require('../utils/sanitize');
 
 // All archive routes require admin role
 router.use(requireAuth, requireAdmin);
@@ -33,11 +36,15 @@ const JSON_DB_PATH = path.join(__dirname, '..', '..', 'database', 'tamtap_users.
  * Remove matching attendance records from the JSON fallback file.
  * @param {Object} query - MongoDB-style query used to match records
  */
-function syncJsonAfterClear(query) {
+async function syncJsonAfterClear(query) {
     try {
-        if (!fs.existsSync(JSON_DB_PATH)) return;
+        try {
+            await fsPromises.access(JSON_DB_PATH);
+        } catch {
+            return; // File does not exist
+        }
 
-        const raw = fs.readFileSync(JSON_DB_PATH, 'utf-8');
+        const raw = await fsPromises.readFile(JSON_DB_PATH, 'utf-8');
         const data = JSON.parse(raw);
 
         const originalAtt = (data.attendance || []).length;
@@ -53,7 +60,7 @@ function syncJsonAfterClear(query) {
         const removedPend = originalPend - data.pending_attendance.length;
 
         if (removedAtt > 0 || removedPend > 0) {
-            fs.writeFileSync(JSON_DB_PATH, JSON.stringify(data, null, 2));
+            await fsPromises.writeFile(JSON_DB_PATH, JSON.stringify(data, null, 2));
             logger.info(`JSON sync: removed ${removedAtt} attendance + ${removedPend} pending records`);
         }
     } catch (e) {
@@ -90,9 +97,10 @@ function buildMatchFn(query) {
 // ----------------------------------------
 function buildQuery(date, nfc_id, section) {
     const query = {};
-    if (date)    query.date    = { $regex: `^${date}` };
-    if (nfc_id)  query.nfc_id  = nfc_id;
-    if (section) query.section = section;
+    const safeDate = sanitizeDate(date);
+    if (safeDate)  query.date    = { $regex: `^${safeDate}` };
+    if (nfc_id)    query.nfc_id  = nfc_id;
+    if (section)   query.section = section;
     return query;
 }
 
@@ -107,7 +115,8 @@ function generateArchiveName(scope, { nfc_id, section, date } = {}) {
 }
 
 function parseScopeQuery(scope, { date, nfc_id, section, nfc_ids } = {}) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = getPhilippineDate();
+    const safeDate = sanitizeDate(date);
     let query = {};
     switch (scope) {
         case 'today':
@@ -117,23 +126,23 @@ function parseScopeQuery(scope, { date, nfc_id, section, nfc_ids } = {}) {
             query = {};
             break;
         case 'date':
-            if (!date) return { error: 'date required' };
-            query = { date: { $regex: `^${date}` } };
+            if (!safeDate) return { error: 'Valid date required (YYYY-MM-DD)' };
+            query = { date: { $regex: `^${safeDate}` } };
             break;
         case 'student':
             if (!nfc_id) return { error: 'nfc_id required' };
             query = { nfc_id };
-            if (date) query.date = { $regex: `^${date}` };
+            if (safeDate) query.date = { $regex: `^${safeDate}` };
             break;
         case 'section':
             if (!section) return { error: 'section required' };
             query = { section };
-            if (date) query.date = { $regex: `^${date}` };
+            if (safeDate) query.date = { $regex: `^${safeDate}` };
             break;
         case 'bulk':
             if (!nfc_ids || !nfc_ids.length) return { error: 'nfc_ids required' };
             query = { nfc_id: { $in: nfc_ids } };
-            if (date) query.date = { $regex: `^${date}` };
+            if (safeDate) query.date = { $regex: `^${safeDate}` };
             break;
         default:
             return { error: 'Invalid scope. Use: today, all, date, student, section, bulk' };
@@ -271,32 +280,35 @@ router.get('/stats', async (req, res) => {
         const db = req.db;
         if (!db) return res.status(503).json({ success: false, error: 'Database unavailable' });
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = getPhilippineDate();
 
-        const [total, todayCount, archiveCount, records] = await Promise.all([
+        // Use aggregation instead of loading all records into memory (H-5)
+        const [total, todayCount, archiveCount, distinctStats] = await Promise.all([
             db.collection('attendance').countDocuments(),
             db.collection('attendance').countDocuments({ date: { $regex: `^${today}` } }),
             db.collection('attendance_archives').countDocuments(),
-            db.collection('attendance').find({}).project({ date: 1, section: 1, nfc_id: 1 }).toArray()
+            db.collection('attendance').aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        dates: { $addToSet: { $substr: ['$date', 0, 10] } },
+                        sections: { $addToSet: '$section' },
+                        students: { $addToSet: '$nfc_id' }
+                    }
+                }
+            ]).toArray()
         ]);
 
-        const dates    = new Set();
-        const sections = new Set();
-        const students = new Set();
-        for (const r of records) {
-            if (r.date)    dates.add(r.date.split(' ')[0]);
-            if (r.section) sections.add(r.section);
-            if (r.nfc_id)  students.add(r.nfc_id);
-        }
+        const agg = distinctStats[0] || { dates: [], sections: [], students: [] };
 
         res.json({
             success: true,
             stats: {
                 total,
                 today: todayCount,
-                uniqueDates:    dates.size,
-                uniqueSections: sections.size,
-                uniqueStudents: students.size,
+                uniqueDates:    agg.dates.length,
+                uniqueSections: agg.sections.filter(Boolean).length,
+                uniqueStudents: agg.students.filter(Boolean).length,
                 archives:       archiveCount
             }
         });
@@ -431,7 +443,7 @@ router.post('/clear', async (req, res) => {
         const result = await db.collection('attendance').deleteMany(query);
         
         // Sync JSON fallback: remove matching records so hardware doesn't see stale data
-        syncJsonAfterClear(query);
+        await syncJsonAfterClear(query);
         
         logger.info(`Cleared ${result.deletedCount} records (scope: ${scope}) by ${req.user.username}`);
 

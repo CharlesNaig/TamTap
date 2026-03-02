@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 const { ObjectId } = require('mongodb');
 const logger = require('../utils/Logger');
+const { getPhilippineDate } = require('../utils/dateUtils');
 
 // Excuse reasons
 const EXCUSE_REASONS = [
@@ -24,17 +25,7 @@ const EXCUSE_REASONS = [
     'Other'
 ];
 
-/**
- * Get Philippine date string (YYYY-MM-DD)
- */
-function getPhilippineDate() {
-    const now = new Date();
-    const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
-    const year = phTime.getFullYear();
-    const month = String(phTime.getMonth() + 1).padStart(2, '0');
-    const day = String(phTime.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
+// getPhilippineDate imported from utils/dateUtils
 
 /**
  * GET /api/notifications/pending

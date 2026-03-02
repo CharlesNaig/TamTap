@@ -19,6 +19,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const logger = require('../utils/Logger');
+const { sanitizeDate } = require('../utils/sanitize');
 
 const { requireAuth } = require('../middleware/auth');
 
@@ -41,7 +42,8 @@ async function getAttendanceForExport(db, options = {}) {
     
     // Date filtering
     if (date) {
-        query.date = { $regex: `^${date}` };
+        const safeDate = sanitizeDate(date);
+        if (safeDate) query.date = { $regex: `^${safeDate}` };
     } else if (from && to) {
         query.date = { $gte: from, $lte: to + ' 23:59:59' };
     } else if (from) {
@@ -267,9 +269,17 @@ async function createAttendanceSheet(workbook, sheetName, records, options) {
     });
     headerRow.height = 22;
     
+    // Pre-load student info in one query instead of N+1 (M-1)
+    const uniqueNfcIds = [...new Set(records.map(r => r.nfc_id).filter(Boolean))];
+    const studentDocs = uniqueNfcIds.length > 0
+        ? await db.collection('students').find({ nfc_id: { $in: uniqueNfcIds } }).toArray()
+        : [];
+    const studentMap = {};
+    for (const s of studentDocs) studentMap[s.nfc_id] = s;
+    
     // Row 6+: Data rows
     for (const record of records) {
-        const student = await getStudentInfo(db, record.nfc_id);
+        const student = studentMap[record.nfc_id] || null;
         const dateOnly = record.date ? record.date.split(' ')[0] : '';
         const photoPath = record.photo ? `/photos/${dateOnly}/${record.photo}` : '';
         

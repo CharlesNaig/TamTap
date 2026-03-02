@@ -19,7 +19,7 @@
     "express-session": "^1.18.0",
     "mongodb": "^6.3.0",
     "multer": "^2.0.2",
-    "pdfkit": "^0.15.2",
+    "pdfkit": "^0.17.0",
     "signale": "^1.4.0",
     "socket.io": "^4.7.4",
     "xlsx": "^0.18.5"

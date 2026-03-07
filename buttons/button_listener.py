@@ -24,7 +24,7 @@ from threading import Lock
 # gpiozero used here (not RPi.GPIO) because button_listener only needs
 # event-driven press/release handlers. tamtap.py uses RPi.GPIO for
 # low-level SPI/I2C/LED control which gpiozero doesn't cover well.
-from gpiozero import Button
+from gpiozero import Button # type: ignore
 
 # =============================================================================
 # CONFIGURATION

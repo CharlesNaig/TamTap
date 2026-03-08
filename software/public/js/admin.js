@@ -13,14 +13,7 @@ async function checkAuth() {
         }
         const data = await res.json();
         if (!data.success || data.user.role !== 'admin') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Access Denied',
-                text: 'Admin access required',
-                confirmButtonColor: '#0a8249'
-            }).then(() => {
-                window.location.replace('/dashboard');
-            });
+            window.location.replace('/dashboard');
             return;
         }
         currentUser = data.user;

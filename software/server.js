@@ -229,6 +229,17 @@ app.set('broadcast', broadcast);
 // STATIC FILES
 // ========================================
 
+// Server-side guard: redirect non-admin users away from /admin
+app.get('/admin', (req, res, next) => {
+    if (!req.session || !req.session.user) {
+        return res.redirect('/login');
+    }
+    if (req.session.user.role !== 'admin') {
+        return res.redirect('/dashboard');
+    }
+    next();
+});
+
 // Serve frontend files (extensions: ['html'] enables clean URLs like /login → /login.html)
 app.use(express.static(path.join(__dirname, 'public'), {
     extensions: ['html']

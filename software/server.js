@@ -128,6 +128,13 @@ async function createIndexes() {
         await db.collection('teachers').createIndex({ username: 1 }, { unique: true });
         
         // Attendance indexes — unique prevents duplicate attendance per student per day
+        // Drop old non-unique index if it exists before creating unique version
+        try {
+            await db.collection('attendance').dropIndex('nfc_id_1_date_1');
+            logger.database('Dropped old attendance.nfc_id+date index (was non-unique)');
+        } catch (e) {
+            // Index may not exist or already unique, ignore
+        }
         await db.collection('attendance').createIndex({ nfc_id: 1, date: 1 }, { unique: true });
         await db.collection('attendance').createIndex({ date: -1 });
         

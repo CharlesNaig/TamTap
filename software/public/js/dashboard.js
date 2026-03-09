@@ -15,6 +15,16 @@ let currentStudentName = null;       // Name of student in detail modal
 let rosterSort = { field: 'name', dir: 'asc' }; // Roster sort state
 
 // ========================================
+// PERMISSION HELPER
+// Only admin or section adviser can mark excused/absent
+// ========================================
+function canMarkAttendance(section) {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    return currentUser.advised_section === section;
+}
+
+// ========================================
 // TIMEZONE HELPER - Asia/Manila (UTC+8)
 // ========================================
 function getPhilippineDate() {
@@ -109,8 +119,13 @@ async function initDashboard() {
     // Connect Socket.IO
     initSocket();
     
-    // Load notification count
-    loadNotificationCount();
+    // Load notification count (only for admin/advisers)
+    if (currentUser.role === 'admin' || currentUser.advised_section) {
+        loadNotificationCount();
+    } else {
+        const notifBtn = document.getElementById('notification-btn');
+        if (notifBtn) notifBtn.classList.add('hidden');
+    }
     
     // Load initial data
     refreshData();
@@ -1196,7 +1211,7 @@ function renderTable(records) {
                 <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
             </td>
             <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
-                ${(r.status === 'present' || r.status === 'late') ? `
+                ${(r.status === 'present' || r.status === 'late') && canMarkAttendance(r.section) ? `
                     <button onclick="event.stopPropagation(); markExcused('${r.nfc_id}', '${escapeHtml(r.name)}')"
                             class="text-[#2664EB] hover:bg-blue-50 p-1.5 rounded-lg transition" title="Mark Excused">
                         <i class="fas fa-calendar-check text-xs"></i>
@@ -1261,7 +1276,7 @@ function renderMobileCards(records) {
                 </div>
                 <div class="flex-shrink-0 flex items-center gap-1.5">
                     <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${r.section || '--'}</span>
-                    ${(r.status === 'present' || r.status === 'late') ? `
+                    ${(r.status === 'present' || r.status === 'late') && canMarkAttendance(r.section) ? `
                         <button onclick="event.stopPropagation(); markExcused('${r.nfc_id}', '${escapeHtml(r.name)}')"
                                 class="text-[#2664EB] hover:bg-blue-50 p-1.5 rounded-lg transition" title="Mark Excused">
                             <i class="fas fa-calendar-check text-xs"></i>
@@ -1302,7 +1317,7 @@ function addRecordToTable(record, prepend = false) {
             <span class="bg-feu-green/10 text-feu-green px-2 py-0.5 rounded text-xs">${record.section || '--'}</span>
         </td>
         <td class="px-3 lg:px-4 py-2 lg:py-3 text-center">
-            ${(record.status === 'present' || record.status === 'late') ? `
+            ${(record.status === 'present' || record.status === 'late') && canMarkAttendance(record.section) ? `
                 <button onclick="event.stopPropagation(); markExcused('${record.nfc_id}', '${escapeHtml(record.name)}')"
                         class="text-[#2664EB] hover:bg-blue-50 p-1.5 rounded-lg transition" title="Mark Excused">
                     <i class="fas fa-calendar-check text-xs"></i>
@@ -1917,6 +1932,17 @@ async function markExcused(nfcId, name) {
             body: JSON.stringify({ nfc_id: nfcId, reason, note })
         });
         
+        if (res.status === 403) {
+            const errData = await res.json();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Not Authorized',
+                text: errData.error || 'Only the section adviser can mark attendance status',
+                confirmButtonColor: '#0a8249'
+            });
+            return;
+        }
+        
         const data = await res.json();
         
         if (data.success) {
@@ -1962,6 +1988,17 @@ async function markAbsent(nfcId, name) {
             credentials: 'include',
             body: JSON.stringify({ nfc_id: nfcId })
         });
+        
+        if (res.status === 403) {
+            const errData = await res.json();
+            Swal.fire({
+                icon: 'warning',
+                title: 'Not Authorized',
+                text: errData.error || 'Only the section adviser can mark attendance status',
+                confirmButtonColor: '#0a8249'
+            });
+            return;
+        }
         
         const data = await res.json();
         

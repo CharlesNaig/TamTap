@@ -47,17 +47,14 @@ router.get('/pending', async (req, res) => {
         const today = getPhilippineDate();
 
         // Get all students (filtered by user's sections if not admin)
+        // Only advisers and admin see pending notifications — subject teachers cannot act on them
         let studentQuery = {};
         if (user.role !== 'admin') {
-            const sections = [];
-            if (user.advised_section) sections.push(user.advised_section);
-            if (user.sections_handled) sections.push(...user.sections_handled);
-            if (sections.length > 0) {
-                studentQuery.section = { $in: sections };
-            } else {
-                // No sections assigned, return empty
-                return res.json({ success: true, count: 0, data: [] });
+            if (!user.advised_section) {
+                // Non-adviser teacher: no actionable notifications
+                return res.json({ success: true, count: 0, date: today, sections: 0, data: [] });
             }
+            studentQuery.section = user.advised_section;
         }
 
         const allStudents = await db.collection('students')
@@ -139,16 +136,13 @@ router.get('/count', async (req, res) => {
         const today = getPhilippineDate();
 
         // Build student query based on user's sections
+        // Only advisers and admin get a count — subject teachers get 0
         let studentQuery = {};
         if (user.role !== 'admin') {
-            const sections = [];
-            if (user.advised_section) sections.push(user.advised_section);
-            if (user.sections_handled) sections.push(...user.sections_handled);
-            if (sections.length > 0) {
-                studentQuery.section = { $in: sections };
-            } else {
+            if (!user.advised_section) {
                 return res.json({ success: true, count: 0 });
             }
+            studentQuery.section = user.advised_section;
         }
 
         // Count students
@@ -234,13 +228,12 @@ router.post('/mark-excused', async (req, res) => {
             return res.status(404).json({ error: 'Student not found' });
         }
 
-        // Check permissions - admin can mark any, teacher only their sections
+        // Check permissions - only admin or section adviser can mark excused
         if (user.role !== 'admin') {
-            const userSections = [];
-            if (user.advised_section) userSections.push(user.advised_section);
-            if (user.sections_handled) userSections.push(...user.sections_handled);
-            if (!userSections.includes(student.section)) {
-                return res.status(403).json({ error: 'Not authorized to mark this student' });
+            if (!user.advised_section || user.advised_section !== student.section) {
+                return res.status(403).json({ 
+                    error: 'Only the section adviser or admin can mark students as excused' 
+                });
             }
         }
 
@@ -351,13 +344,12 @@ router.post('/mark-absent', async (req, res) => {
             return res.status(404).json({ error: 'Student not found' });
         }
 
-        // Check permissions
+        // Check permissions - only admin or section adviser can mark absent
         if (user.role !== 'admin') {
-            const userSections = [];
-            if (user.advised_section) userSections.push(user.advised_section);
-            if (user.sections_handled) userSections.push(...user.sections_handled);
-            if (!userSections.includes(student.section)) {
-                return res.status(403).json({ error: 'Not authorized to mark this student' });
+            if (!user.advised_section || user.advised_section !== student.section) {
+                return res.status(403).json({ 
+                    error: 'Only the section adviser or admin can mark students as absent' 
+                });
             }
         }
 

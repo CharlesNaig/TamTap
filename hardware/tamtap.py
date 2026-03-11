@@ -702,8 +702,8 @@ def capture_photo_for_detection(filename, timeout_ms=1000):
             [
                 'rpicam-still',
                 '-t', str(timeout_ms),
-                '--width', '600',
-                '--height', '800',
+                '--width', '1024',
+                '--height', '1024',
                 '--metering', 'spot',
                 '-o', filename
             ],

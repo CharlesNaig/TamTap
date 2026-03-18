@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>TamTap Diagram Editor</title>
+  <meta name="description"
+    content="TamTap interactive wiring diagram editor with multi-select, grouping, and component library" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <div id="toolbar">
+    <span id="title-bar">&#9670; TamTap Editor</span>
+    <span class="save-indicator" id="save-status">&#9679; saved</span>
+    <div class="tool-sep"></div>
+    <button class="tool-btn active" id="btn-select" onclick="setMode('select')">
+      <svg viewBox="0 0 24 24" fill="currentColor">
+        <path d="M4 0l16 12-7 2-4 8z" />
+      </svg>Select
+    </button>
+    <button class="tool-btn" id="btn-wire" onclick="setMode('wire')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M5 12h14M15 8l4 4-4 4" />
+      </svg>Wire
+    </button>
+    <button class="tool-btn" onclick="addBox()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <line x1="8" y1="12" x2="16" y2="12" />
+        <line x1="12" y1="8" x2="12" y2="16" />
+      </svg>Box
+    </button>
+    <button class="tool-btn" onclick="addLabel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+      </svg>Text
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="zoomIn()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        <line x1="11" y1="8" x2="11" y2="14" />
+        <line x1="8" y1="11" x2="14" y2="11" />
+      </svg>
+    </button>
+    <button class="tool-btn" onclick="zoomOut()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        <line x1="8" y1="11" x2="14" y2="11" />
+      </svg>
+    </button>
+    <button class="tool-btn" onclick="resetView()">Fit</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="undoAction()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="9,14 4,9 9,4" />
+        <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
+      </svg>
+    </button>
+    <button class="tool-btn" onclick="redoAction()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="15,14 20,9 15,4" />
+        <path d="M4 20v-7a4 4 0 0 1 4-4h12" />
+      </svg>
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="togglePanel()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" />
+      </svg>Props
+    </button>
+    <button class="tool-btn" onclick="toggleLibrary()" title="Component Library (L)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </svg>Library
+    </button>
+    <button class="tool-btn" onclick="toggleMinimap()" title="Minimap (M)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <rect x="6" y="6" width="6" height="4" rx="1" fill="currentColor" opacity="0.3" />
+        <rect x="14" y="12" width="5" height="3" rx="1" fill="currentColor" opacity="0.3" />
+      </svg>Map
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="btn-folder" onclick="pickSaveFolder()" title="Set save folder"
+      style="color:var(--purple)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 19V9a2 2 0 0 0-2-2h-8l-2-2H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2z" />
+      </svg>Folder
+    </button>
+    <button class="tool-btn" onclick="saveProgress()" style="border-color:var(--accent2);color:var(--accent2)"
+      title="Save (Ctrl+S)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+        <polyline points="17,21 17,13 7,13 7,21" />
+        <polyline points="7,3 7,8 15,8" />
+      </svg>Save
+    </button>
+    <button class="tool-btn" onclick="saveAs()" title="Save As (Ctrl+Shift+S)">Save As</button>
+    <button class="tool-btn" onclick="loadFileDialog()" title="Load saved file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17,8 12,3 7,8" />
+        <line x1="12" y1="3" x2="12" y2="15" />
+      </svg>Load
+    </button>
+    <button class="tool-btn" onclick="exportPNG()" title="Export PNG (Ctrl+E)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <polyline points="21,15 16,10 5,21" />
+      </svg>PNG
+    </button>
+    <button class="tool-btn" onclick="exportSVG()" title="Export SVG (Ctrl+Shift+E)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M7 15l3-3 2 2 3-4 4 5" />
+      </svg>SVG
+    </button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="groupSelected()" title="Group selection (Ctrl+G)" style="color:var(--teal)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="2" width="8" height="8" rx="1" />
+        <rect x="14" y="14" width="8" height="8" rx="1" />
+        <path d="M10 6h4M6 10v4M14 18h-4M18 14v-4" />
+      </svg>Group
+    </button>
+    <button class="tool-btn" onclick="ungroupSelected()" title="Ungroup (Ctrl+Shift+G)">Ungrp</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" onclick="loadTamTap()" style="color:var(--yellow)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="13,2 3,14 12,14 11,22 21,10 12,10" />
+      </svg>TamTap
+    </button>
+    <button class="tool-btn" onclick="clearAll()" style="color:var(--red)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3,6 5,6 21,6" />
+        <path d="M19,6l-1,14H6L5,6" />
+        <path d="M10,11v6M14,11v6" />
+      </svg>
+    </button>
+  </div>
+
+  <div id="main">
+    <!-- Component Library Sidebar -->
+    <div id="library">
+      <div id="library-content">
+        <input type="text" id="lib-search" placeholder="Search components..." />
+        <div id="lib-items"></div>
+      </div>
+    </div>
+
+    <!-- Canvas -->
+    <div id="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="sel-rect"></div>
+      <div id="zoom-badge">100%</div>
+      <div id="coords-badge">x:0 y:0</div>
+      <div id="minimap"><canvas id="minimap-canvas"></canvas></div>
+    </div>
+
+    <!-- Properties Panel -->
+    <div id="panel">
+      <div id="panel-content">
+        <div id="no-sel" style="color:var(--text3);font-size:11px;text-align:center;padding:24px 0;line-height:1.8">
+          Select a component<br />to edit properties<br /><br />
+          <span style="font-size:9px;color:var(--text3)">
+            Click = select<br />Ctrl+Click = multi-select<br />Drag empty = box select<br />
+            Double-click = edit label<br />Drag corner/edge = resize<br />
+            Ctrl+G = group · Ctrl+Shift+G = ungroup
+          </span>
+        </div>
+
+        <!-- Multi-select info -->
+        <div id="multi-sel-info" style="display:none">
+          <div class="panel-section">
+            <div class="panel-title">Multi-Selection</div>
+            <div style="font-size:11px;color:var(--text2);text-align:center;padding:8px 0" id="multi-count">0 items
+            </div>
+            <button class="btn-full" onclick="groupSelected()">⊞ Group (Ctrl+G)</button>
+            <button class="btn-full" onclick="ungroupSelected()">⊟ Ungroup (Ctrl+Shift+G)</button>
+            <button class="btn-full" onclick="duplicateSel()">●● Duplicate</button>
+            <button class="btn-full" onclick="bringFront()">⇧ Bring front</button>
+            <button class="btn-full" onclick="sendBack()">⇩ Send back</button>
+            <button class="btn-full danger" onclick="deleteSelected()">✕ Delete all</button>
+          </div>
+        </div>
+
+        <!-- Box Properties -->
+        <div id="box-props" style="display:none">
+          <div class="panel-section">
+            <div class="panel-title">Label</div>
+            <div class="prop-row"><span class="prop-label">Main</span><input class="prop-input" id="p-label" type="text"
+                oninput="upP('label',this.value)" /></div>
+            <div class="prop-row"><span class="prop-label">Sub</span><input class="prop-input" id="p-sub" type="text"
+                oninput="upP('sub',this.value)" /></div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Size (px exact)</div>
+            <div class="prop-row"><span class="prop-label">Width</span>
+              <div class="stepper"><button class="step-btn" onpointerdown="startStep('w',-1)"
+                  onpointerup="stopStep()">&#8722;</button><input type="number" id="p-w" min="20" max="800"
+                  oninput="upP('w',+this.value)" onchange="upP('w',+this.value)" /><button class="step-btn"
+                  onpointerdown="startStep('w',1)" onpointerup="stopStep()">&#43;</button></div>
+              <span class="prop-val" id="pv-w">120</span>
+            </div>
+            <div class="prop-row"><span class="prop-label">Height</span>
+              <div class="stepper"><button class="step-btn" onpointerdown="startStep('h',-1)"
+                  onpointerup="stopStep()">&#8722;</button><input type="number" id="p-h" min="20" max="800"
+                  oninput="upP('h',+this.value)" onchange="upP('h',+this.value)" /><button class="step-btn"
+                  onpointerdown="startStep('h',1)" onpointerup="stopStep()">&#43;</button></div>
+              <span class="prop-val" id="pv-h">60</span>
+            </div>
+            <div class="prop-row"><span class="prop-label">Radius</span><input class="prop-input" id="p-r" type="range"
+                min="0" max="60"
+                oninput="upP('r',+this.value);document.getElementById('pv-r').textContent=this.value" /><span
+                class="prop-val" id="pv-r">6</span></div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Position (px exact)</div>
+            <div class="prop-row"><span class="prop-label">X</span>
+              <div class="stepper"><button class="step-btn" onpointerdown="startStep('x',-1)"
+                  onpointerup="stopStep()">&#8722;</button><input type="number" id="p-x" oninput="upP('x',+this.value)"
+                  onchange="upP('x',+this.value)" /><button class="step-btn" onpointerdown="startStep('x',1)"
+                  onpointerup="stopStep()">&#43;</button></div>
+            </div>
+            <div class="prop-row"><span class="prop-label">Y</span>
+              <div class="stepper"><button class="step-btn" onpointerdown="startStep('y',-1)"
+                  onpointerup="stopStep()">&#8722;</button><input type="number" id="p-y" oninput="upP('y',+this.value)"
+                  onchange="upP('y',+this.value)" /><button class="step-btn" onpointerdown="startStep('y',1)"
+                  onpointerup="stopStep()">&#43;</button></div>
+            </div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Colors</div>
+            <div class="prop-row"><span class="prop-label">Fill</span><input class="prop-input" id="p-fill" type="color"
+                oninput="upP('fill',this.value)" /></div>
+            <div class="prop-row"><span class="prop-label">Stroke</span><input class="prop-input" id="p-stroke"
+                type="color" oninput="upP('stroke',this.value)" /></div>
+            <div class="prop-row"><span class="prop-label">Text</span><input class="prop-input" id="p-textcol"
+                type="color" oninput="upP('textColor',this.value)" /></div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Font &amp; Border</div>
+            <div class="prop-row"><span class="prop-label">Size</span><input class="prop-input" id="p-fontsize"
+                type="range" min="7" max="28"
+                oninput="upP('fontSize',+this.value);document.getElementById('pv-fs').textContent=this.value+'px'" /><span
+                class="prop-val" id="pv-fs">11px</span></div>
+            <div class="prop-row"><span class="prop-label">Weight</span><select class="prop-input" id="p-fontw"
+                onchange="upP('fontWeight',this.value)">
+                <option value="normal">Normal</option>
+                <option value="bold">Bold</option>
+              </select></div>
+            <div class="prop-row"><span class="prop-label">Stroke W</span><input class="prop-input" id="p-sw"
+                type="range" min="0" max="8" step="0.5"
+                oninput="upP('strokeWidth',+this.value);document.getElementById('pv-sw').textContent=this.value" /><span
+                class="prop-val" id="pv-sw">1.5</span></div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Shape &amp; Style</div>
+            <div class="prop-row"><span class="prop-label">Shape</span><select class="prop-input" id="p-shape"
+                onchange="upP('shape',this.value)">
+                <option value="rect">Rectangle</option>
+                <option value="circle">Circle</option>
+                <option value="diamond">Diamond</option>
+                <option value="pill">Pill</option>
+              </select></div>
+            <div class="prop-row"><span class="prop-label">Border</span><select class="prop-input" id="p-dash"
+                onchange="upP('dash',this.value)">
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+              </select></div>
+            <div class="prop-row"><span class="prop-label">Opacity</span><input class="prop-input" id="p-opacity"
+                type="range" min="0.1" max="1" step="0.05"
+                oninput="upP('opacity',+this.value);document.getElementById('pv-op').textContent=Math.round(this.value*100)+'%'" /><span
+                class="prop-val" id="pv-op">100%</span></div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Actions</div>
+            <button class="btn-full" onclick="duplicateSel()">●● Duplicate</button>
+            <button class="btn-full" onclick="bringFront()">⇧ Bring front</button>
+            <button class="btn-full" onclick="sendBack()">⇩ Send back</button>
+            <button class="btn-full danger" onclick="deleteSelected()">✕ Delete</button>
+          </div>
+        </div>
+
+        <!-- Wire Properties -->
+        <div id="wire-props" style="display:none">
+          <div class="panel-section">
+            <div class="panel-title">Wire</div>
+            <div class="prop-row"><span class="prop-label">Label</span><input class="prop-input" id="wp-label"
+                type="text" oninput="upW('label',this.value)" /></div>
+            <div class="prop-row"><span class="prop-label">Color</span><input class="prop-input" id="wp-color"
+                type="color" oninput="upW('color',this.value)" /></div>
+            <div class="prop-row"><span class="prop-label">Width</span><input class="prop-input" id="wp-width"
+                type="range" min="0.5" max="10" step="0.5"
+                oninput="upW('width',+this.value);document.getElementById('pv-ww').textContent=this.value" /><span
+                class="prop-val" id="pv-ww">1.5</span></div>
+            <div class="prop-row"><span class="prop-label">Style</span><select class="prop-input" id="wp-style"
+                onchange="upW('style',this.value)">
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+              </select></div>
+            <div class="prop-row"><span class="prop-label">Route</span><select class="prop-input" id="wp-route"
+                onchange="upW('route',this.value)">
+                <option value="ortho">Orthogonal (L)</option>
+                <option value="straight">Straight</option>
+                <option value="curve">Curved</option>
+              </select></div>
+            <div class="prop-row"><span class="prop-label">Arrow</span><select class="prop-input" id="wp-arrow"
+                onchange="upW('arrow',this.value)">
+                <option value="end">End only</option>
+                <option value="both">Both ends</option>
+                <option value="none">None</option>
+              </select></div>
+          </div>
+          <div class="panel-section">
+            <div class="panel-title">Quick colors</div>
+            <div class="color-swatches" id="wire-swatches"></div>
+          </div>
+          <div class="panel-section">
+            <button class="btn-full" onclick="clearWireLabel()">✎ Clear wire label</button>
+            <button class="btn-full danger" onclick="deleteSelected()">✕ Delete wire</button>
+          </div>
+        </div>
+
+        <!-- Canvas settings (always visible at bottom) -->
+        <div class="panel-section" style="margin-top:8px;border-top:1px solid var(--border);padding-top:10px">
+          <div class="panel-title">Canvas</div>
+          <div class="prop-row"><span class="prop-label">BG</span><input class="prop-input" id="g-bg" type="color"
+              value="#ffffff" oninput="canvasBg=this.value;markUnsaved();redraw()" /></div>
+          <div class="prop-row"><span class="prop-label">Grid</span><select class="prop-input" id="g-grid"
+              onchange="gridMode=this.value;markUnsaved();redraw()">
+              <option value="none">None</option>
+              <option value="dots">Dots</option>
+              <option value="lines">Lines</option>
+            </select></div>
+          <div class="prop-row"><span class="prop-label">Snap</span><select class="prop-input" id="g-snap"
+              onchange="snapGrid=+this.value">
+              <option value="1">Off (1px)</option>
+              <option value="5">5px</option>
+              <option value="10">10px</option>
+              <option value="20" selected>20px</option>
+              <option value="40">40px</option>
+            </select></div>
+        </div>
+        <div class="panel-section">
+          <button class="btn-full save-btn" onclick="saveProgress()">💾 Save progress (.json)</button>
+          <button class="btn-full" onclick="loadFileDialog()">📁 Load file</button>
+          <button class="btn-full" onclick="exportPNG()">📷 Export PNG</button>
+          <button class="btn-full" onclick="exportSVG()">📐 Export SVG</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menu -->
+  <div id="ctx-menu">
+    <div class="ctx-item" onclick="editLabel()">✎ Edit label</div>
+    <div class="ctx-item" onclick="duplicateSel()">◫ Duplicate <span class="ctx-shortcut">Ctrl+D</span></div>
+    <div class="ctx-item" onclick="bringFront()">⇧ Bring front</div>
+    <div class="ctx-item" onclick="sendBack()">⇩ Send back</div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="groupSelected()">⊞ Group <span class="ctx-shortcut">Ctrl+G</span></div>
+    <div class="ctx-item" onclick="ungroupSelected()">⊟ Ungroup <span class="ctx-shortcut">Ctrl+Shift+G</span></div>
+    <div class="ctx-sep"></div>
+    <div class="ctx-item" onclick="clearWireLabel()">⌫ Clear wire label <span class="ctx-shortcut">Shift+Del</span></div>
+    <div class="ctx-item danger" onclick="deleteSelected()">✕ Delete <span class="ctx-shortcut">Del</span></div>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Label Edit Modal -->
+  <div id="modal-overlay">
+    <div id="modal">
+      <h3 id="modal-title">Edit Label</h3>
+      <input class="prop-input" id="modal-input" type="text"
+        style="width:100%;margin-bottom:7px;font-size:13px;padding:7px 10px" />
+      <input class="prop-input" id="modal-sub" type="text" placeholder="Subtitle (optional)"
+        style="width:100%;font-size:12px;padding:6px 10px" />
+      <div class="modal-btns">
+        <button onclick="closeModal()">Cancel</button>
+        <button class="primary" onclick="confirmModal()">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="json-file-input" accept=".json" style="display:none" onchange="loadJSONFile(this)" />
+
+  <!-- Scripts (order matters) -->
+  <script src="editor-core.js"></script>
+  <script src="editor-data.js"></script>
+  <script src="editor-actions.js"></script>
+  <script>
+    // ── INIT ──
+    resize();
+    initFileSystemUI();
+    initSwatches();
+    initLibrary();
+    if (!loadAutoSave()) loadTamTap();
+    document.getElementById('panel').classList.add('open');
+  </script>
+</body>
+
+</html>

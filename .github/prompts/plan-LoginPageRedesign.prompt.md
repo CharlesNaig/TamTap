@@ -55,12 +55,12 @@ Mobile menu adds `Log In` as the last item.
   - Mobile: `h-[55vh]`
 - ✅ Keep arrows, dots, auto-play, swipe animation
 - 🔄 Add a **gradient overlay** at bottom of hero for smooth transition to next section
-- 🔄 Optional: Add overlay text on hero — "NFC-Based Attendance System" tagline
+- 🔄 Optional: Add overlay text on hero — "TamTap NFC-Based Attendance System" tagline
 
 **Hero overlay text (centered on slideshow):**
 ```
          TAMTAP
-  NFC-Based Attendance System
+  TamTap NFC-Based Attendance System
   FEU Roosevelt Marikina
         [Log In]
 ```

@@ -147,7 +147,12 @@ const heroImages = [
     '/assets/backgrounds/Researchers.png',
     '/assets/backgrounds/Hero-page.png',
     '/assets/backgrounds/Hero-page-2.png',
-    '/assets/backgrounds/Hero-page-3.png'
+    '/assets/backgrounds/Hero-page-3.png',
+    '/assets/backgrounds/Hero-page-4.png',
+    '/assets/backgrounds/Hero-page-5.png',
+    '/assets/backgrounds/Hero-page-6.png',
+    '/assets/backgrounds/Hero-page-7.png',
+    '/assets/backgrounds/Hero-page-8.png'
 ];
 
 let currentSlide = 0;
@@ -324,7 +329,7 @@ function showInfoModal(type) {
                     </p>
                     <h4 class="font-semibold text-gray-800">Project Description:</h4>
                     <p class="text-gray-600 text-sm">
-                        TAMTAP is an NFC-based attendance system designed to streamline
+                        TAMTAP is an TamTap NFC-Based Attendance System designed to streamline
                         student check-ins using contactless technology, face detection
                         verification, and real-time monitoring through a LAN dashboard.
                     </p>

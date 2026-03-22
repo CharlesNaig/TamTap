@@ -11,7 +11,7 @@ This version is **final-policy clear**, Copilot-safe, and defense-ready.
 # 📘 TAMTAP Dashboard & System Prompt Plan
 
 **File:** `plan.prompt.md`
-**Project:** TAMTAP – NFC-Based Attendance System
+**Project:** TAMTAP – TamTap NFC-Based Attendance System
 **Primary Users:** Teachers
 **System Authority:** Admin
 **Student Interaction:** Hardware only (NFC tap)

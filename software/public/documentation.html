@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAMTAP - Documentation</title>
+    <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="/css/preloader.css">
+    <link rel="stylesheet" href="/css/fonts.css">
+    <script src="/js/preloader.js"></script>
+    <style>
+        html { scroll-behavior: smooth; }
+        /* Offset for sticky header anchoring */
+        section { scroll-margin-top: 5rem; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- Top Bar -->
+    <div class="bg-feu-green text-white text-xs sm:text-sm py-1.5 sm:py-2 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-location-dot"></i>
+                <span class="hidden sm:inline">504 J. P. Rizal St, Marikina, 1800 Metro Manila</span>
+                <span class="sm:hidden">FEU Roosevelt</span>
+            </div>
+            <span class="text-xs text-white/70">TAMTAP Attendance System</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white py-3 sm:py-4 px-4 sm:px-6 lg:px-8 shadow-sm border-b sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <a href="/" class="flex items-center gap-2 no-underline">
+                <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                <span class="font-brand text-xl font-bold">
+                    <span class="text-feu-green">TAM</span><span class="text-feu-gold">TAP</span>
+                </span>
+            </a>
+            <nav class="hidden md:flex items-center gap-6">
+                <a href="/" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Home</a>
+                <a href="/documentation" class="text-feu-green font-semibold text-sm no-underline">Documentation</a>
+                <a href="/privacy" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Privacy Policy</a>
+                <a href="/terms" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Terms of Use</a>
+                <a href="/researchers" class="text-gray-600 hover:text-feu-green text-sm font-medium no-underline">Researchers</a>
+            </nav>
+            <a href="/" class="md:hidden text-feu-green text-sm font-medium no-underline"><i class="fas fa-arrow-left mr-1"></i>Back</a>
+        </div>
+    </header>
+
+    <!-- Hero Banner -->
+    <div class="bg-gradient-to-r from-feu-green to-feu-green-dark text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto text-center">
+            <p class="text-feu-gold text-xs uppercase tracking-widest font-semibold mb-2">Technical Overview</p>
+            <h1 class="font-brand text-3xl sm:text-4xl lg:text-5xl font-bold">System Documentation</h1>
+            <p class="mt-3 text-white/80 text-sm sm:text-base max-w-xl mx-auto">
+                Comprehensive technical guide on the architecture, hardware, and development of TAMTAP.
+            </p>
+        </div>
+    </div>
+
+    <!-- Breadcrumb -->
+    <div class="bg-white border-b">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <nav class="text-sm text-gray-500">
+                <a href="/" class="hover:text-feu-green no-underline">Home</a>
+                <span class="mx-2">›</span>
+                <span class="text-gray-800 font-medium">Documentation</span>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Content -->
+    <main class="flex-1 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+            <!-- Sidebar Navigation (Sticky) -->
+            <aside class="lg:col-span-1 hidden lg:block">
+                <div class="bg-white rounded-xl shadow-sm border p-6 sticky" style="top: 6rem;">
+                    <h3 class="font-bold text-gray-800 text-lg mb-4">Contents</h3>
+                    <ul class="space-y-3 text-sm text-gray-600 font-medium">
+                        <li><a href="#overview" class="hover:text-feu-green transition-colors">1. Overview</a></li>
+                        <li><a href="#system-flow" class="hover:text-feu-green transition-colors">2. System Flow</a></li>
+                        <li><a href="#components" class="hover:text-feu-green transition-colors">3. Hardware Components</a></li>
+                        <li><a href="#wiring" class="hover:text-feu-green transition-colors">4. Wiring & Schematics</a></li>
+                        <li><a href="#procedure" class="hover:text-feu-green transition-colors">5. Development Procedure</a></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Main Documentation Content -->
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-xl shadow-sm border p-6 sm:p-8 lg:p-10 space-y-12">
+
+                    <!-- 1. Overview -->
+                    <section id="overview">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-feu-green/10 text-feu-green font-bold text-lg">1</span>
+                            <h2 class="text-2xl font-bold text-gray-800">Project Overview</h2>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base">
+                            TAMTAP is a decentralized, locally hosted attendance management system specifically engineered for FEU Roosevelt Marikina. Operating exclusively over the school's Local Area Network (LAN), the system leverages NFC technology alongside automated camera verification to drastically eliminate proxy-attendance while maintaining sub-3-second transaction cycles.
+                        </p>
+                    </section>
+
+                    <hr class="border-gray-100">
+
+                    <!-- 2. System Flow Diagram -->
+                    <section id="system-flow">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-feu-green/10 text-feu-green font-bold text-lg">2</span>
+                            <h2 class="text-2xl font-bold text-gray-800">System Flow Diagram</h2>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mb-6">
+                            The architecture strictly follows a hardware state-machine model consisting of: <code class="bg-gray-100 text-gray-800 px-1 rounded text-sm">IDLE → CARD_DETECTED → CAMERA_ACTIVE → SUCCESS/FAIL → IDLE</code>. This guarantees a non-blocking asynchronous pipeline bridging the Python hardware core to the Node.js backend.
+                        </p>
+                        
+                        <!-- Image Container -->
+                        <div class="rounded-lg border bg-gray-50 flex items-center justify-center relative overflow-hidden group min-h-[300px] sm:min-h-[400px]">
+                            <!-- TODO: Replace the src with actual diagram path -->
+                            <img src="/assets/backgrounds/Flow-Chart.png" alt="System Flow Diagram" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-auto object-contain max-h-[600px] z-10" />
+                            
+                            <!-- Placeholder Text if Image is missing -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 hidden p-6 text-center">
+                                <i class="fas fa-project-diagram text-4xl mb-3"></i>
+                                <span class="font-medium">Missing Image: Flow Diagram</span>
+                                <span class="text-xs mt-1">Place image at: /assets/backgrounds/Flow-Chart.png</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <hr class="border-gray-100">
+
+                    <!-- 3. Hardware Components -->
+                    <section id="components">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-feu-green/10 text-feu-green font-bold text-lg">3</span>
+                            <h2 class="text-2xl font-bold text-gray-800">Hardware Components & Materials</h2>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mb-6">
+                            The terminal is constructed from a mix of off-the-shelf electronics, power stabilization modules, and custom-cut housing. Below is the complete component manifest used during the build.
+                        </p>
+                        
+                        <div class="overflow-x-auto rounded-lg border">
+                            <table class="w-full text-sm text-left align-middle">
+                                <thead class="bg-gray-50 text-gray-700 border-b">
+                                    <tr>
+                                        <th class="px-4 py-3 font-semibold w-24 text-center">Image</th>
+                                        <th class="px-4 py-3 font-semibold">Component</th>
+                                        <th class="px-4 py-3 font-semibold">Category</th>
+                                        <th class="px-4 py-3 font-semibold">Purpose / Specification</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y text-gray-600 bg-white">
+                                    <!-- Raspberry Pi -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://res.cloudinary.com/rsc/image/upload/b_rgb:FFFFFF,c_pad,dpr_2.625,f_auto,h_214,q_auto,w_380/c_pad,h_214,w_380/Y0219252-01?pgw=1" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=Pi+4'" class="w-16 h-16 object-contain rounded border bg-white mx-auto shadow-sm" alt="Raspberry Pi">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">Raspberry Pi 4 Model B</td>
+                                        <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded">Core Electronics</span></td>
+                                        <td class="px-4 py-3">4GB RAM. Acts as the central processing brain, hosting the MongoDB database, Node.js server, and Python hardware scripts.</td>
+                                    </tr>
+                                    <!-- RFID Module -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://quartzcomponents.com/cdn/shop/files/RC522-RFID-Reader-Module.jpg?v=1771568196" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=RC522'" class="w-16 h-16 object-cover rounded border bg-white mx-auto shadow-sm" alt="RFID RC522">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">RFID RC522 Module</td>
+                                        <td class="px-4 py-3"><span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded">Core Electronics</span></td>
+                                        <td class="px-4 py-3">13.56MHz NFC reader for scanning student ID tags continuously with sub-100ms polling via SPI.</td>
+                                    </tr>
+                                    <!-- Camera -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://vilros.com/cdn/shop/products/Front.jpg?v=1659473955" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=Camera'" class="w-16 h-16 object-contain rounded border bg-white mx-auto shadow-sm" alt="Pi Camera">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">5MP Pi Camera V2</td>
+                                        <td class="px-4 py-3"><span class="bg-purple-100 text-purple-700 text-xs px-2 py-0.5 rounded">Core Electronics</span></td>
+                                        <td class="px-4 py-3">Captures automated facial verification snapshots instantly after card scans via CSI interface.</td>
+                                    </tr>
+                                    <!-- LCD -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://media.parallax.com/wp-content/uploads/2021/01/08143252/26970a.jpg.webp" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=LCD'" class="w-16 h-16 object-contain rounded border bg-white mx-auto shadow-sm" alt="16x2 LCD">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">16x2 I2C LCD</td>
+                                        <td class="px-4 py-3"><span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded">Feedback</span></td>
+                                        <td class="px-4 py-3">Blue Crystal type. Provides real-time terminal feedback (e.g., "Tap Card", "Access Denied").</td>
+                                    </tr>
+                                    <!-- Tactile & LEDs -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://m.media-amazon.com/images/I/51kzW9mvzQL._SL1000_.jpg" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=LEDs'" class="w-16 h-16 object-cover rounded border bg-white mx-auto shadow-sm" alt="LEDs and Buttons">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">Feedback IO</td>
+                                        <td class="px-4 py-3"><span class="bg-gray-100 text-gray-700 text-xs px-2 py-0.5 rounded">Feedback</span></td>
+                                        <td class="px-4 py-3">Green/Red LEDs (with 330Ω resistors), tactile push buttons (Start, Restart, Stop), and an active buzzer (5V–24V) triggered via Power Relay.</td>
+                                    </tr>
+                                    <!-- Power Supply -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://wiki.52pi.com/images/thumb/c/c9/UPS_V2_3.jpg/600px-UPS_V2_3.jpg?20210125030020" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=Batteries'" class="w-16 h-16 object-cover rounded border bg-white mx-auto shadow-sm" alt="UPS Power">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">UPS Module & Batteries</td>
+                                        <td class="px-4 py-3"><span class="bg-yellow-100 text-yellow-700 text-xs px-2 py-0.5 rounded">Power Management</span></td>
+                                        <td class="px-4 py-3">Provides uninterrupted power featuring two 18650 Lithium Batteries (5,000mAh–7,000mAh) on a dedicated balanace platform.</td>
+                                    </tr>
+                                    <!-- Enclosure -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://cdn.discordapp.com/attachments/1009803745846108200/1485220314920255508/sg-11134201-7rd3p-lvy8z601czkt7b.png?ex=69c112b5&is=69bfc135&hm=528b3cd6885a20c6a28ef34b2d0452e69b74684513f45435081dce7b67d24d93&" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=Enclosure'" class="w-16 h-16 object-cover rounded border bg-white mx-auto shadow-sm" alt="Housing Materials">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">Housing Structure</td>
+                                        <td class="px-4 py-3"><span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">Hardware Assembly</span></td>
+                                        <td class="px-4 py-3">Sintra board (main enclosure), Acrylic board (side panel), Hinges for rear maintenance doors, and Magnetic locks. Includes brushless cooling fan.</td>
+                                    </tr>
+                                    <!-- Interconnects & Assembly -->
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-center">
+                                            <img src="https://cdn.discordapp.com/attachments/1009803745846108200/1485220668369801356/image.png?ex=69c11309&is=69bfc189&hm=7530490b228dd15970c8a2f5e6d0459f1566dc1309d8d396fc52de77d76cb9e0&" onerror="this.src='https://placehold.co/80x80/f8f9fa/a1a1aa?text=Wires'" class="w-16 h-16 object-cover rounded border bg-white mx-auto shadow-sm" alt="Wires and Tools">
+                                        </td>
+                                        <td class="px-4 py-3 font-medium text-gray-800">Interconnects & Supplies</td>
+                                        <td class="px-4 py-3"><span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded">Hardware Assembly</span></td>
+                                        <td class="px-4 py-3">T-type GPIO extender, Breadboard, Jumper wires (M-M, M-F, F-F), Tapes (Masking/Electrical/Velcro), super glue, Soldering Iron.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <hr class="border-gray-100">
+
+                    <!-- 4. Wiring Diagram -->
+                    <section id="wiring">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-feu-green/10 text-feu-green font-bold text-lg">4</span>
+                            <h2 class="text-2xl font-bold text-gray-800">Wiring & Schematics</h2>
+                        </div>
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mb-6">
+                            Below represents the direct pin mapping between the Raspberry Pi GPIO headers and the attached external interfaces.
+                        </p>
+                        
+                        <!-- Image Container -->
+                        <div class="rounded-lg border bg-gray-50 flex items-center justify-center relative overflow-hidden group min-h-[300px] sm:min-h-[400px]">
+                            <!-- TODO: Replace the src with actual wiring path -->
+                            <img src="/assets/backgrounds/Wiring-Diagram.png" alt="System Wiring Diagram" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" class="w-full h-auto object-contain max-h-[600px] z-10" />
+                            
+                            <!-- Placeholder Text if Image is missing -->
+                            <div class="absolute inset-0 flex flex-col items-center justify-center text-gray-400 hidden p-6 text-center">
+                                <i class="fas fa-microchip text-4xl mb-3"></i>
+                                <span class="font-medium">Missing Image: Wiring Diagram</span>
+                                <span class="text-xs mt-1">Place image at: /assets/backgrounds/Wiring-Diagram.png</span>
+                            </div>
+                        </div>
+
+                        <!-- Pin Reference List -->
+                        <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="bg-gray-50 p-4 border rounded-lg">
+                                <h4 class="font-bold text-sm text-gray-800 mb-2 border-b pb-2">SPI (RC522)</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 24</span> → GPIO 8 (CE/SDA)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 21</span> → GPIO 9 (MISO)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 19</span> → GPIO 10 (MOSI)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 23</span> → GPIO 11 (SCK)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 22</span> → GPIO 25 (RST)</li>
+                                </ul>
+                            </div>
+                            <div class="bg-gray-50 p-4 border rounded-lg">
+                                <h4 class="font-bold text-sm text-gray-800 mb-2 border-b pb-2">I2C & General (LCD / LEDs)</h4>
+                                <ul class="text-sm text-gray-600 space-y-1">
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 03</span> → GPIO 2 (SDA)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 05</span> → GPIO 3 (SCL)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 11</span> → GPIO 17 (Green LED)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 13</span> → GPIO 27 (Red LED)</li>
+                                    <li><span class="font-mono text-xs w-10 inline-block">Pin 12</span> → GPIO 18 (Buzzer)</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </section>
+
+                    <hr class="border-gray-100">
+
+                    <!-- 5. Development Procedure -->
+                    <section id="procedure">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-feu-green/10 text-feu-green font-bold text-lg">5</span>
+                            <h2 class="text-2xl font-bold text-gray-800">Development Procedure</h2>
+                        </div>
+
+                        <p class="text-gray-600 leading-relaxed text-sm sm:text-base mb-6">
+                            The development combined hardware assembly, backend engineering, and iterative field testing. The summary below compresses the full build experience from procurement to final optimization.
+                        </p>
+
+                        <div class="bg-gray-50 border rounded-xl p-5 sm:p-6 mb-8">
+                            <h3 class="text-lg font-bold text-gray-800 mb-4">Components and Materials Used</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+                                <div>
+                                    <p class="font-semibold text-gray-800 mb-2">Housing</p>
+                                    <ul class="space-y-1 list-disc pl-5">
+                                        <li>Sintra board enclosure and battery balance platform</li>
+                                        <li>Acrylic side panel for component visibility</li>
+                                        <li>Hinges and magnetic locks for rear maintenance door</li>
+                                        <li>Brushless cooling fan for airflow control</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800 mb-2">Core Electronics</p>
+                                    <ul class="space-y-1 list-disc pl-5">
+                                        <li>Raspberry Pi 4 Model B (4GB), RC522 RFID, 5MP Pi Camera</li>
+                                        <li>16x2 I2C LCD (Blue Crystal), T-type GPIO extender, breadboard</li>
+                                        <li>Jumper wires (M-M, M-F, F-F) and 330-ohm resistors</li>
+                                        <li>Tactile push buttons (Start, Restart, Stop)</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800 mb-2">Feedback and Power</p>
+                                    <ul class="space-y-1 list-disc pl-5">
+                                        <li>Green/Red LEDs, active buzzer (5V-24V), and relay control</li>
+                                        <li>UPS module with two 18650 Li-ion batteries (5,000mAh-7,000mAh)</li>
+                                        <li>USB SD Card reader for flashing and maintenance</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800 mb-2">Assembly and Tools</p>
+                                    <ul class="space-y-1 list-disc pl-5">
+                                        <li>Soldering iron for RFID pins, LEDs, and wire joints</li>
+                                        <li>Masking tape, electrical tape, super glue, Velcro tape</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-bold text-gray-800">Development Process</h3>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 1</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Funding and Material Acquisition</h4>
+                                <p class="text-sm text-gray-600">The build started with pooled funding and staged hardware purchases. Priority was given to core test parts: RFID, LCD, buzzer, relay, jumper sets, Raspberry Pi, and soldering tools.</p>
+                            </div>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 2</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Individual Component Testing</h4>
+                                <p class="text-sm text-gray-600">Each device was validated using dedicated Python scripts: NFC ID reads, GPIO LED outputs, relay-driven buzzer logic, LCD communication, and camera capture. Dependencies and setup commands were documented during this stage.</p>
+                            </div>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 3</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Hardware Integration and Main Controller</h4>
+                                <p class="text-sm text-gray-600">After passing isolated tests, all modules were wired together. The separate test scripts were consolidated into one main hardware controller to coordinate the full attendance cycle.</p>
+                            </div>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 4</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Database and Reliability Layers</h4>
+                                <p class="text-sm text-gray-600">Schemas were built for students, teachers, schedules, archive schedules, and hardware status, with encrypted teacher credentials. Continuity was improved through fallback storage layers centered on local MongoDB and local JSON backup, including prototype cloud-mirror testing during development.</p>
+                            </div>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 5</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Synchronization and Emergency Controls</h4>
+                                <p class="text-sm text-gray-600">The hardware loop was synchronized with backend writes, followed by repeated debugging for attendance accuracy. Physical Start, Restart, and Stop buttons were added for manual recovery in case of runtime issues.</p>
+                            </div>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 6</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Auto-Start and Full Web Platform</h4>
+                                <p class="text-sm text-gray-600">A Raspberry Pi service was configured for automatic startup on boot. The web system was then completed with Express.js, sessions, MongoDB integration, Socket.IO, role-aware middleware, and the full page set (Login, Dashboard, Admin, Privacy, Terms, Researchers, and 404).</p>
+                            </div>
+
+                            <div class="border rounded-xl p-4 sm:p-5 bg-white">
+                                <p class="text-feu-gold text-xs font-bold uppercase tracking-wider mb-1">Step 7</p>
+                                <h4 class="font-bold text-gray-800 mb-1">Final Optimization</h4>
+                                <p class="text-sm text-gray-600">Final tuning focused on loading speed, asset compression, and smoother dashboard startup performance, especially for first-time access on school LAN clients.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-feu-green-dark text-white pt-12 pb-6 px-4 sm:px-6 lg:px-8 mt-auto">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 mb-8">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <img src="/assets/TamTap-3D.png" alt="TAMTAP" class="h-10 w-10 object-contain">
+                        <span class="font-brand text-xl font-bold">
+                            <span class="text-white">TAM</span><span class="text-feu-gold">TAP</span>
+                        </span>
+                    </div>
+                    <p class="text-white text-sm leading-relaxed">
+                        TamTap NFC-Based Attendance System<br>
+                        FEU Roosevelt Marikina<br>
+                        Grade 12 ICT B Group 5 Capstone
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">Quick Links</h4>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="/" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-home mr-1.5 text-xs"></i>Home</a></li>
+                        <li><a href="/documentation" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-book mr-1.5 text-xs"></i>Documentation</a></li>
+                        <li><a href="/privacy" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-shield-halved mr-1.5 text-xs"></i>Privacy Policy</a></li>
+                        <li><a href="/terms" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-file-contract mr-1.5 text-xs"></i>Terms of Use</a></li>
+                        <li><a href="/researchers" class="text-white hover:text-feu-gold transition no-underline"><i class="fas fa-flask mr-1.5 text-xs"></i>Researchers</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-feu-gold font-semibold text-sm uppercase tracking-wide mb-3">School</h4>
+                    <ul class="space-y-2 text-sm text-white">
+                        <li class="flex items-start gap-2"><i class="fas fa-school mt-0.5 text-xs text-feu-gold"></i><span>FEU Roosevelt — Marikina Campus</span></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-map-marker-alt mt-0.5 text-xs text-feu-gold"></i><span>J.P. Rizal St., Lamuan, Marikina City</span></li>
+                        <li class="flex items-start gap-2"><i class="fas fa-globe mt-0.5 text-xs text-feu-gold"></i><a href="https://feuroosevelt.edu.ph" target="_blank" rel="noopener" class="text-white hover:text-feu-gold transition no-underline">feuroosevelt.edu.ph</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-white/15 pt-5">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-white">
+                    <p>&copy; 2025</p>
+                    <p>Capstone By Group 5 of Grade 12 ICT B &nbsp;|&nbsp; FEU Roosevelt Marikina</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

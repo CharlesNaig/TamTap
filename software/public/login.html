@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TAMTAP - NFC-Based Attendance System</title>
+    <title>TAMTAP - TamTap NFC-Based Attendance System</title>
     <link rel="icon" type="image/png" href="/assets/TamTap-3D.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/tailwind-config.js"></script>
@@ -34,6 +34,7 @@
 
             <!-- Center + Right: Nav Links (Desktop) -->
             <nav class="hidden md:flex items-center gap-4 lg:gap-8 xl:gap-10">
+                <a href="/documentation" class="nav-link text-feu-green font-medium text-sm lg:text-base no-underline">Documentation</a>
                 <a href="/privacy" class="nav-link text-feu-green font-medium text-sm lg:text-base no-underline">Privacy Policy</a>
                 <a href="/terms" class="nav-link text-feu-green font-medium text-sm lg:text-base no-underline">Terms of Use</a>
                 <a href="/researchers" class="nav-link text-feu-green font-medium text-sm lg:text-base no-underline">Researchers</a>
@@ -52,6 +53,7 @@
         <!-- Mobile Navigation Menu -->
         <nav id="mobile-menu" class="hidden md:hidden mt-3 pb-2 border-t border-gray-100 pt-3">
             <div class="flex flex-col gap-1">
+                <a href="/documentation" class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded no-underline block">Documentation</a>
                 <a href="/privacy" class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded no-underline block">Privacy Policy</a>
                 <a href="/terms" class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded no-underline block">Terms of Use</a>
                 <a href="/researchers" class="text-feu-green font-medium text-sm py-2 px-3 hover:bg-gray-50 rounded no-underline block">Researchers</a>
@@ -67,10 +69,10 @@
     ================================================ -->
     <section class="hero-section">
         <!-- Slides Container -->
-        <div id="slides-container">
+        <div id="slides-container" class="absolute inset-0 w-full h-full">
             <div class="slides-wrapper" id="slides-wrapper">
                 <div class="hero-slide">
-                    <img src="/assets/backgrounds/Hero-page.png" alt="TAMTAP Hero" loading="eager">
+                    <img src="/assets/backgrounds/Hero-page.png" alt="TAMTAP Hero" loading="eager" class="w-full h-full object-cover object-center">
                 </div>
             </div>
         </div>
@@ -85,7 +87,7 @@
                  class="h-16 sm:h-20 lg:h-24 mx-auto mb-4 drop-shadow-lg"
                  onerror="this.style.display='none'">
             <h1 class="text-white text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold drop-shadow-lg leading-tight">
-                NFC-Based Attendance System
+                TamTap NFC-Based Attendance System
             </h1>
             <p class="text-gray-200 text-sm sm:text-base lg:text-lg mt-2 drop-shadow">
                 FEU Roosevelt Marikina
@@ -115,8 +117,8 @@
         <div class="max-w-3xl mx-auto">
             <h2 class="text-3xl sm:text-4xl font-bold text-feu-green mb-6 text-center">What is <span class="font-brand">TAMTAP</span>?</h2>
             <p class="text-gray-600 text-base sm:text-lg leading-relaxed mb-4 text-justify">
-                <strong class="text-gray-800 font-brand">TAMTAP</strong> is a locally hosted, NFC-based attendance system developed under the capstone project titled
-                <em>"Developing a TAMTAP NFC-Based Attendance System Using Raspberry Pi with Real-Time Dashboard Updates."</em>
+                <strong class="text-gray-800 font-brand">TAMTAP</strong> is a locally hosted, TamTap NFC-Based Attendance System developed under the capstone project titled
+                <em class="font-bold text-feu-green">"Development and Evaluation of TAMTAP NFC-Based Attendance System Using Raspberry Pi with Real-Time Dashboard Updates"</em>
                 It is designed specifically for <strong class="text-gray-800">FEU Roosevelt Marikina</strong> to provide a secure, efficient, and modern approach to attendance monitoring.
             </p>
             <p class="text-gray-600 text-base sm:text-lg leading-relaxed mb-4 text-justify">
@@ -308,7 +310,7 @@
                         </span>
                     </div>
                     <p class="text-white text-sm leading-relaxed">
-                        NFC-Based Attendance System<br>
+                        TamTap NFC-Based Attendance System<br>
                         FEU Roosevelt Marikina<br>
                         Grade 12 ICT B Group 5 Capstone
                     </p>

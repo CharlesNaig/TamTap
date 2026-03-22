@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 TAMTAP v7.0 - LCD Messages PERFECT SYNC
-NFC-Based Attendance System | FEU Roosevelt Marikina
+TamTap NFC-Based Attendance System | FEU Roosevelt Marikina
 State Machine: IDLE → CARD_DETECTED → CAMERA_ACTIVE → SUCCESS|FAIL → IDLE
 MongoDB with JSON fallback for offline mode
 """

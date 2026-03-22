@@ -1,6 +1,6 @@
 ========================================
   TAMTAP v2.0 - API Server with Auth
-  NFC-Based Attendance System
+  TamTap NFC-Based Attendance System
 ========================================
 [INFO] Connecting to MongoDB: mongodb://naig:****@162.243.218.87:27017/
 [INFO] Database name: tamtap

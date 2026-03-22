@@ -5,7 +5,7 @@
       "label": "Raspberry Pi 4B · 4GB RAM",
       "sub": "tamtap.py · server.js · MongoDB",
       "x": 160,
-      "y": 60,
+      "y": 100,
       "w": 420,
       "h": 80,
       "r": 8,
@@ -24,7 +24,7 @@
       "label": "Pi Camera",
       "sub": "CSI · 5MP",
       "x": 330,
-      "y": -60,
+      "y": -28,
       "w": 80,
       "h": 80,
       "r": 6,
@@ -42,8 +42,8 @@
       "id": "fan",
       "label": "Brushless Fan",
       "sub": "5V · cooling",
-      "x": -60,
-      "y": 71,
+      "x": 0,
+      "y": 111,
       "w": 80,
       "h": 60,
       "r": 6,
@@ -62,7 +62,7 @@
       "label": "UPS 18650 Battery (dual)",
       "sub": "5V uninterruptible power",
       "x": 160,
-      "y": 140,
+      "y": 180,
       "w": 420,
       "h": 36,
       "r": 5,
@@ -137,7 +137,7 @@
       "id": "rail33",
       "label": "3.3V Rail",
       "sub": "GPIO 3V3",
-      "x": 260,
+      "x": 440,
       "y": 280,
       "w": 40,
       "h": 40,
@@ -156,7 +156,7 @@
       "id": "i2c_jump",
       "label": "I2C Jumper Group",
       "sub": "GPIO2 (SDA) + GPIO3 (SCL) grouped",
-      "x": -40,
+      "x": -2,
       "y": 360,
       "w": 140,
       "h": 20,
@@ -175,8 +175,8 @@
       "id": "stop",
       "label": "STOP",
       "sub": "GPIO 13",
-      "x": -180,
-      "y": 560,
+      "x": 40,
+      "y": 460,
       "w": 64,
       "h": 64,
       "r": 32,
@@ -194,8 +194,8 @@
       "id": "rst",
       "label": "RST",
       "sub": "GPIO 6",
-      "x": -100,
-      "y": 560,
+      "x": 40,
+      "y": 540,
       "w": 64,
       "h": 64,
       "r": 32,
@@ -213,8 +213,8 @@
       "id": "start",
       "label": "START",
       "sub": "GPIO 5",
-      "x": -20,
-      "y": 560,
+      "x": 40,
+      "y": 620,
       "w": 64,
       "h": 64,
       "r": 32,
@@ -233,7 +233,7 @@
       "label": "GPIO T-Type Extender",
       "sub": "40-pin · all GPIO broken out",
       "x": 320,
-      "y": 500,
+      "y": 499,
       "w": 100,
       "h": 200,
       "r": 4,
@@ -251,7 +251,7 @@
       "id": "rc522",
       "label": "RC522 RFID",
       "sub": "SPI · GPIO8,9,10,11,25 · 3.3V · GND",
-      "x": 800,
+      "x": 700,
       "y": 300,
       "w": 160,
       "h": 120,
@@ -270,7 +270,7 @@
       "id": "lcd",
       "label": "I2C LCD 16×2",
       "sub": "GPIO2 SDA · GPIO3 SCL · 0x27",
-      "x": -40,
+      "x": -2,
       "y": 240,
       "w": 160,
       "h": 60,
@@ -289,7 +289,7 @@
       "id": "gled",
       "label": "Green LED",
       "sub": "GPIO17 · ok",
-      "x": 740,
+      "x": 700,
       "y": 700,
       "w": 70,
       "h": 70,
@@ -328,7 +328,7 @@
       "label": "Relay module",
       "sub": "GPIO18 · 5V · GND",
       "x": 160,
-      "y": 840,
+      "y": 760,
       "w": 120,
       "h": 40,
       "r": 5,
@@ -347,7 +347,7 @@
       "label": "Buzzer",
       "sub": "via relay · 5V · GND",
       "x": 440,
-      "y": 840,
+      "y": 760,
       "w": 100,
       "h": 40,
       "r": 5,
@@ -355,6 +355,63 @@
       "stroke": "#bf360c",
       "textColor": "#b71c1c",
       "fontSize": 10,
+      "fontWeight": "bold",
+      "strokeWidth": 1.5,
+      "shape": "rect",
+      "dash": "solid",
+      "opacity": 1
+    },
+    {
+      "id": "id545",
+      "label": "330Ω",
+      "sub": "",
+      "x": 560,
+      "y": 620,
+      "w": 40,
+      "h": 20,
+      "r": 6,
+      "fill": "#e3f2fd",
+      "stroke": "#1565c0",
+      "textColor": "#1a1a2e",
+      "fontSize": 11,
+      "fontWeight": "bold",
+      "strokeWidth": 1.5,
+      "shape": "rect",
+      "dash": "solid",
+      "opacity": 1
+    },
+    {
+      "id": "id546",
+      "label": "330Ω",
+      "sub": "",
+      "x": 620,
+      "y": 620,
+      "w": 40,
+      "h": 20,
+      "r": 6,
+      "fill": "#e3f2fd",
+      "stroke": "#1565c0",
+      "textColor": "#1a1a2e",
+      "fontSize": 11,
+      "fontWeight": "bold",
+      "strokeWidth": 1.5,
+      "shape": "rect",
+      "dash": "solid",
+      "opacity": 1
+    },
+    {
+      "id": "id578",
+      "label": "Resistor",
+      "sub": "Ω",
+      "x": -160,
+      "y": 460,
+      "w": 80,
+      "h": 36,
+      "r": 4,
+      "fill": "#fff3e0",
+      "stroke": "#e65100",
+      "textColor": "#bf360c",
+      "fontSize": 9,
       "fontWeight": "bold",
       "strokeWidth": 1.5,
       "shape": "rect",
@@ -410,14 +467,14 @@
       "x2": 330,
       "y2": 260,
       "color": "#ff0000",
-      "width": 10,
+      "width": 50,
       "style": "solid",
       "route": "straight",
       "arrow": "none",
       "label": "40-pin GPIO ribbon",
       "labelOffset": {
-        "x": 67,
-        "y": 18
+        "x": 1,
+        "y": 16
       }
     },
     {
@@ -435,8 +492,8 @@
       "arrow": "end",
       "label": "GPIO2 SDA",
       "labelOffset": {
-        "x": -125,
-        "y": -88
+        "x": -87,
+        "y": -93
       }
     },
     {
@@ -454,8 +511,8 @@
       "arrow": "end",
       "label": "GPIO3 SCL",
       "labelOffset": {
-        "x": -192,
-        "y": -88
+        "x": -159,
+        "y": -89
       }
     },
     {
@@ -497,44 +554,6 @@
       }
     },
     {
-      "id": "w_lcd_vcc",
-      "fromId": "rail5v",
-      "toId": "lcd",
-      "x1": 360,
-      "y1": 290,
-      "x2": 590,
-      "y2": 272,
-      "color": "#d32f2f",
-      "width": 1,
-      "style": "dashed",
-      "route": "ortho",
-      "arrow": "end",
-      "label": "5V",
-      "labelOffset": {
-        "x": -130,
-        "y": 35
-      }
-    },
-    {
-      "id": "w_lcd_gnd",
-      "fromId": "railgnd",
-      "toId": "lcd",
-      "x1": 510,
-      "y1": 302,
-      "x2": 590,
-      "y2": 302,
-      "color": "#212121",
-      "width": 1,
-      "style": "dashed",
-      "route": "ortho",
-      "arrow": "none",
-      "label": "GND",
-      "labelOffset": {
-        "x": -235,
-        "y": 35
-      }
-    },
-    {
       "id": "w_stop_sig",
       "fromId": "ttype",
       "toId": "stop",
@@ -549,8 +568,8 @@
       "arrow": "end",
       "label": "GPIO13",
       "labelOffset": {
-        "x": -260,
-        "y": -55
+        "x": -65,
+        "y": -54
       }
     },
     {
@@ -568,8 +587,8 @@
       "arrow": "end",
       "label": "GPIO6",
       "labelOffset": {
-        "x": -218,
-        "y": -57
+        "x": -63,
+        "y": -16
       }
     },
     {
@@ -587,8 +606,8 @@
       "arrow": "end",
       "label": "GPIO5",
       "labelOffset": {
-        "x": -181,
-        "y": -56
+        "x": -64,
+        "y": 26
       }
     },
     {
@@ -606,8 +625,8 @@
       "arrow": "end",
       "label": "MOSI GPIO10",
       "labelOffset": {
-        "x": 91,
-        "y": -177
+        "x": 85,
+        "y": -184
       }
     },
     {
@@ -625,8 +644,8 @@
       "arrow": "end",
       "label": "MISO GPIO9",
       "labelOffset": {
-        "x": 94,
-        "y": -155
+        "x": 92,
+        "y": -159
       }
     },
     {
@@ -644,8 +663,8 @@
       "arrow": "end",
       "label": "SCK GPIO11",
       "labelOffset": {
-        "x": 88,
-        "y": -142
+        "x": 84,
+        "y": -147
       }
     },
     {
@@ -682,8 +701,8 @@
       "arrow": "end",
       "label": "3.3V",
       "labelOffset": {
-        "x": 93,
-        "y": 17
+        "x": -19,
+        "y": 2
       }
     },
     {
@@ -701,8 +720,8 @@
       "arrow": "none",
       "label": "GND",
       "labelOffset": {
-        "x": -16,
-        "y": -42
+        "x": -12,
+        "y": -12
       }
     },
     {
@@ -720,8 +739,8 @@
       "arrow": "end",
       "label": "GPIO18",
       "labelOffset": {
-        "x": 2,
-        "y": 32
+        "x": 0,
+        "y": 48
       }
     },
     {
@@ -739,8 +758,8 @@
       "arrow": "end",
       "label": "5V",
       "labelOffset": {
-        "x": -2,
-        "y": 41
+        "x": 0,
+        "y": 8
       }
     },
     {
@@ -758,8 +777,8 @@
       "arrow": "none",
       "label": "GND",
       "labelOffset": {
-        "x": -35,
-        "y": 178
+        "x": -49,
+        "y": 141
       }
     },
     {
@@ -777,8 +796,8 @@
       "arrow": "end",
       "label": "relay out",
       "labelOffset": {
-        "x": -1,
-        "y": 4
+        "x": -3,
+        "y": 2
       }
     },
     {
@@ -796,8 +815,8 @@
       "arrow": "end",
       "label": "5V",
       "labelOffset": {
-        "x": 37,
-        "y": 179
+        "x": 46,
+        "y": 139
       }
     },
     {
@@ -815,8 +834,8 @@
       "arrow": "none",
       "label": "GND",
       "labelOffset": {
-        "x": -1,
-        "y": 130
+        "x": 0,
+        "y": 105
       }
     },
     {
@@ -884,8 +903,8 @@
       "arrow": "end",
       "label": "RST GPIO25 (Pin22)",
       "labelOffset": {
-        "x": 13,
-        "y": -137
+        "x": 7,
+        "y": -143
       }
     },
     {
@@ -979,18 +998,140 @@
       "route": "ortho",
       "arrow": "end",
       "label": "GND"
+    },
+    {
+      "id": "id558",
+      "fromId": "railgnd",
+      "toId": "rst",
+      "x1": 500,
+      "y1": 480,
+      "x2": 72,
+      "y2": 624,
+      "fromPort": {
+        "side": "left",
+        "offset": 0.5
+      },
+      "toPort": {
+        "side": "bottom",
+        "offset": 0.5
+      },
+      "color": "#212121",
+      "width": 1.5,
+      "style": "solid",
+      "route": "ortho",
+      "arrow": "end",
+      "label": "GND",
+      "labelOffset": {
+        "x": -137,
+        "y": 62
+      }
+    },
+    {
+      "id": "id559",
+      "fromId": "railgnd",
+      "toId": "start",
+      "x1": 500,
+      "y1": 480,
+      "x2": 72,
+      "y2": 704,
+      "fromPort": {
+        "side": "left",
+        "offset": 0.5
+      },
+      "toPort": {
+        "side": "bottom",
+        "offset": 0.5
+      },
+      "color": "#212121",
+      "width": 1.5,
+      "style": "solid",
+      "route": "ortho",
+      "arrow": "end",
+      "label": "GND",
+      "labelOffset": {
+        "x": -137,
+        "y": 103
+      }
+    },
+    {
+      "id": "id561",
+      "fromId": "rail5v",
+      "toId": null,
+      "x1": 220,
+      "y1": 480,
+      "x2": 60.808234610650715,
+      "y2": 380.1503448870192,
+      "fromPort": {
+        "side": "left",
+        "offset": 0.5
+      },
+      "color": "#d32f2f",
+      "width": 1.5,
+      "style": "dashed",
+      "route": "ortho",
+      "arrow": "end",
+      "label": "5V",
+      "labelOffset": {
+        "x": -52,
+        "y": -9
+      }
+    },
+    {
+      "id": "id567",
+      "fromId": "bb",
+      "toId": "i2c_jump",
+      "x1": 200,
+      "y1": 480,
+      "x2": 63,
+      "y2": 380,
+      "fromPort": {
+        "side": "left",
+        "offset": 0.5
+      },
+      "toPort": {
+        "side": "bottom",
+        "offset": 0.5
+      },
+      "color": "#000000",
+      "width": 1.5,
+      "style": "dashed",
+      "route": "ortho",
+      "arrow": "none",
+      "label": "GND",
+      "labelOffset": {
+        "x": -80,
+        "y": -9
+      }
+    },
+    {
+      "id": "id568",
+      "fromId": "railgnd",
+      "toId": "stop",
+      "x1": 500,
+      "y1": 480,
+      "x2": 72,
+      "y2": 524,
+      "fromPort": {
+        "side": "left",
+        "offset": 0.5
+      },
+      "toPort": {
+        "side": "bottom",
+        "offset": 0.5
+      },
+      "color": "#000000",
+      "width": 1.5,
+      "style": "solid",
+      "route": "ortho",
+      "arrow": "end",
+      "label": "GND",
+      "labelOffset": {
+        "x": -142,
+        "y": 19
+      }
     }
   ],
   "groups": [
-    {
-      "id": "g_buttons",
-      "memberIds": [
-        "stop",
-        "rst",
-        "start"
-      ],
-      "wireIds": []
-    },
     {
       "id": "gid532",
       "memberIds": [
@@ -998,10 +1139,30 @@
         "ups"
       ],
       "wireIds": []
+    },
+    {
+      "id": "gid543",
+      "memberIds": [
+        "i2c_jump",
+        "lcd"
+      ],
+      "wireIds": [
+        "w_lcd_sda",
+        "w_lcd_scl"
+      ]
+    },
+    {
+      "id": "gid547",
+      "memberIds": [
+        "stop",
+        "rst",
+        "start"
+      ],
+      "wireIds": []
     }
   ],
   "canvasBg": "#ffffff",
   "gridMode": "dots",
   "v": 2,
-  "savedAt": "2026-03-18T09:46:49.711Z"
+  "savedAt": "2026-03-18T18:49:51.000Z"
 }

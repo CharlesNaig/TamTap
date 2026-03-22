@@ -4,7 +4,7 @@
 
 # TamTap
 
-### NFC-Based Attendance System with Camera Verification
+### TamTap NFC-Based Attendance System with Camera Verification
 
 **Grade 12 ICT B Group 5 Capstone | FEU Roosevelt Marikina | S.Y. 2025–2026**
 
@@ -14,7 +14,7 @@
 ![Python](https://img.shields.io/badge/python-3.11-blue)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%204B-red)
 
-*A locally hosted, NFC-based attendance system running on Raspberry Pi with camera verification and a real-time LAN dashboard.*
+*A locally hosted, TamTap NFC-Based Attendance System running on Raspberry Pi with camera verification and a real-time LAN dashboard.*
 
 </div>
 

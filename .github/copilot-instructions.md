@@ -1,6 +1,6 @@
 # 📜 **TAMTAP – GitHub Copilot Contract Instruction**
 
-**NFC-Based Attendance System | FEU Roosevelt Marikina**
+**TamTap NFC-Based Attendance System | FEU Roosevelt Marikina**
 **Capstone By Group 5 of Grade 12 ICT B
  | S.Y. 2025–2026**
 **Authors:** Charles Giann Marcelo et al.
@@ -9,7 +9,7 @@
 
 ## 🎯 PROJECT PURPOSE
 
-TAMTAP is a **locally hosted, NFC-based attendance system** using Raspberry Pi hardware with camera verification and a real-time LAN dashboard.
+TAMTAP is a **locally hosted, TamTap NFC-Based Attendance System** using Raspberry Pi hardware with camera verification and a real-time LAN dashboard.
 All generated code **must align with research requirements**, hardware limits, and school deployment constraints.
 
 Copilot must behave as a **professional engineer following strict specs**, not as a feature-inventing assistant.

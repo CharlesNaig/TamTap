@@ -1,4 +1,4 @@
-PROJECT: TAMTAP – NFC-Based Attendance System
+PROJECT: TAMTAP – TamTap NFC-Based Attendance System
 CONTEXT: Existing system with backend, hardware integration, admin + teacher dashboard
 GOAL: Implement feature enhancements and UI improvements
 IMPORTANT: Follow existing architecture. Maintain current tech stack constraints.

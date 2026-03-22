@@ -1,6 +1,6 @@
 /**
  * TAMTAP v2.0 - Express.js API Server with Auth
- * NFC-Based Attendance System | FEU Roosevelt Marikina
+ * TamTap NFC-Based Attendance System | FEU Roosevelt Marikina
  * 
  * Features:
  * - REST API for attendance and student data

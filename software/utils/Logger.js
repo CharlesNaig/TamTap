@@ -102,7 +102,7 @@ class Logger extends Signale {
         console.log('');
         console.log('========================================');
         console.log('  🦬 TAMTAP v2.0 - Attendance Server');
-        console.log('  NFC-Based Attendance System');
+        console.log('  TamTap NFC-Based Attendance System');
         console.log('  FEU Roosevelt Marikina');
         console.log('========================================');
         console.log('');

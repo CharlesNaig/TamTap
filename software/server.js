@@ -44,21 +44,16 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session middleware (before routes)
-// Uses connect-mongo to persist sessions in MongoDB instead of default MemoryStore
-// MemoryStore leaks memory and loses sessions on restart
-app.use(session({
-    ...config.session,
-    store: MongoStore.create({
-        mongoUrl: config.mongodb.uri,
-        dbName: config.mongodb.database,
-        ttl: Math.floor(config.session.cookie.maxAge / 1000), // 8 hours in seconds
-        touchAfter: 3600, // Only update session once per hour if unchanged
-        crypto: {
-            secret: config.session.secret
-        }
-    })
-}));
+// Session middleware — lazy initialization
+// The actual session handler is set up in startServer() after DB connection attempt.
+// We use a proxy middleware so it's in the middleware chain BEFORE routes.
+let sessionHandler = null;
+app.use((req, res, next) => {
+    if (sessionHandler) {
+        return sessionHandler(req, res, next);
+    }
+    next(); // No session configured yet (during startup), skip
+});
 
 // Request logging
 app.use((req, res, next) => {
@@ -67,41 +62,157 @@ app.use((req, res, next) => {
 });
 
 // ========================================
-// MONGODB CONNECTION
+// MONGODB CONNECTION WITH FALLBACK
 // ========================================
 let db = null;
 let mongoClient = null;
+let dbSource = null;  // 'local' | 'cloud' | null
+let reconnectTimer = null;
 
-async function connectMongoDB() {
+/**
+ * Connect to a specific MongoDB URI.
+ * Returns { client, db } on success, null on failure.
+ */
+async function connectToUri(uri, label) {
+    let client = null;
     try {
-        logger.database('Connecting to MongoDB:', config.mongodb.uri.replace(/:[^:@]+@/, ':****@'));
-        logger.database('Database name:', config.mongodb.database);
+        const maskedUri = uri.replace(/:[^:@]+@/, ':****@');
+        logger.database(`Connecting to ${label} MongoDB: ${maskedUri}`);
         
-        mongoClient = new MongoClient(config.mongodb.uri, {
+        client = new MongoClient(uri, {
             ...config.mongodb.options,
-            authSource: 'admin'  // Explicit auth database
+            authSource: 'admin'
         });
-        await mongoClient.connect();
-        db = mongoClient.db(config.mongodb.database);
+        await client.connect();
+        const database = client.db(config.mongodb.database);
         
-        // Test connection with auth
-        await db.command({ ping: 1 });
-        logger.success('MongoDB connected successfully');
+        // Test connection
+        await database.command({ ping: 1 });
+        logger.success(`${label} MongoDB connected successfully`);
         
-        // Create indexes
-        await createIndexes();
-        
-        return true;
+        return { client, db: database };
     } catch (error) {
-        logger.error('MongoDB connection failed:', error.message);
-        // Clean up failed connection
-        if (mongoClient) {
-            try { await mongoClient.close(); } catch (_) { /* ignore */ }
-            mongoClient = null;
+        logger.warn(`${label} MongoDB connection failed: ${error.message}`);
+        if (client) {
+            try { await client.close(); } catch (_) { /* ignore */ }
         }
-        db = null;
-        return false;
+        return null;
     }
+}
+
+/**
+ * Connect with fallback: Local MongoDB → Cloud MongoDB → No DB
+ * Returns true if any database connected.
+ */
+async function connectWithFallback() {
+    // Try local first (primary)
+    const local = await connectToUri(config.mongodb.uri, 'Local');
+    if (local) {
+        mongoClient = local.client;
+        db = local.db;
+        dbSource = 'local';
+        logger.success('Database source: LOCAL MongoDB (primary)');
+        await createIndexes();
+        return true;
+    }
+    
+    // Try cloud fallback
+    if (config.mongodb.remoteUri) {
+        logger.warn('Local MongoDB failed. Switching to fallback cloud MongoDB...');
+        const cloud = await connectToUri(config.mongodb.remoteUri, 'Cloud');
+        if (cloud) {
+            mongoClient = cloud.client;
+            db = cloud.db;
+            dbSource = 'cloud';
+            logger.success('Database source: CLOUD MongoDB (fallback)');
+            await createIndexes();
+            return true;
+        }
+    }
+    
+    // No database available
+    logger.warn('All MongoDB connections failed. Running WITHOUT database.');
+    logger.warn('System will use JSON fallback only. Background reconnect active.');
+    mongoClient = null;
+    db = null;
+    dbSource = null;
+    return false;
+}
+
+/**
+ * Background reconnect: periodically check if local MongoDB is back.
+ * When it comes back, switch from cloud/none → local.
+ */
+function startBackgroundReconnect() {
+    if (reconnectTimer) return;
+    
+    const interval = config.mongodb.reconnectIntervalMs;
+    logger.info(`Background MongoDB reconnect started (every ${interval / 1000}s)`);
+    
+    reconnectTimer = setInterval(async () => {
+        // If already on local, just verify it's still alive
+        if (dbSource === 'local') {
+            try {
+                await db.command({ ping: 1 });
+                return; // Still connected, nothing to do
+            } catch (error) {
+                logger.warn('Local MongoDB connection lost! Switching to fallback...');
+                // Clean up dead connection
+                try { await mongoClient.close(); } catch (_) { /* ignore */ }
+                mongoClient = null;
+                db = null;
+                dbSource = null;
+                
+                // Try cloud as immediate fallback
+                if (config.mongodb.remoteUri) {
+                    const cloud = await connectToUri(config.mongodb.remoteUri, 'Cloud');
+                    if (cloud) {
+                        mongoClient = cloud.client;
+                        db = cloud.db;
+                        dbSource = 'cloud';
+                        logger.success('Switched to CLOUD MongoDB (fallback)');
+                        return;
+                    }
+                }
+                
+                logger.warn('No database available. Waiting for local MongoDB to return...');
+                return;
+            }
+        }
+        
+        // If on cloud or no DB, try to reconnect to local
+        const local = await connectToUri(config.mongodb.uri, 'Local');
+        if (local) {
+            // Close existing cloud connection if any
+            if (mongoClient) {
+                try { await mongoClient.close(); } catch (_) { /* ignore */ }
+            }
+            
+            mongoClient = local.client;
+            db = local.db;
+            const previousSource = dbSource;
+            dbSource = 'local';
+            
+            logger.success('='.repeat(50));
+            logger.success('Local MongoDB is back online! Reconnected successfully.');
+            logger.success(`Switched from ${previousSource || 'no database'} → LOCAL MongoDB`);
+            logger.success('='.repeat(50));
+            
+            await createIndexes();
+            return;
+        }
+        
+        // If we have no DB at all, also try cloud
+        if (!dbSource && config.mongodb.remoteUri) {
+            const cloud = await connectToUri(config.mongodb.remoteUri, 'Cloud');
+            if (cloud) {
+                mongoClient = cloud.client;
+                db = cloud.db;
+                dbSource = 'cloud';
+                logger.success('Cloud MongoDB reconnected (fallback)');
+            }
+        }
+    }, interval);
 }
 
 async function createIndexes() {
@@ -472,6 +583,7 @@ app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
         mongodb: db !== null,
+        dbSource: dbSource,
         clients: connectedClients,
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
@@ -502,15 +614,45 @@ app.use((req, res) => {
 async function startServer() {
     logger.banner();
     
-    // Connect to MongoDB
-    const mongoConnected = await connectMongoDB();
+    // Connect to MongoDB with fallback chain: Local → Cloud → No DB
+    const mongoConnected = await connectWithFallback();
     if (!mongoConnected) {
         logger.warn('Running without MongoDB - some features disabled');
     }
     
+    // Setup session handler (applied via lazy proxy middleware declared earlier)
+    if (db && dbSource) {
+        // Use MongoDB-backed sessions
+        const mongoStoreUri = dbSource === 'local' ? config.mongodb.uri : config.mongodb.remoteUri;
+        sessionHandler = session({
+            ...config.session,
+            store: MongoStore.create({
+                mongoUrl: mongoStoreUri,
+                dbName: config.mongodb.database,
+                ttl: Math.floor(config.session.cookie.maxAge / 1000),
+                touchAfter: 3600,
+                crypto: {
+                    secret: config.session.secret
+                }
+            })
+        });
+        logger.info(`Session store: MongoDB (${dbSource})`);
+    } else {
+        // Fallback to MemoryStore (sessions lost on restart, but system works)
+        sessionHandler = session({
+            ...config.session
+            // No store = default MemoryStore
+        });
+        logger.warn('Session store: MemoryStore (fallback — sessions lost on restart)');
+    }
+    
+    // Start background reconnect loop
+    startBackgroundReconnect();
+    
     // Start HTTP server
     server.listen(config.server.port, config.server.host, () => {
         logger.server(`Server running on http://${config.server.host}:${config.server.port} or http://localhost:${config.server.port}`);
+        logger.server(`Database source: ${dbSource || 'none (JSON fallback)'}`);
         logger.socket('Socket.IO ready for connections');
         logger.info(`Photos served from: ${internalPhotosPath}`);
     });
@@ -519,6 +661,12 @@ async function startServer() {
 // Graceful shutdown
 process.on('SIGINT', async () => {
     logger.info('Shutting down...');
+    
+    // Stop background reconnect
+    if (reconnectTimer) {
+        clearInterval(reconnectTimer);
+        reconnectTimer = null;
+    }
     
     if (mongoClient) {
         await mongoClient.close();

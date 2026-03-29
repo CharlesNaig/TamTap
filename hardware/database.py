@@ -258,6 +258,9 @@ class Database:
         self._stop_reconnect = threading.Event()
         self._reconnect_thread = None
         
+        # Active database source tracking: 'local' | 'cloud' | 'json'
+        self._active_source = 'json'  # Start as JSON until a MongoDB connects
+        
         # Thread safety for JSON file access
         self._json_lock = threading.Lock()
         
@@ -277,7 +280,14 @@ class Database:
         # Initialize
         self._ensure_json_exists()
         self._connect_mongodb()
-        self._connect_remote_mongodb()
+        
+        # If local failed, try cloud as ACTIVE database (not just backup)
+        if not self.use_mongodb and MONGODB_REMOTE_URI:
+            self._use_cloud_as_active()
+        
+        # Connect remote for backup sync (if not already used as active)
+        if self._active_source != 'cloud':
+            self._connect_remote_mongodb()
         
         # Start background threads
         if enable_background_reconnect:
@@ -307,7 +317,7 @@ class Database:
         }
     
     def _connect_mongodb(self):
-        """Attempt to connect to MongoDB"""
+        """Attempt to connect to local MongoDB (primary)"""
         if not MONGODB_AVAILABLE:
             logger.warning("pymongo not installed - using JSON fallback only")
             return False
@@ -321,7 +331,8 @@ class Database:
             self.mongo_client.admin.command('ping')
             self.mongo_db = self.mongo_client[MONGODB_NAME]
             self.use_mongodb = True
-            logger.info("MongoDB connected successfully")
+            self._active_source = 'local'
+            logger.info("Local MongoDB connected successfully (primary)")
             
             # Create indexes
             self._create_indexes()
@@ -333,12 +344,55 @@ class Database:
             return True
             
         except (ConnectionFailure, ServerSelectionTimeoutError) as e:
-            logger.warning("MongoDB connection failed: %s - using JSON fallback", e)
+            logger.warning("Local MongoDB connection failed: %s", e)
             self.use_mongodb = False
             return False
         except Exception as e:
-            logger.error("MongoDB init error: %s - using JSON fallback", e)
+            logger.error("Local MongoDB init error: %s", e)
             self.use_mongodb = False
+            return False
+    
+    def _use_cloud_as_active(self):
+        """
+        Use cloud MongoDB as the ACTIVE database when local is unavailable.
+        This is different from _connect_remote_mongodb() which connects cloud
+        as a background backup sync target.
+        """
+        if not MONGODB_AVAILABLE or not MONGODB_REMOTE_URI:
+            return False
+        
+        logger.warning("Main DB failed... switching to fallback cloud MongoDB...")
+        
+        try:
+            self.mongo_client = MongoClient(
+                MONGODB_REMOTE_URI,
+                serverSelectionTimeoutMS=MONGODB_REMOTE_TIMEOUT
+            )
+            self.mongo_client.admin.command('ping')
+            self.mongo_db = self.mongo_client[MONGODB_NAME]
+            self.use_mongodb = True
+            self._active_source = 'cloud'
+            logger.info("Cloud MongoDB connected as ACTIVE database (fallback)")
+            
+            # Create indexes on cloud too
+            self._create_indexes()
+            
+            # Push any pending attendance to cloud
+            self._push_pending_to_mongodb()
+            self._pull_from_mongodb()
+            
+            return True
+            
+        except (ConnectionFailure, ServerSelectionTimeoutError) as e:
+            logger.warning("Cloud MongoDB also unavailable: %s", e)
+            self.use_mongodb = False
+            self._active_source = 'json'
+            logger.warning("Both MongoDB unavailable. Using JSON backup only.")
+            return False
+        except Exception as e:
+            logger.error("Cloud MongoDB fallback error: %s", e)
+            self.use_mongodb = False
+            self._active_source = 'json'
             return False
     
     def _create_indexes(self):
@@ -933,26 +987,95 @@ class Database:
         logger.info("Background reconnect thread started (interval: %ds)", self._reconnect_interval)
     
     def _reconnect_loop(self):
-        """Background loop to check and reconnect to MongoDB"""
+        """
+        Background loop to check and reconnect to MongoDB.
+        Priority: Always try to get back to local MongoDB.
+        
+        Transitions:
+        - local (connected) → verify alive, if dead → try cloud → json
+        - cloud (fallback)  → try local first, if still down → stay on cloud
+        - json (offline)    → try local first, then cloud
+        """
         while not self._stop_reconnect.is_set():
             # Wait for interval (interruptible)
             if self._stop_reconnect.wait(timeout=self._reconnect_interval):
                 break  # Stop signal received
             
-            # Skip if already connected
-            if self.use_mongodb:
-                # Verify connection is still alive
+            # === CASE 1: Currently on LOCAL — verify it's still alive ===
+            if self._active_source == 'local' and self.use_mongodb:
                 try:
                     if self.mongo_client:
                         self.mongo_client.admin.command('ping')
                         continue  # Still connected, nothing to do
                 except Exception:
-                    logger.warning("MongoDB connection lost, will attempt reconnect")
+                    logger.warning("Local MongoDB connection lost!")
                     self.use_mongodb = False
+                    self._active_source = 'json'
+                    
+                    # Try cloud as immediate fallback
+                    if MONGODB_REMOTE_URI:
+                        logger.info("Switching to cloud MongoDB fallback...")
+                        if self._use_cloud_as_active():
+                            continue
+                    
+                    logger.warning("Operating in JSON-only mode. Will keep trying local...")
+                    continue
             
-            # Attempt reconnect
-            if not self.use_mongodb:
-                logger.info("Attempting MongoDB reconnect...")
+            # === CASE 2: Currently on CLOUD — try to get back to local ===
+            if self._active_source == 'cloud':
+                logger.debug("Checking if local MongoDB is back online...")
+                try:
+                    test_client = MongoClient(
+                        MONGODB_URI,
+                        serverSelectionTimeoutMS=MONGODB_TIMEOUT
+                    )
+                    test_client.admin.command('ping')
+                    
+                    # Local is back! Switch over
+                    logger.info("=" * 50)
+                    logger.info("Local MongoDB is back online! Reconnecting...")
+                    logger.info("=" * 50)
+                    
+                    # Close cloud connection
+                    if self.mongo_client:
+                        try:
+                            self.mongo_client.close()
+                        except Exception:
+                            pass
+                    
+                    self.mongo_client = test_client
+                    self.mongo_db = self.mongo_client[MONGODB_NAME]
+                    self.use_mongodb = True
+                    self._active_source = 'local'
+                    
+                    logger.info("Switched from CLOUD → LOCAL MongoDB (primary)")
+                    
+                    # Sync: push pending to local, pull latest
+                    self._push_pending_to_mongodb()
+                    self._pull_from_mongodb()
+                    
+                    # Re-establish cloud as backup (not active)
+                    self._connect_remote_mongodb()
+                    
+                except Exception as e:
+                    logger.debug("Local MongoDB still down: %s", e)
+                    
+                    # Verify cloud is still alive
+                    try:
+                        if self.mongo_client:
+                            self.mongo_client.admin.command('ping')
+                    except Exception:
+                        logger.warning("Cloud MongoDB also lost!")
+                        self.use_mongodb = False
+                        self._active_source = 'json'
+                
+                continue
+            
+            # === CASE 3: Currently on JSON — try local, then cloud ===
+            if self._active_source == 'json' or not self.use_mongodb:
+                logger.debug("Attempting to reconnect to any MongoDB...")
+                
+                # Try local first (always preferred)
                 try:
                     if self.mongo_client:
                         try:
@@ -967,15 +1090,28 @@ class Database:
                     self.mongo_client.admin.command('ping')
                     self.mongo_db = self.mongo_client[MONGODB_NAME]
                     self.use_mongodb = True
+                    self._active_source = 'local'
                     
-                    logger.info("MongoDB reconnected successfully!")
+                    logger.info("=" * 50)
+                    logger.info("Local MongoDB reconnected successfully!")
+                    logger.info("Switched from JSON → LOCAL MongoDB (primary)")
+                    logger.info("=" * 50)
                     
                     # Sync on reconnect
                     self._push_pending_to_mongodb()
                     self._pull_from_mongodb()
                     
+                    # Re-establish cloud as backup
+                    self._connect_remote_mongodb()
+                    
+                    continue
                 except Exception as e:
-                    logger.debug("MongoDB reconnect failed: %s", e)
+                    logger.debug("Local MongoDB reconnect failed: %s", e)
+                
+                # Try cloud as fallback
+                if MONGODB_REMOTE_URI:
+                    if self._use_cloud_as_active():
+                        continue
                     self.use_mongodb = False
     
     def stop_reconnect(self):
@@ -1204,6 +1340,7 @@ class Database:
         
         return {
             "mongodb_connected": self._check_mongodb(),
+            "active_source": self._active_source,
             "remote_connected": self.use_remote,
             "remote_queue_size": self._remote_queue.qsize(),
             "last_sync": self.last_sync,

@@ -2,7 +2,7 @@
 Description=TAMTAP NFC Hardware Service
 Documentation=https://github.com/CharlesNaig/TamTap
 After=network.target tamtap-server.service
-Requires=tamtap-server.service
+Wants=tamtap-server.service
 
 [Service]
 Type=simple

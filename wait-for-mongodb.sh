@@ -40,8 +40,9 @@ while [ $elapsed -lt $MAX_WAIT ]; do
 done
 
 if [ $elapsed -ge $MAX_WAIT ]; then
-    echo "[TAMTAP] ERROR: Container '${CONTAINER_NAME}' did not start within ${MAX_WAIT}s"
-    exit 1
+    echo "[TAMTAP] WARNING: Container '${CONTAINER_NAME}' did not start within ${MAX_WAIT}s"
+    echo "[TAMTAP] Server will start with fallback database (cloud MongoDB or JSON)"
+    exit 0
 fi
 
 # Phase 2: Wait for MongoDB to accept connections (ping)
@@ -58,5 +59,6 @@ while [ $elapsed -lt $MAX_WAIT ]; do
     elapsed=$((elapsed + POLL_INTERVAL))
 done
 
-echo "[TAMTAP] ERROR: MongoDB did not respond to ping within ${MAX_WAIT}s"
-exit 1
+echo "[TAMTAP] WARNING: MongoDB did not respond to ping within ${MAX_WAIT}s"
+echo "[TAMTAP] Server will start with fallback database (cloud MongoDB or JSON)"
+exit 0

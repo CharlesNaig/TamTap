@@ -15,7 +15,9 @@ const config = {
     // MongoDB Configuration
     mongodb: {
         uri: process.env.MONGODB_URI,
+        remoteUri: process.env.MONGODB_REMOTE_URI || '',
         database: process.env.MONGODB_NAME,
+        reconnectIntervalMs: 30000, // 30 seconds background reconnect check
         options: {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000,

@@ -1191,10 +1191,13 @@ def main():
     logger.info("=" * 50)
     
     # Database status
-    if db.use_mongodb:
-        logger.info("Database: MongoDB connected")
-    else:
-        logger.info("Database: JSON fallback mode")
+    source_labels = {
+        'local': 'LOCAL MongoDB (primary)',
+        'cloud': 'CLOUD MongoDB (fallback)',
+        'json': 'JSON file only (offline mode)'
+    }
+    active_source = getattr(db, '_active_source', 'json')
+    logger.info("Database: %s", source_labels.get(active_source, active_source))
     
     # Startup feedback
     lcd.show("TAMTAP v7.0", "STARTING...")

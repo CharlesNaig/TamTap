@@ -198,6 +198,8 @@ I2C SDA ─── LCD SDA
 I2C SCL ─── LCD SCL
 ```
 
+![Wiring Diagram](https://github.com/CharlesNaig/TamTap/blob/d9c751f90a32667d2d29fd973ff58f63e2dee5cd/assets/backgrounds/Wiring-Diagram.png)
+
 ---
 
 ## 🛠 Software Stack
@@ -356,6 +358,8 @@ All hardware modules **must** follow this state flow:
 - No parallel state transitions
 - Every cycle must return to `IDLE`
 - `SHUTDOWN` state only on `SIGINT`/`SIGTERM`
+
+![Flow Chart](https://github.com/CharlesNaig/TamTap/blob/d9c751f90a32667d2d29fd973ff58f63e2dee5cd/assets/backgrounds/Flow-Chart.png)
 
 ---
 

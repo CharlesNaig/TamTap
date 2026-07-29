@@ -7,8 +7,8 @@
 (function() {
     'use strict';
 
-    // Minimum preloader display time: random between 1-2 seconds
-    const MIN_PRELOADER_TIME = 1000 + Math.random() * 1000;
+    // Keep the transition perceptible without delaying usable content.
+    const MIN_PRELOADER_TIME = 450 + Math.random() * 350;
     let preloaderStartTime = Date.now();
 
     // Immediately cover the screen via CSS (no body needed)
@@ -134,8 +134,9 @@
         });
     }
 
-    // Hide preloader when page is fully loaded (respects minimum display time)
-    function hideOnLoad() {
+    // Hide when the document is usable. Waiting for window.load keeps the page
+    // covered while nonessential third-party images load or time out.
+    function hideOnReady() {
         function doHide() {
             const elapsed = Date.now() - preloaderStartTime;
             const remaining = MIN_PRELOADER_TIME - elapsed;
@@ -147,10 +148,10 @@
             }
         }
 
-        if (document.readyState === 'complete') {
+        if (document.readyState !== 'loading') {
             doHide();
         } else {
-            window.addEventListener('load', doHide);
+            document.addEventListener('DOMContentLoaded', doHide, { once: true });
         }
     }
 
@@ -160,7 +161,7 @@
         interceptLinks();
         interceptForms();
         handlePageUnload();
-        hideOnLoad();
+        hideOnReady();
     }
 
     if (document.readyState === 'loading') {

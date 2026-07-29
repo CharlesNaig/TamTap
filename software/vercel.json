@@ -1,15 +1,14 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd software && npm ci --omit=dev",
   "builds": [
     {
-      "src": "software/server.js",
+      "src": "server.js",
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "software/public/**",
-          "assets/**",
-          "database/**"
+          "public/**",
+          "../assets/**",
+          "../database/**"
         ]
       }
     }
@@ -17,7 +16,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "/software/server.js"
+      "dest": "/server.js"
     }
   ]
 }
